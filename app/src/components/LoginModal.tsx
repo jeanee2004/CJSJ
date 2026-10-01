@@ -34,10 +34,10 @@ export function LoginModal() {
             transition={{ ease: [0.22, 1, 0.36, 1], duration: 0.6 }}
           >
             <button className="circle close" type="button" aria-label="닫기" onClick={() => setLoginOpen(false)}>✕</button>
-            <span className="label">LOG IN · DEMO</span>
-            <h2 id="login-title">지난 결과를<br /><span className="it" style={{ fontSize: '1.15em' }}>이어서</span> 볼까요?</h2>
+            <span className="label">로그인 · 체험용</span>
+            <h2 id="login-title">지난 결과를<br /><span className="em">이어서</span> 볼까요?</h2>
             <div className="demo-note">
-              <b>데모 화면이에요.</b> 실제 계정은 만들어지지 않고, 입력한 내용은 이 기기 브라우저에만 저장돼요. 서버로 보내지 않아요.
+              <b>체험용 화면이에요.</b> 실제 계정은 만들어지지 않고, 입력하신 내용은 이 기기 브라우저에만 저장돼요. 서버로는 보내지 않아요.
             </div>
             <div className="social">
               <button ref={first} className="kakao" type="button" onClick={() => done('kakao', '카카오')}>카카오로 계속하기</button>

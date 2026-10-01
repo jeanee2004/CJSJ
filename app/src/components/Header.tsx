@@ -9,7 +9,7 @@ export const NAV = [
   { n: '02', label: '지원 제도', to: '/#policies' },
   { n: '03', label: '숫자로 보기', to: '/#data' },
   { n: '04', label: '쉬운 용어', to: '/#glossary' },
-  { n: '05', label: '의견 보내기', to: '/#feedback' },
+  { n: '05', label: '의견 남기기', to: '/#feedback' },
 ]
 
 export function Header() {

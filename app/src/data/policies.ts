@@ -95,7 +95,7 @@ export const POLICIES: PolicyInfo[] = [
     apply: PORTALS.sejong,
     sourceIds: ['viva_rent'],
     verified: 'secondary',
-    caution: '1년에 사흘만 접수해요. 놓치면 다음 해를 기다려야 해요.',
+    caution: '1년에 사흘만 접수해요. 놓치면 다음 해를 기다려야 해서, 접수 기간을 꼭 챙겨 주세요.',
   },
   {
     id: 'molitRent',

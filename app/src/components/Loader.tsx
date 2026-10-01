@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Btn, reduced } from '../ui'
 
 const KEY = 'cjsj.seen'
-const shown = ['靑', '定', '世', '宗']
+const shown = ['청', '정', '세', '종']
 
 // 첫 방문에만, 2초 이내. 건너뛰기 가능. 막이 위로 걷히며 사라진다.
 export function Loader() {

@@ -22,8 +22,9 @@ export function Cursor() {
     const move = (e: MouseEvent) => {
       x = e.clientX; y = e.clientY
       const t = e.target as HTMLElement
-      const lab = t.closest('[data-cursor]')?.getAttribute('data-cursor')
-      const link = !!t.closest('a, button, [role="button"], summary, label')
+      const small = !!t.closest('.btn, .circle, .fchip, .choice, .social button, .preset button, .stepper button, .nav a, .brand, .back, .intro-play, .intro-mute, a, button, summary, label, input')
+      const lab = small ? undefined : t.closest('[data-cursor]')?.getAttribute('data-cursor')
+      const link = small
       const text = !link && !!t.closest('input, textarea')
       d.classList.toggle('link', link && !lab)
       d.classList.toggle('text', text)

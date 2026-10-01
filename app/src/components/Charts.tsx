@@ -6,7 +6,7 @@ import type { ChartMeta } from '../data/stats'
 import { CountUp, Reveal, SourceBlock, VBadge } from '../ui'
 
 // 다크 배경용 팔레트. 색만으로 구분하지 않도록 값 라벨·범례·표를 함께 둔다.
-const C = { lime: '#d6ff4f', mint: '#8cf0cf', aqua: '#7ccbff', peri: '#a3afff', coral: '#ff7a59', grey: '#7b8296', text: '#f3efe7' }
+const C = { lime: '#ff9cc4', mint: '#8cf0cf', aqua: '#7ccbff', peri: '#a3afff', coral: '#ff7a59', grey: '#7b8296', text: '#fff8fa' }
 const DIM = 0.28
 
 function Frame({ meta, children, table, legend }: { meta: ChartMeta; children: ReactNode; table: { k: string; v: string }[]; legend?: string }) {
@@ -71,7 +71,7 @@ export function DataSection() {
         </Reveal>
 
         <Reveal delay={0.08}>
-          <Frame meta={INCOME_META} legend="라임 = 세종시 제도 · 하늘 = 나라(주택도시기금) 제도 · 단위 만원/연" table={[...INCOME_LIMITS.map((i) => ({ k: i.name, v: `${i.value.toLocaleString()}만원` })), { k: '예시 맞벌이 부부', v: `${EXAMPLE_COUPLE.toLocaleString()}만원` }]}>
+          <Frame meta={INCOME_META} legend="분홍 = 세종시 제도 · 하늘 = 나라(주택도시기금) 제도 · 단위 만원/연" table={[...INCOME_LIMITS.map((i) => ({ k: i.name, v: `${i.value.toLocaleString()}만원` })), { k: '예시 맞벌이 부부', v: `${EXAMPLE_COUPLE.toLocaleString()}만원` }]}>
             <ResponsiveContainer>
               <BarChart data={INCOME_LIMITS} layout="vertical" margin={{ left: 4, right: 52, top: 10, bottom: 4 }} onMouseLeave={() => setBar(null)}>
                 <XAxis type="number" domain={[0, 9500]} hide />

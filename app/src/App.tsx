@@ -5,6 +5,7 @@ import { Header } from './components/Header'
 import { LoginModal } from './components/LoginModal'
 import { Loader } from './components/Loader'
 import { Cursor } from './components/Cursor'
+import { Flutter } from './components/Flutter'
 import Home from './pages/Home'
 import Diagnose from './pages/Diagnose'
 import Result from './pages/Result'
@@ -26,6 +27,7 @@ export default function App() {
     <StoreProvider>
       <ScrollManager />
       <Loader />
+      <Flutter />
       <Cursor />
       <Header />
       <Routes>

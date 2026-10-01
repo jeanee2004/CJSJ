@@ -12,7 +12,7 @@ function Choice<T extends string | boolean>({ opts, value, onPick }: { opts: Opt
   return (
     <div className="choices" role="group">
       {opts.map((o, i) => (
-        <button key={String(o.v)} type="button" className="choice" aria-pressed={value === o.v} onClick={() => onPick(o.v)} data-cursor="고르기">
+        <button key={String(o.v)} type="button" className="choice" aria-pressed={value === o.v} onClick={() => onPick(o.v)}>
           <span className="k">{String.fromCharCode(65 + i)}</span>
           <span><b>{o.t}</b>{o.d && <small>{o.d}</small>}</span>
           <span className="tick" aria-hidden="true">{value === o.v ? '✓' : ''}</span>
@@ -61,8 +61,8 @@ const UNK = (a: Answers, key: string, on: boolean): string[] => {
 const STEPS: Step[] = [
   {
     id: 'age',
-    title: '올해 만 몇 살이에요?',
-    why: <>제도마다 나이 기준이 달라요(19~34세 / 19~39세). <b>만 나이</b>는 생일이 지나야 한 살 늘어나요.</>,
+    title: '올해 만 몇 살이신가요?',
+    why: <>제도마다 나이 기준이 달라서 여쭤봐요(19~34세 / 19~39세). <b>만 나이</b>는 생일이 지나야 한 살 늘어나요.</>,
     body: (a, set) => (
       <div className="stepper">
         <button type="button" aria-label="한 살 줄이기" onClick={() => set({ age: Math.max(15, a.age - 1) })}>−</button>
@@ -73,8 +73,8 @@ const STEPS: Step[] = [
   },
   {
     id: 'marital',
-    title: '지금 어떤 상황이에요?',
-    why: <>혼자인지, 결혼했는지에 따라 소득 기준이 완전히 달라져요. 결혼 7년 이내이거나 6개월 안에 결혼할 예정이면 <b>신혼부부</b> 제도를 볼 수 있어요.</>,
+    title: '지금 어떤 상황이신가요?',
+    why: <>혼자이신지, 결혼하셨는지에 따라 소득 기준이 크게 달라져요. 결혼 7년 이내이거나 6개월 안에 결혼할 예정이면 <b>신혼부부</b> 제도를 볼 수 있어요.</>,
     body: (a, set, next) => (
       <Choice<Marital>
         value={a.marital}
@@ -89,19 +89,19 @@ const STEPS: Step[] = [
   },
   {
     id: 'income',
-    title: (a: Answers) => (a.marital === 'single' ? '1년에 얼마를 버나요?' : '부부가 1년에 얼마를 버나요?'),
+    title: (a: Answers) => (a.marital === 'single' ? '1년 소득은 대략 얼마인가요?' : '두 분의 1년 소득을 합치면 얼마인가요?'),
     why: <><Term id="income" />은 세금 떼기 전 1년 치 수입이에요. 부부라면 둘이 번 돈을 합쳐요(<Term id="combined" />). 월급 250만원이면 약 3,000만원이에요.</>,
     body: (a, set) => (
       <NumberField
         value={a.income} onChange={(n) => set({ income: n })} unit="만원 / 연" presets={[0, 2000, 3000, 4000, 5000, 6500, 8500]}
-        hint={`월급으로 환산하면 약 ${Number.isNaN(a.income) ? 0 : Math.round(a.income / 12).toLocaleString()}만원이에요. 대학생이라 소득이 없으면 0을 눌러요.`}
+        hint={`월급으로 환산하면 약 ${Number.isNaN(a.income) ? 0 : Math.round(a.income / 12).toLocaleString()}만원이에요. 소득이 없는 대학생이라면 0을 눌러 주세요.`}
       />
     ),
     valid: (a) => !Number.isNaN(a.income),
   },
   {
     id: 'livesApart',
-    title: '부모님과 따로 살아요?',
+    title: '부모님과 따로 살고 계신가요?',
     why: <>부모님과 주소가 같으면 못 받는 월세 지원이 있어요. 주민등록상 주소 기준이에요.</>,
     show: (a) => a.marital === 'single',
     body: (a, set, next) => (
@@ -122,11 +122,11 @@ const STEPS: Step[] = [
   },
   {
     id: 'hasLoan',
-    title: '지금 받고 있는 전세대출이 있나요?',
+    title: '지금 이용 중인 전세대출이 있나요?',
     why: <>이미 전세대출(<Term id="buteemok" /> 등)이 있으면 세종 <Term id="interest" />을 못 받아요. 둘이 겹치면 안 되거든요.</>,
     body: (a, set, next) => (
       <Choice<string> value={a.unknown?.includes('hasLoan') ? 'unk' : String(a.hasLoan)} onPick={(v) => { set({ hasLoan: v === 'true', unknown: UNK(a, 'hasLoan', v === 'unk') }); next() }} opts={[
-        { v: 'false', t: '없어요' }, { v: 'true', t: '있어요' }, { v: 'unk', t: '잘 모르겠어요', d: '없다고 보고 계산하고, 결과에서 다시 확인하라고 알려드려요' },
+        { v: 'false', t: '없어요' }, { v: 'true', t: '있어요' }, { v: 'unk', t: '잘 모르겠어요', d: '없다고 보고 계산한 뒤, 결과에서 다시 확인하실 수 있게 알려드려요' },
       ]} />
     ),
   },
@@ -142,7 +142,7 @@ const STEPS: Step[] = [
   },
   {
     id: 'deal',
-    title: '어떤 방식으로 집을 구하고 있어요?',
+    title: '어떤 방식으로 집을 구하고 계세요?',
     why: <>전세인지 월세인지에 따라 받을 수 있는 지원이 완전히 달라요. 헷갈리면 아래 설명을 보세요.</>,
     body: (a, set, next) => (
       <Choice<Deal> value={a.deal} onPick={(v) => { set({ deal: v, ...(v === 'jeonse' ? { rent: 0, deposit: 12000 } : { rent: a.rent || 50, deposit: a.deposit > 10000 ? 1000 : a.deposit }) }); next() }} opts={[
@@ -154,7 +154,7 @@ const STEPS: Step[] = [
   },
   {
     id: 'money',
-    title: (a: Answers) => (a.deal === 'jeonse' ? '전세금(보증금)이 얼마예요?' : '보증금과 월세가 얼마예요?'),
+    title: (a: Answers) => (a.deal === 'jeonse' ? '전세금(보증금)은 얼마 정도인가요?' : '보증금과 월세는 얼마 정도인가요?'),
     why: <><Term id="deposit" />과 월세가 정해진 금액을 넘으면 지원이 안 돼요. 아직 정해지지 않았다면 대략 생각하는 금액을 넣어요.</>,
     body: (a, set) => (
       <>
@@ -173,7 +173,7 @@ const STEPS: Step[] = [
   },
   {
     id: 'houseType',
-    title: '구하는 집은 어떤 종류예요?',
+    title: '구하시는 집은 어떤 종류인가요?',
     why: <>원룸·고시원처럼 방을 쪼개 쓰는 <Term id="multihouse" />은 지원에서 빠지는 경우가 많아요. 계약서의 "건축물 용도"를 보면 알 수 있어요.</>,
     body: (a, set, next) => (
       <Choice<string> value={a.unknown?.includes('houseType') ? 'unk' : a.houseType} onPick={(v) => { set({ houseType: v === 'multi' ? 'multi' : ('normal' as HouseType), unknown: UNK(a, 'houseType', v === 'unk') }); next() }} opts={[
@@ -185,8 +185,8 @@ const STEPS: Step[] = [
   },
   {
     id: 'stage',
-    title: '지금 집 계약이 어디까지 됐어요?',
-    why: <>이게 제일 중요해요. 같은 지원도 <b>계약 어느 시점이냐</b>에 따라 받을 수도, 못 받을 수도 있어요. <Term id="jan" />을 치르기 전과 후가 특히 달라요.</>,
+    title: '지금 집 계약은 어디까지 진행됐나요?',
+    why: <>이 질문이 가장 중요해요. 같은 지원도 <b>계약 어느 시점이냐</b>에 따라 받을 수도, 못 받을 수도 있어요. <Term id="jan" />을 치르기 전과 후가 특히 달라요.</>,
     body: (a, set, next) => (
       <Choice<Stage> value={a.stage} onPick={(v) => { set({ stage: v }); next() }} opts={[
         { v: 'explore', t: '아직 집을 보러 다녀요', d: '계약 전' },
@@ -241,7 +241,7 @@ export default function Diagnose() {
             <div className="diag-side">
               <span className="diag-no" aria-hidden="true">{String(idx + 1).padStart(2, '0')}</span>
               <h1>{title}</h1>
-              <div className="why"><b>왜 물어요?</b>{step.why}</div>
+              <div className="why"><b>여쭤보는 이유</b>{step.why}</div>
             </div>
             <div className="diag-main">
               {step.body(a, set, () => { if (!isLast) autoNext() })}

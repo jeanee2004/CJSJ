@@ -180,3 +180,14 @@ export function SourceBlock({ ids }: { ids: string[] }) {
     </div>
   )
 }
+
+/** 글자 하나하나가 통통 튀는 텍스트 (호버) — 한 줄 유지 */
+export function Wave({ text, accent }: { text: string; accent?: boolean }) {
+  return (
+    <span className={`wave ${accent ? 'em' : ''}`} aria-label={text}>
+      {[...text].map((c, i) => (
+        <span key={i} aria-hidden="true" style={{ ['--i' as string]: i }}>{c === ' ' ? '\u00a0' : c}</span>
+      ))}
+    </span>
+  )
+}

@@ -77,8 +77,8 @@ function sejongInterest(a: Answers): Verdict {
       isCouple(a) ? 'EXCL_INCOME_COUPLE' : 'EXCL_INCOME_SINGLE',
       `${isCouple(a) ? '부부 합산' : '내'} 연소득이 ${fmt(limit)}만원 이하여야 해요. 지금 입력한 금액(${fmt(a.income)}만원)이 ${fmt(a.income - limit)}만원 많아요.`,
     )
-  if (a.hasLoan) fail(v, 'EXCL_DUP_LOAN', '이미 전세대출이 있으면 받을 수 없어요. 대출을 갈아타는 것도 안 돼요.')
-  if (a.usedBefore) fail(v, 'EXCL_ONCE', '평생 한 번만 받을 수 있는데, 이미 받은 적이 있어요.')
+  if (a.hasLoan) fail(v, 'EXCL_DUP_LOAN', '이미 전세대출이 있으면 받을 수 없어요. 대출을 갈아타는 것도 어려워요.')
+  if (a.usedBefore) fail(v, 'EXCL_ONCE', '평생 한 번만 받을 수 있는데, 이미 받으신 적이 있어요.')
   if (a.deal === 'wolse') fail(v, 'EXCL_DEAL_TYPE', '전세 대출 이자를 도와주는 제도예요. 월세(보증금 대출 없음)는 대상이 아니에요.')
   else if (a.deal === 'banjeonse' && !blocked(v))
     warn(v, '반전세(보증금+월세)가 "전세계약"으로 인정되는지 공식 기준이 확인되지 않았어요.', '세종시 청년지원팀(☎1533-1934)에 반전세도 되는지 먼저 물어보세요.')
@@ -86,8 +86,8 @@ function sejongInterest(a: Answers): Verdict {
     if (a.stage === 'paid' || a.stage === 'movedin')
       fail(v, 'EXCL_TIMING', '잔금을 이미 치렀어요. 이 지원은 잔금 치르기 전에 신청해야 해서 지금은 받을 수 없어요.')
     else if (a.stage === 'contract') {
-      v.todo.push('잔금 치르기 전에 먼저 신청하세요. 신청이 늦으면 탈락해요.')
-      warn(v, '아직 잔금 전이라 신청할 수 있어요. 단, 서두르세요.')
+      v.todo.push('잔금을 치르기 전에 먼저 신청해 주세요. 늦으면 신청할 수 없게 돼요.')
+      warn(v, '아직 잔금 전이라 신청할 수 있어요. 조금만 서둘러 주세요.')
     } else {
       warn(v, '자격은 맞아요. 계약 후 잔금 전에 신청하면 돼요.')
     }
@@ -110,7 +110,7 @@ function sejongRent(a: Answers): Verdict {
   if (a.houseType === 'multi') fail(v, 'EXCL_HOUSE_TYPE', '원룸·고시원 같은 다중주택은 대상에서 빠져요.')
   if (a.deal !== 'jeonse' && a.deposit > r.maxDeposit) fail(v, 'EXCL_HOUSE_TYPE', `보증금이 ${fmt(r.maxDeposit)}만원 이하여야 해요.`)
   if (a.deal !== 'jeonse' && a.rent > r.maxRent) fail(v, 'EXCL_HOUSE_TYPE', `월세가 ${r.maxRent}만원 이하여야 해요.`)
-  if (a.usedBefore) fail(v, 'EXCL_ONCE', '평생 한 번만 받을 수 있는데, 이미 받은 적이 있어요.')
+  if (a.usedBefore) fail(v, 'EXCL_ONCE', '평생 한 번만 받을 수 있는데, 이미 받으신 적이 있어요.')
   if (v.status !== 'no') {
     if (a.stage === 'movedin') warn(v, '자격은 맞아요. 다만 1년에 사흘만 접수해요(2026년은 3월 3~5일).', '다음 접수 공고(보통 2~3월)를 알림으로 챙기세요.')
     else warn(v, '자격은 맞아요. 세종에 전입(주소 이전)한 뒤에야 신청할 수 있어요. 접수는 1년에 사흘뿐이에요.', '전입 후 다음 접수 시기를 확인하세요. 그동안은 월세 부담을 직접 져야 해요.')
@@ -206,16 +206,16 @@ export function warnings(a: Answers): Warning[] {
   const buteemokAlive = alive('youthButeemok') || alive('newlywedButeemok')
   switch (a.stage) {
     case 'explore':
-      if (wantsLoan) w.push({ tone: 'todo', text: '집을 보러 다니는 중이라면 아직 괜찮아요. 계약을 하면 "잔금 치르기 전"이 신청 마감선이 돼요. 날짜를 달력에 적어두세요.' })
+      if (wantsLoan) w.push({ tone: 'todo', text: '집을 보러 다니는 중이라면 아직 괜찮아요. 계약을 하면 "잔금 치르기 전"이 신청 마감선이 돼요. 날짜를 달력에 적어 두세요.' })
       w.push({ tone: 'todo', text: '계약하기 전에 안심전세앱(HUG)에서 이 집의 보증금 반환 위험을 확인하세요. 반환보증이 안 되면 대출이 막힐 수 있어요.' })
       break
     case 'contract':
-      if (interestAlive) w.push({ tone: 'stop', text: '지금 잔금을 먼저 치르지 마세요. 세종 이자지원은 잔금 전에 신청해야 해요. 치르면 탈락해요.' })
+      if (interestAlive) w.push({ tone: 'stop', text: '잔금은 조금만 기다려 주세요. 세종 이자지원은 잔금을 치르기 전에 신청해야 하고, 치르고 나면 신청할 수 없어요.' })
       if (buteemokAlive) w.push({ tone: 'todo', text: '버팀목은 보증금의 5%를 낸 뒤 신청할 수 있어요. 계약금 영수증을 챙기세요.' })
       break
     case 'paid':
       if (wantsLoan && (interestAlive || buteemokAlive || a.deal === 'jeonse'))
-        w.push({ tone: 'stop', text: '잔금을 이미 치렀다면 세종 이자지원은 받을 수 없어요. 버팀목은 신청 기한이 남았는지 오늘 바로 확인하세요.' })
+        w.push({ tone: 'stop', text: '잔금을 이미 치렀다면 세종 이자지원은 받을 수 없어요. 버팀목은 신청 기한이 남았는지 오늘 바로 확인해 보세요.' })
       w.push({ tone: 'todo', text: '전입신고와 확정일자는 오늘 하세요. 그래야 보증금을 지킬 수 있어요.' })
       break
     case 'movedin':
