@@ -19,6 +19,7 @@ export interface Answers {
   rent: number // 만원/월
   houseType: HouseType
   stage: Stage
+  unknown?: string[] // "모름"이라고 답한 항목 (결과에서 다시 확인하도록 안내)
 }
 
 export type Status = 'ok' | 'maybe' | 'no'
@@ -46,7 +47,6 @@ export interface Verdict {
 }
 
 const isCouple = (a: Answers) => a.marital !== 'single'
-const isJeonseLike = (a: Answers) => a.deal === 'jeonse'
 
 function make(id: PolicyId): Verdict {
   return { id, status: 'ok', reasons: [], codes: [], todo: [] }
@@ -56,6 +56,7 @@ function fail(v: Verdict, code: ReasonCode, reason: string) {
   v.codes.push(code)
   v.reasons.push(reason)
 }
+const blocked = (v: Verdict): boolean => v.status === 'no'
 function warn(v: Verdict, reason: string, todo?: string) {
   if (v.status === 'ok') v.status = 'maybe'
   v.reasons.push(reason)
@@ -79,9 +80,9 @@ function sejongInterest(a: Answers): Verdict {
   if (a.hasLoan) fail(v, 'EXCL_DUP_LOAN', '이미 전세대출이 있으면 받을 수 없어요. 대출을 갈아타는 것도 안 돼요.')
   if (a.usedBefore) fail(v, 'EXCL_ONCE', '평생 한 번만 받을 수 있는데, 이미 받은 적이 있어요.')
   if (a.deal === 'wolse') fail(v, 'EXCL_DEAL_TYPE', '전세 대출 이자를 도와주는 제도예요. 월세(보증금 대출 없음)는 대상이 아니에요.')
-  else if (a.deal === 'banjeonse' && v.status !== 'no')
+  else if (a.deal === 'banjeonse' && !blocked(v))
     warn(v, '반전세(보증금+월세)가 "전세계약"으로 인정되는지 공식 기준이 확인되지 않았어요.', '세종시 청년지원팀(☎1533-1934)에 반전세도 되는지 먼저 물어보세요.')
-  if (v.status !== 'no') {
+  if (blocked(v) === false) {
     if (a.stage === 'paid' || a.stage === 'movedin')
       fail(v, 'EXCL_TIMING', '잔금을 이미 치렀어요. 이 지원은 잔금 치르기 전에 신청해야 해서 지금은 받을 수 없어요.')
     else if (a.stage === 'contract') {
@@ -198,17 +199,23 @@ export interface Warning {
 export function warnings(a: Answers): Warning[] {
   const w: Warning[] = []
   const wantsLoan = a.deal === 'jeonse' || a.deal === 'banjeonse'
+  // 시점 경고는 해당 제도를 실제로 받을 수 있을 때만 의미가 있다 (이미 불가인데 경고하면 혼란)
+  const vs = evaluate(a)
+  const alive = (id: PolicyId) => vs.find((v) => v.id === id)?.status !== 'no'
+  const interestAlive = alive('sejongInterest')
+  const buteemokAlive = alive('youthButeemok') || alive('newlywedButeemok')
   switch (a.stage) {
     case 'explore':
       if (wantsLoan) w.push({ tone: 'todo', text: '집을 보러 다니는 중이라면 아직 괜찮아요. 계약을 하면 "잔금 치르기 전"이 신청 마감선이 돼요. 날짜를 달력에 적어두세요.' })
       w.push({ tone: 'todo', text: '계약하기 전에 안심전세앱(HUG)에서 이 집의 보증금 반환 위험을 확인하세요. 반환보증이 안 되면 대출이 막힐 수 있어요.' })
       break
     case 'contract':
-      if (wantsLoan) w.push({ tone: 'stop', text: '지금 잔금을 먼저 치르지 마세요. 세종 이자지원은 잔금 전에 신청해야 해요. 치르면 탈락해요.' })
-      w.push({ tone: 'todo', text: '버팀목은 보증금의 5%를 낸 뒤 신청할 수 있어요. 계약금 영수증을 챙기세요.' })
+      if (interestAlive) w.push({ tone: 'stop', text: '지금 잔금을 먼저 치르지 마세요. 세종 이자지원은 잔금 전에 신청해야 해요. 치르면 탈락해요.' })
+      if (buteemokAlive) w.push({ tone: 'todo', text: '버팀목은 보증금의 5%를 낸 뒤 신청할 수 있어요. 계약금 영수증을 챙기세요.' })
       break
     case 'paid':
-      if (wantsLoan) w.push({ tone: 'stop', text: '잔금을 이미 치렀다면 세종 이자지원은 받을 수 없어요. 버팀목은 신청 기한이 남았는지 오늘 바로 확인하세요.' })
+      if (wantsLoan && (interestAlive || buteemokAlive || a.deal === 'jeonse'))
+        w.push({ tone: 'stop', text: '잔금을 이미 치렀다면 세종 이자지원은 받을 수 없어요. 버팀목은 신청 기한이 남았는지 오늘 바로 확인하세요.' })
       w.push({ tone: 'todo', text: '전입신고와 확정일자는 오늘 하세요. 그래야 보증금을 지킬 수 있어요.' })
       break
     case 'movedin':

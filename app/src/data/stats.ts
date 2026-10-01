@@ -54,7 +54,8 @@ export const SALE_META: ChartMeta = {
   note: '2026년 5월 아파트 거래 건수 (PRD 인용). 국토부 실거래가 원문으로 재확인이 필요해요.',
 }
 
-export const OUTFLOW = [{ name: '20~24세 순유출(2025)', value: -479 }]
+// value는 순유출 크기(명). 화면에서 '−'를 붙여 순유출로 표시한다.
+export const OUTFLOW = [{ name: '20~24세 순유출(2025)', value: 479 }]
 export const OUTFLOW_META: ChartMeta = {
   title: '20~24세는 한 해 479명이 세종을 떠났어요',
   takeaway: '대학을 졸업하는 시기에 세종에 남을 이유가 필요해요.',
