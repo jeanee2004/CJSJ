@@ -6,49 +6,85 @@ import type { PolicyInfo } from '../data/policies'
 import { TERMS } from '../data/terms'
 import { DataSection } from '../components/Charts'
 import { Feedback } from '../components/Feedback'
-import { IntroVideo } from '../components/IntroVideo'
 import { useStore } from '../store'
 
-/* ───────── 첫 화면: 영상 히어로 (어그로) ───────── */
-function HeroVideo({ onFull }: { onFull: () => void }) {
+/* ───────── 첫 화면: 영상 히어로 ─────────
+   · 세션 첫 방문에만 한 번 자동 재생하고 끝나면 정지, 이후에는 배경을 눌러야 재생된다
+   · 영어 캡션·검은 엔딩 화면이 나오기 전(6.6초)에서 멈춘다 */
+const HERO_KEY = 'cjsj.heroPlayed'
+const STOP_AT = 6.6
+function HeroVideo() {
   const vref = useRef<HTMLVideoElement>(null)
-  const still = reduced()
-  // 영어 캡션과 검은 엔딩 화면이 나오기 전(6.5초)에 페이드로 끊고 처음부터 다시 재생한다
+  const [auto] = useState(() => {
+    try { return !reduced() && !sessionStorage.getItem(HERO_KEY) } catch { return false }
+  })
+  const [playing, setPlaying] = useState(false)
+  const [started, setStarted] = useState(false)
+
+  const play = () => {
+    const v = vref.current
+    if (!v) return
+    if (!started || v.currentTime >= STOP_AT - 0.2) v.currentTime = 0
+    void v.play()
+  }
+  const toggle = () => {
+    const v = vref.current
+    if (!v) return
+    if (v.paused) play()
+    else v.pause()
+  }
+
+  // 첫 방문: 로딩 막이 걷힌 뒤(약 2.1초) 한 번 재생
+  useEffect(() => {
+    if (!auto) return
+    const t = setTimeout(play, 2100)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auto])
+
   useEffect(() => {
     const v = vref.current
-    if (!v || still) return
-    let busy = false
+    if (!v) return
     const id = setInterval(() => {
-      if (busy || v.currentTime < 6.5) return
-      busy = true
-      v.classList.add('cut')
-      setTimeout(() => { v.currentTime = 0; void v.play(); v.classList.remove('cut'); busy = false }, 300)
+      if (!v.paused && v.currentTime >= STOP_AT) v.pause()
     }, 100)
     return () => clearInterval(id)
-  }, [still])
+  }, [])
+
+  const onSection = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('a, button')) return
+    toggle()
+  }
+
   return (
-    <section className="vhero" aria-labelledby="vh-title">
+    <section className="vhero" aria-labelledby="vh-title" onClick={onSection} data-cursor={playing ? '정지' : '재생'}>
       <div className="vhero-media" aria-hidden="true">
         <video
-          ref={vref} className="vhero-video" src={still ? '/intro.mp4#t=6' : '/intro.mp4'}
-          autoPlay={!still} muted loop={false} playsInline preload="auto"
+          ref={vref} className="vhero-video" src={auto ? '/intro.mp4' : '/intro.mp4#t=6'}
+          muted playsInline preload="auto"
+          onPlay={() => { setPlaying(true); setStarted(true); try { sessionStorage.setItem(HERO_KEY, '1') } catch { /* noop */ } }}
+          onPause={() => setPlaying(false)}
         />
       </div>
       <div className="vhero-scrim" aria-hidden="true" />
       <div className="wrap vhero-inner">
         <span className="vh-pill">세종에서 처음 집을 구하는 청년 · 신혼부부를 위해</span>
         <Lines
-          as="h1" id="vh-title" className="display"
+          as="h1" id="vh-title" className="display vh-en"
           delay={(() => { try { return sessionStorage.getItem('cjsj.seen') ? 0.1 : 1.9 } catch { return 0.1 } })()}
-          lines={[<span className="l" key="a">세종에서 첫 집,</span>, <span key="b">어디서부터 <span className="em">시작</span>하죠?</span>]}
+          lines={[<span className="en1" key="a">Where Youth Settles,</span>, <span className="en2" key="b">Sejong <span className="blush">Begins.</span></span>]}
         />
+        <p className="vh-sub">세종에서 첫 집, <b>어디서부터 시작하죠?</b></p>
         <p className="lead">받을 수 있는 지원금, 신청하는 순서, 놓치기 쉬운 함정까지 — 3분이면 쉬운 말로 알려드릴게요.</p>
         <div className="hero-cta">
           <Btn to="/diagnose" variant="light">내 상황 확인해 보기</Btn>
-          <Btn onClick={onFull} variant="glass">전체 영상 보기</Btn>
+          <Btn to="/#intro" variant="glass">청정 세종 이야기</Btn>
         </div>
       </div>
-      <span className="vh-scroll">아래로 ↓</span>
+      <div className="vh-right">
+        {!playing && started && <button type="button" className="vh-replay" onClick={play}>▶ 영상 다시 재생</button>}
+        <span className="vh-scroll">아래로 ↓</span>
+      </div>
     </section>
   )
 }
@@ -90,7 +126,6 @@ function Intro() {
           as="h2" id="intro-t" className="display"
           lines={[<span className="l" key="a"><Wave text="청년이 머무는 곳," /></span>, <span key="b"><Wave text="세종이 " /><Wave text="시작" accent /><Wave text="되는 곳" /></span>]}
         />
-        <p className="tagline2">Where Youth Settles, Sejong Begins.</p>
         <p className="lead">청정(靑定)은 푸를 청에 정할 정, 청년이 세종에 마음 편히 자리 잡도록 돕고 싶은 마음을 담았어요. 어려운 경제 용어는 쉬운 말로 풀어서, 받을 수 있는 지원과 조심할 점을 차근차근 안내해 드릴게요.</p>
         <div className="hero-cta">
           <Btn to="/#policies">지원 제도 둘러보기</Btn>
@@ -98,25 +133,6 @@ function Intro() {
         </div>
       </div>
     </section>
-  )
-}
-
-/* ───────── 전체 영상 보기 (모달) ───────── */
-function VideoModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  useEffect(() => {
-    if (!open) return
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', esc)
-    return () => window.removeEventListener('keydown', esc)
-  }, [open, onClose])
-  if (!open) return null
-  return (
-    <div className="overlay vmodal" onClick={onClose} role="dialog" aria-modal="true" aria-label="소개 영상">
-      <div className="vmodal-box" onClick={(e) => e.stopPropagation()}>
-        <button className="circle close" type="button" aria-label="닫기" onClick={onClose}>✕</button>
-        <IntroVideo autoStart />
-      </div>
-    </div>
   )
 }
 
@@ -304,11 +320,9 @@ export function Footer() {
 }
 
 export default function Home() {
-  const [video, setVideo] = useState(false)
   return (
     <>
-      <VideoModal open={video} onClose={() => setVideo(false)} />
-      <HeroVideo onFull={() => setVideo(true)} />
+      <HeroVideo />
       <Marquee />
       <Intro />
       <How />
