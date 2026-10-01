@@ -28,8 +28,13 @@ function HeroVideo() {
     try { return !sessionStorage.getItem(HERO_KEY) } catch { return false }
   })
   const [still] = useState(() => reduced())
+  // 로딩 막이 이번에 뜨는지(Loader 와 같은 조건): 뜰 때만 막이 걷히길 기다린다
+  const [loaderUp] = useState(() => {
+    try { return !sessionStorage.getItem('cjsj.seen') && !reduced() } catch { return false }
+  })
   const [playing, setPlaying] = useState(false)
   const [started, setStarted] = useState(false)
+  const [blocked, setBlocked] = useState(false)
 
   useEffect(() => {
     const z = v0.current, a = va.current, b = vb.current
@@ -37,10 +42,34 @@ function HeroVideo() {
     const s = new HeroSequence([a, z, b], [HERO.clip1, HERO.clip0, HERO.clip2], HERO.fade)
     seq.current = s
     const id = setInterval(() => s.tick(), 60)
-    // 첫 방문: 로딩 막이 걷힌 뒤(약 2.1초) 처음부터 재생
-    const t = firstRun && !still ? setTimeout(() => s.start(), 2100) : undefined
-    return () => { clearInterval(id); if (t) clearTimeout(t); s.dispose() }
-  }, [firstRun, still])
+    // 첫 방문: 로딩 막이 걷힌 뒤(약 2.1초) + 첫 영상이 재생 가능해지면 처음부터 재생.
+    // 영상이 늦어도 3초 뒤에는 시작하고, 브라우저가 자동재생을 막으면 재생 버튼을 보여준다.
+    const timers: ReturnType<typeof setTimeout>[] = []
+    let onReady: (() => void) | undefined
+    let begun = false
+    if (firstRun && !still) {
+      const go = () => {
+        if (begun) return
+        begun = true
+        if (onReady) a.removeEventListener('canplay', onReady)
+        onReady = undefined
+        s.start()
+        timers.push(setTimeout(() => { if (a.paused && z.paused && b.paused) setBlocked(true) }, 1500))
+      }
+      timers.push(setTimeout(() => {
+        if (a.readyState >= 3) return go()
+        onReady = go
+        a.addEventListener('canplay', go, { once: true })
+        timers.push(setTimeout(go, 3000))
+      }, loaderUp ? 2100 : 0))
+    }
+    return () => {
+      clearInterval(id)
+      timers.forEach(clearTimeout)
+      if (onReady) a.removeEventListener('canplay', onReady)
+      s.dispose()
+    }
+  }, [firstRun, still, loaderUp])
 
   // 팝업이 열려 있는 동안에는 뒤의 영상을 잠시 멈췄다가 닫히면 이어서 재생한다
   useEffect(() => {
@@ -57,7 +86,7 @@ function HeroVideo() {
   }, [popupOpen])
 
   const autoplay = firstRun && !still
-  const showBtn = !playing && (started || !autoplay)
+  const showBtn = !playing && (started || !autoplay || blocked)
   const mark = () => { try { sessionStorage.setItem(HERO_KEY, '1') } catch { /* noop */ } }
   const onPlay = () => { setPlaying(true); setStarted(true); mark() }
   // 영상 중 하나라도 재생 중이면 재생 중
@@ -75,7 +104,7 @@ function HeroVideo() {
         <span className="vh-pill">세종에서 처음 집을 구하는 청년 · 신혼부부를 위해</span>
         <Lines
           as="h1" id="vh-title" className="display"
-          delay={(() => { try { return sessionStorage.getItem('cjsj.seen') ? 0.1 : 1.9 } catch { return 0.1 } })()}
+          delay={loaderUp ? 1.9 : 0.1}
           lines={[<span className="l" key="a">청년이 머무는 곳,</span>, <span key="b">세종이 <span className="em">시작</span>되는 곳</span>]}
         />
         <p className="vh-sub">세종에서 첫 집, <b>어디서부터 시작하죠?</b></p>
