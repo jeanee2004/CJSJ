@@ -103,7 +103,7 @@ function Intro() {
       ty = ((e.clientY - r.top) / r.height - 0.5) * 2
     }
     const tick = () => {
-      x += (tx - x) * 0.07; y += (ty - y) * 0.07
+      x += (tx - x) * 0.16; y += (ty - y) * 0.16
       el.style.setProperty('--px', x.toFixed(3))
       el.style.setProperty('--py', y.toFixed(3))
       raf = requestAnimationFrame(tick)
@@ -115,7 +115,9 @@ function Intro() {
   return (
     <section className="hero hero2" id="intro" ref={ref} aria-labelledby="intro-t">
       <div className="scene" aria-hidden="true">
-        <div className="arch a1" /><div className="arch a2" /><div className="arch a3" />
+        <div className="arch a1"><img src="/photos/home-interior.jpg" alt="" loading="lazy" decoding="async" style={{ objectPosition: '50% 38%' }} /></div>
+        <div className="arch a2"><img src="/photos/sejong-lake.jpg" alt="" loading="lazy" decoding="async" style={{ objectPosition: '62% 50%' }} /></div>
+        <div className="arch a3"><img src="/photos/sejong-skyline.jpg" alt="" loading="lazy" decoding="async" style={{ objectPosition: '50% 55%' }} /></div>
         <div className="stairs" /><div className="orb" />
       </div>
       <img className="hero-logo" src="/logo-lg.png" alt="청정 세종 CJSJ 로고" data-cursor="Hello" />
@@ -312,6 +314,8 @@ export function Footer({ tone = 'home' }: { tone?: 'home' | 'paper' }) {
           </div>
         </div>
         <p className="legal">
+          사진 출처(Pixabay 콘텐츠 라이선스, 상업적 이용 가능): 세종호수공원 <a className="ulink" href="https://pixabay.com/photos/sejong-city-lake-boat-korea-pond-4331956/" target="_blank" rel="noreferrer noopener">YHBae</a> · 호수 너머 도시 풍경 <a className="ulink" href="https://pixabay.com/photos/sejong-city-sejong-city-day-6003866/" target="_blank" rel="noreferrer noopener">BinnaKim714</a> · 집 안 풍경 <a className="ulink" href="https://pixabay.com/photos/interior-room-couch-window-4226020/" target="_blank" rel="noreferrer noopener">atanaspaskalev</a>.
+          <br /><br />
           이 서비스는 참고용이에요. 대출·지원금의 최종 판정은 각 기관(세종시, 주택도시기금, 복지로 등)에서 해요. 제도 수치는 2026년 공고·보도 기준이며 자주 바뀔 수 있어요. 신청을 대신해 드리지는 않아요. 로그인은 체험용이며, 입력하신 정보는 이 기기에만 저장돼요.
         </p>
       </div>

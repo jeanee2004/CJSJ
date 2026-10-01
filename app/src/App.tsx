@@ -27,6 +27,7 @@ export default function App() {
     <StoreProvider>
       <ScrollManager />
       <Loader />
+      <div className="aurora" aria-hidden="true" />
       <Flutter />
       <Cursor />
       <Header />

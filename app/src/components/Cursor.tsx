@@ -11,16 +11,16 @@ export function Cursor() {
   useEffect(() => {
     const d = dot.current, l = lab.current
     if (!d || !l || reduced() || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return
-    let x = innerWidth / 2, y = innerHeight / 2, dx = x, dy = y, lx = x, ly = y, raf = 0
+    let x = innerWidth / 2, y = innerHeight / 2, lx = x, ly = y, raf = 0
+    // 점은 마우스에 지연 없이 붙고, 라벨 원만 가볍게 따라온다
     const tick = () => {
-      dx += (x - dx) * 0.35; dy += (y - dy) * 0.35
-      lx += (x - lx) * 0.14; ly += (y - ly) * 0.14
-      d.style.transform = `translate(${dx}px, ${dy}px)`
-      l.style.transform = `translate(${lx}px, ${ly}px)`
+      lx += (x - lx) * 0.4; ly += (y - ly) * 0.4
+      l.style.transform = `translate3d(${lx}px, ${ly}px, 0)`
       raf = requestAnimationFrame(tick)
     }
     const move = (e: MouseEvent) => {
       x = e.clientX; y = e.clientY
+      d.style.transform = `translate3d(${x}px, ${y}px, 0)`
       const t = e.target as HTMLElement
       const small = !!t.closest('.btn, .circle, .fchip, .choice, .social button, .preset button, .stepper button, .nav a, .brand, .back, .intro-play, .intro-mute, a, button, summary, label, input')
       const lab = small ? undefined : t.closest('[data-cursor]')?.getAttribute('data-cursor')
