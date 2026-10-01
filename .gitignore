@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+# GitHub 100MB 파일 한도 초과 — 레퍼런스 영상은 로컬에만 보관
+*.mov
