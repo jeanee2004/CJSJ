@@ -56,7 +56,7 @@ interface BtnProps {
   href?: string
   onClick?: () => void
   children: string
-  variant?: 'ink' | 'light' | 'line' | 'plain'
+  variant?: 'ink' | 'light' | 'line' | 'plain' | 'glass'
   size?: 'md' | 'sm'
   disabled?: boolean
   type?: 'button' | 'submit'

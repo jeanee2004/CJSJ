@@ -6,7 +6,7 @@ import type { ChartMeta } from '../data/stats'
 import { CountUp, Reveal, SourceBlock, VBadge } from '../ui'
 
 // 다크 배경용 팔레트. 색만으로 구분하지 않도록 값 라벨·범례·표를 함께 둔다.
-const C = { lime: '#ff9cc4', mint: '#8cf0cf', aqua: '#7ccbff', peri: '#a3afff', coral: '#ff7a59', grey: '#7b8296', text: '#fff8fa' }
+const C = { lime: '#f0a9bf', mint: '#8cf0cf', aqua: '#7ccbff', peri: '#a3afff', coral: '#ff7a59', grey: '#7b8296', text: '#fff8fa' }
 const DIM = 0.28
 
 function Frame({ meta, children, table, legend }: { meta: ChartMeta; children: ReactNode; table: { k: string; v: string }[]; legend?: string }) {

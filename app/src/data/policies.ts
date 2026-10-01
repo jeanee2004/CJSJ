@@ -82,7 +82,7 @@ export const POLICIES: PolicyInfo[] = [
     apply: PORTALS.sejong,
     sourceIds: ['newspim_interest', 'hankook_interest', 'sejong_interest_2025'],
     verified: 'secondary',
-    caution: '잔금 치르기 전에 신청해야 해요. 주택금융공사 보증료 등 부대비용은 본인 부담이에요(2025 공고 기준).',
+    caution: '집값의 마지막 큰 금액(잔금)을 치르기 전에 신청해야 해요. 주택금융공사 보증료 같은 부대비용은 본인이 부담해요(2025 공고 기준).',
   },
   {
     id: 'sejongRent',

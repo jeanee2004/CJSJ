@@ -35,7 +35,7 @@ export function Header() {
 
   return (
     <>
-      <header className={`header ${stuck ? 'stuck' : ''}`}>
+      <header className={`header ${stuck ? 'stuck' : ''} ${loc.pathname === '/' && !stuck ? 'on-dark' : ''}`}>
         <div className="wrap">
           <Link to="/" className="brand" aria-label="청정 세종 홈">
             <img src="/logo-sm.png" alt="" />

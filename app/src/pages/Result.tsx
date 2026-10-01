@@ -61,13 +61,13 @@ export default function Result() {
 
           {warns.map((w, i) => (
             <div key={i} className={`strip ${w.tone === 'stop' ? 'stop' : ''}`} role={w.tone === 'stop' ? 'alert' : undefined}>
-              <span className="ico" aria-hidden="true">{w.tone === 'stop' ? '⛔' : '📌'}</span>
+              <span className="ico" aria-hidden="true">{w.tone === 'stop' ? '!' : '✓'}</span>
               <span><b>{w.tone === 'stop' ? '이것만은 조심해 주세요' : '미리 챙겨 두면 좋아요'}</b>{w.text}</span>
             </div>
           ))}
           {unknown.length > 0 && (
             <div className="strip ask">
-              <span className="ico" aria-hidden="true">❓</span>
+              <span className="ico" aria-hidden="true">?</span>
               <span><b>"잘 모르겠어요"라고 하신 항목</b>없다고 보고 계산했어요. 한 번 확인해 보세요: {unknown.map((k) => UNKNOWN_TXT[k]).join(' / ')}</span>
             </div>
           )}

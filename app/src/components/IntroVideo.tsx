@@ -1,8 +1,8 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 // 소개 영상(10초). 재생 전에는 5초 지점의 웃는 장면을 보여주고,
 // 영상 우하단의 AI 생성 마크는 하단 라벨로 가린다.
-export function IntroVideo() {
+export function IntroVideo({ autoStart = false }: { autoStart?: boolean }) {
   const ref = useRef<HTMLVideoElement>(null)
   const [playing, setPlaying] = useState(false)
   const [started, setStarted] = useState(false)
@@ -19,6 +19,11 @@ export function IntroVideo() {
       void v.play()
     } else v.pause()
   }
+
+  useEffect(() => {
+    if (autoStart) toggle()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className={`intro ${playing ? 'is-playing' : ''}`} data-cursor={playing ? '멈춤' : '재생'}>
@@ -38,7 +43,7 @@ export function IntroVideo() {
         </button>
       )}
       <button type="button" className="intro-mute" aria-pressed={muted} aria-label={muted ? '소리 켜기' : '소리 끄기'} onClick={() => setMuted((m) => !m)}>
-        {muted ? '🔇' : '🔊'}
+        {muted ? '소리 켜기' : '소리 끄기'}
       </button>
     </div>
   )

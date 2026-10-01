@@ -9,8 +9,52 @@ import { Feedback } from '../components/Feedback'
 import { IntroVideo } from '../components/IntroVideo'
 import { useStore } from '../store'
 
-/* ───────── 히어로: 마우스에 반응하는 아치·구슬·로고 (커서와 반대로 깊이별 이동) ───────── */
-function Hero() {
+/* ───────── 첫 화면: 영상 히어로 (어그로) ───────── */
+function HeroVideo({ onFull }: { onFull: () => void }) {
+  const vref = useRef<HTMLVideoElement>(null)
+  const still = reduced()
+  // 영어 캡션과 검은 엔딩 화면이 나오기 전(6.5초)에 페이드로 끊고 처음부터 다시 재생한다
+  useEffect(() => {
+    const v = vref.current
+    if (!v || still) return
+    let busy = false
+    const id = setInterval(() => {
+      if (busy || v.currentTime < 6.5) return
+      busy = true
+      v.classList.add('cut')
+      setTimeout(() => { v.currentTime = 0; void v.play(); v.classList.remove('cut'); busy = false }, 300)
+    }, 100)
+    return () => clearInterval(id)
+  }, [still])
+  return (
+    <section className="vhero" aria-labelledby="vh-title">
+      <div className="vhero-media" aria-hidden="true">
+        <video
+          ref={vref} className="vhero-video" src={still ? '/intro.mp4#t=6' : '/intro.mp4'}
+          autoPlay={!still} muted loop={false} playsInline preload="auto"
+        />
+      </div>
+      <div className="vhero-scrim" aria-hidden="true" />
+      <div className="wrap vhero-inner">
+        <span className="vh-pill">세종에서 처음 집을 구하는 청년 · 신혼부부를 위해</span>
+        <Lines
+          as="h1" id="vh-title" className="display"
+          delay={(() => { try { return sessionStorage.getItem('cjsj.seen') ? 0.1 : 1.9 } catch { return 0.1 } })()}
+          lines={[<span className="l" key="a">세종에서 첫 집,</span>, <span key="b">어디서부터 <span className="em">시작</span>하죠?</span>]}
+        />
+        <p className="lead">받을 수 있는 지원금, 신청하는 순서, 놓치기 쉬운 함정까지 — 3분이면 쉬운 말로 알려드릴게요.</p>
+        <div className="hero-cta">
+          <Btn to="/diagnose" variant="light">내 상황 확인해 보기</Btn>
+          <Btn onClick={onFull} variant="glass">전체 영상 보기</Btn>
+        </div>
+      </div>
+      <span className="vh-scroll">아래로 ↓</span>
+    </section>
+  )
+}
+
+/* ───────── 두 번째 화면: 인트로 (마우스에 반응하는 아치·구슬·로고) ───────── */
+function Intro() {
   const { hasSaved } = useStore()
   const ref = useRef<HTMLElement>(null)
   useEffect(() => {
@@ -33,7 +77,7 @@ function Hero() {
     return () => { el.removeEventListener('mousemove', move); cancelAnimationFrame(raf) }
   }, [])
   return (
-    <section className="hero" ref={ref} aria-labelledby="hero-title">
+    <section className="hero hero2" id="intro" ref={ref} aria-labelledby="intro-t">
       <div className="scene" aria-hidden="true">
         <div className="arch a1" /><div className="arch a2" /><div className="arch a3" />
         <div className="stairs" /><div className="orb" />
@@ -41,59 +85,52 @@ function Hero() {
       <img className="hero-logo" src="/logo-lg.png" alt="청정 세종 CJSJ 로고" data-cursor="Hello" />
       <div className="grain" aria-hidden="true" />
       <div className="wrap hero-inner">
-        <span className="label" style={{ color: 'var(--ink)' }}>청정 세종 · 세종 주거지원 쉬운 안내 · 2026년 10월 1일 기준</span>
+        <span className="label" style={{ color: 'var(--ink)' }}>청정 세종이라는 이름에는</span>
         <Lines
-          as="h1" id="hero-title" className="display" delay={(() => { try { return sessionStorage.getItem('cjsj.seen') ? 0.15 : 2.0 } catch { return 0.15 } })()}
-          lines={[<span className="l" key="a"><Wave text="내 집으로 가는 길," /></span>, <span key="b"><Wave text="함께 " /><Wave text="확인해" accent /><Wave text=" 봐요" /></span>]}
+          as="h2" id="intro-t" className="display"
+          lines={[<span className="l" key="a"><Wave text="청년이 머무는 곳," /></span>, <span key="b"><Wave text="세종이 " /><Wave text="시작" accent /><Wave text="되는 곳" /></span>]}
         />
-        <p className="lead">어려운 경제 용어를 몰라도 괜찮아요. 몇 가지만 알려 주시면 <b>받을 수 있는 지원</b>과 <b>조심할 점</b>을 차근차근 안내해 드릴게요.</p>
+        <p className="tagline2">Where Youth Settles, Sejong Begins.</p>
+        <p className="lead">청정(靑定)은 푸를 청에 정할 정, 청년이 세종에 마음 편히 자리 잡도록 돕고 싶은 마음을 담았어요. 어려운 경제 용어는 쉬운 말로 풀어서, 받을 수 있는 지원과 조심할 점을 차근차근 안내해 드릴게요.</p>
         <div className="hero-cta">
-          <Btn to="/diagnose">내 상황 확인해 보기</Btn>
-          <Btn to="/#about" variant="light">소개 영상 보기</Btn>
+          <Btn to="/#policies">지원 제도 둘러보기</Btn>
           {hasSaved && <Btn to="/result" variant="line">지난 결과 보기</Btn>}
         </div>
-      </div>
-      <div className="hero-facts">
-        <span className="label" style={{ color: 'var(--ink)' }}>3분이면 충분해요 · 로그인 없이 가능해요 · 입력한 내용은 서버로 보내지 않아요</span>
-        <span className="label" style={{ color: 'var(--ink)' }}>아래로 ↓</span>
       </div>
     </section>
   )
 }
 
+/* ───────── 전체 영상 보기 (모달) ───────── */
+function VideoModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  useEffect(() => {
+    if (!open) return
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [open, onClose])
+  if (!open) return null
+  return (
+    <div className="overlay vmodal" onClick={onClose} role="dialog" aria-modal="true" aria-label="소개 영상">
+      <div className="vmodal-box" onClick={(e) => e.stopPropagation()}>
+        <button className="circle close" type="button" aria-label="닫기" onClick={onClose}>✕</button>
+        <IntroVideo autoStart />
+      </div>
+    </div>
+  )
+}
+
 function Marquee() {
-  const items = ['놓치기 쉬운 지원금', '잔금 전에 신청해요', '월세도 도와줘요', '전세·월세 모두 확인', '더 이득인 쪽 비교']
+  const items = ['놓치기 쉬운 지원금', '신청 순서가 중요해요', '월세도 지원받을 수 있어요', '전세·월세 한 번에 확인', '나에게 더 이득인 쪽은?']
   const row = (
     <span aria-hidden="true">
       {items.map((t) => (<span key={t}>{t}<i>✺</i></span>))}
     </span>
   )
   return (
-    <div className="marquee" aria-label="핵심 메시지: 놓치기 쉬운 지원금, 잔금 전에 신청, 월세도 지원, 더 이득인 쪽 비교">
+    <div className="marquee" aria-label="핵심 메시지: 놓치기 쉬운 지원금, 신청 순서가 중요해요, 월세도 지원받을 수 있어요, 전세·월세 한 번에 확인">
       <div className="track">{row}{row}</div>
     </div>
-  )
-}
-
-/* ───────── 소개: 영상 + 이름의 뜻 ───────── */
-function About() {
-  return (
-    <section className="sec about" id="about" aria-labelledby="about-t">
-      <div className="wrap">
-        <div className="sec-head">
-          <div className="eyebrow"><i>소개</i><span className="label">청정 세종 이야기</span></div>
-          <p>청정(靑定)은 푸를 청(靑)에 정할 정(定)을 써서, 청년이 세종에 마음 편히 자리 잡도록 돕고 싶다는 마음을 담았어요. 집을 구하는 일이 막막하지 않도록, 받을 수 있는 지원과 지켜야 할 순서를 쉬운 말로 안내해 드려요.</p>
-          <Lines id="about-t" className="display" lines={[<span className="l" key="1">청년이 머무는 곳,</span>, <span key="2">세종이 <span className="em">시작</span>되는 곳</span>]} />
-        </div>
-        <Reveal><IntroVideo /></Reveal>
-        <p className="tagline">Where Youth Settles, Sejong Begins.</p>
-        <ul className="about-points">
-          <li><b>한 번에 한 가지씩</b><span>질문은 하나씩, 어려우면 "잘 모르겠어요"를 눌러도 괜찮아요.</span></li>
-          <li><b>낯선 말은 바로 풀어서</b><span>보증금, 전세, 택1 같은 말을 눌러 보면 쉬운 설명이 나와요.</span></li>
-          <li><b>출처와 기준일까지</b><span>모든 숫자에 출처와 기준일을 달아 두었고, 확인하지 못한 값은 "확인 필요"로 알려드려요.</span></li>
-        </ul>
-      </div>
-    </section>
   )
 }
 
@@ -101,7 +138,7 @@ function About() {
 const STEPS = [
   { n: '01', t: '편하게 답해 주세요', d: '나이, 소득, 구하는 집 형태를 한 번에 한 가지씩 여쭤볼게요. 잘 모르는 건 "잘 모르겠어요"를 눌러도 괜찮아요.' },
   { n: '02', t: '쉬운 말로 알려드려요', d: '"신청할 수 있어요 / 확인해 보면 좋아요 / 지금은 어려워요"로 알려드리고, 이유도 풀어서 설명해 드려요.' },
-  { n: '03', t: '순서대로 신청해요', d: '"잔금은 신청한 뒤에 치러요" 같은 순서를 미리 알려드리고, 신청할 곳도 이어 드려요.' },
+  { n: '03', t: '순서대로 신청해요', d: '집값을 다 치르기 전에 신청해야 하는 제도도 있어요. 이런 순서를 미리 알려드리고, 신청할 곳도 이어 드려요.' },
 ]
 function How() {
   return (
@@ -267,11 +304,13 @@ export function Footer() {
 }
 
 export default function Home() {
+  const [video, setVideo] = useState(false)
   return (
     <>
-      <Hero />
+      <VideoModal open={video} onClose={() => setVideo(false)} />
+      <HeroVideo onFull={() => setVideo(true)} />
       <Marquee />
-      <About />
+      <Intro />
       <How />
       <Policies />
       <section className="sec dark" id="data" aria-labelledby="data-t">

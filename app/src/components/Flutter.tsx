@@ -1,73 +1,61 @@
 import { useEffect, useRef } from 'react'
 import { reduced } from '../ui'
 
-// 나비·꽃잎 효과 엔진 (unseen.co의 Blossom 실험에서 영감)
-//  · 히어로: 나비 7마리가 날아다니다가 커서 주변을 맴돈다
-//  · 커서 이동: 꽃잎·가끔 나비가 흩날리며 사라진다
-//  · 버튼/목록/카드에 올리면: 그 자리에서 나비가 날아오른다
-//  · 클릭/터치: 꽃잎과 나비가 터져 나온다
-// 캔버스 1장, 입자 최대 110개. 모션 줄이기 설정이면 아예 켜지지 않는다.
+// 흰 나비 효과 (unseen.co의 Blossom 실험처럼 절제된 화이트 톤)
+//  · 첫 화면: 나비 3마리가 천천히 날다가 커서 주변을 맴돈다
+//  · 주요 버튼·로고 위: 나비 2마리가 날아오른다 (그 외 요소는 반응 없음)
+//  · 클릭/터치: 나비 3마리
+// 캔버스 1장, 입자 최대 14개. 모션 줄이기 설정이면 켜지지 않는다.
 
 interface P {
-  kind: 0 | 1 // 0 나비, 1 꽃잎
-  mode: 0 | 1 | 2 // 0 버스트, 1 상주(히어로), 2 트레일
+  mode: 0 | 1 // 0 버스트, 1 상주
   x: number; y: number; vx: number; vy: number
-  a: number; va: number; size: number; ph: number; seed: number
+  a: number; size: number; ph: number; seed: number
   age: number; life: number; fade: number
-  c: [string, string]
 }
 
-const PAL: [string, string][] = [
-  ['#ff8fba', '#ffd9e8'], ['#ffb0cf', '#fff0f6'], ['#7fcfff', '#d9f1ff'],
-  ['#8fe8cc', '#e4fff6'], ['#c7bcff', '#f0ebff'], ['#ff7aa8', '#ffe3ee'],
-]
-const HOVER_SEL = '.btn, .idx-head, .fchip, .choice, .circle, .hero-logo, .step, .gl-row, .nav a, .social button, .preset button, .cmp, .intro-play, .vd'
-const MAX = 110
+const HOVER_SEL = '.hero-cta .btn, .hero-logo, .vhero .btn'
+const MAX = 14
+const AMBIENT = 3
 const rnd = (a: number, b: number) => a + Math.random() * (b - a)
-const pick = () => PAL[(Math.random() * PAL.length) | 0]
 
 function drawButterfly(ctx: CanvasRenderingContext2D, p: P, t: number, alpha: number) {
   const s = p.size
-  const flap = 0.38 + 0.62 * Math.abs(Math.cos(t * (p.mode === 1 ? 0.011 : 0.016) + p.ph))
+  const flap = 0.4 + 0.6 * Math.abs(Math.cos(t * (p.mode === 1 ? 0.0075 : 0.012) + p.ph))
   ctx.save()
   ctx.translate(p.x, p.y)
   ctx.rotate(p.a + Math.PI / 2)
   ctx.globalAlpha = alpha
+  ctx.shadowColor = 'rgba(30, 40, 80, 0.3)'
+  ctx.shadowBlur = 10
+  ctx.shadowOffsetY = 3
   for (const side of [-1, 1]) {
     ctx.save()
     ctx.scale(side * flap, 1)
-    const g = ctx.createLinearGradient(0, -s, s * 1.2, s * 0.4)
-    g.addColorStop(0, p.c[0]); g.addColorStop(1, p.c[1])
+    const g = ctx.createLinearGradient(0, -s, s * 1.2, s * 0.5)
+    g.addColorStop(0, 'rgba(255,255,255,0.96)')
+    g.addColorStop(1, 'rgba(236,241,255,0.6)')
     ctx.fillStyle = g
+    ctx.strokeStyle = 'rgba(130,142,185,0.4)'
+    ctx.lineWidth = 0.8
     ctx.beginPath() // 위쪽 큰 날개
     ctx.moveTo(0, -s * 0.1)
     ctx.bezierCurveTo(s * 0.9, -s * 1.35, s * 1.55, -s * 0.2, s * 0.2, s * 0.15)
-    ctx.closePath(); ctx.fill()
+    ctx.closePath(); ctx.fill(); ctx.stroke()
     ctx.beginPath() // 아래쪽 작은 날개
     ctx.moveTo(0, s * 0.05)
     ctx.bezierCurveTo(s * 1.0, s * 0.15, s * 0.85, s * 1.1, s * 0.05, s * 0.72)
-    ctx.closePath(); ctx.fill()
+    ctx.closePath(); ctx.fill(); ctx.stroke()
+    ctx.shadowColor = 'transparent'
+    ctx.beginPath() // 날개맥
+    ctx.moveTo(s * 0.12, -s * 0.05); ctx.lineTo(s * 0.9, -s * 0.55)
+    ctx.moveTo(s * 0.12, 0); ctx.lineTo(s * 0.7, s * 0.3)
+    ctx.stroke()
     ctx.restore()
   }
-  ctx.fillStyle = 'rgba(23,35,77,0.7)'
-  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.07, s * 0.5, 0, 0, Math.PI * 2); ctx.fill()
-  ctx.restore()
-}
-
-function drawPetal(ctx: CanvasRenderingContext2D, p: P, alpha: number) {
-  const s = p.size
-  ctx.save()
-  ctx.translate(p.x, p.y)
-  ctx.rotate(p.a)
-  ctx.globalAlpha = alpha
-  const g = ctx.createLinearGradient(0, -s, 0, s)
-  g.addColorStop(0, p.c[0]); g.addColorStop(1, p.c[1])
-  ctx.fillStyle = g
-  ctx.beginPath()
-  ctx.moveTo(0, -s)
-  ctx.bezierCurveTo(s * 0.9, -s * 0.4, s * 0.6, s * 0.8, 0, s)
-  ctx.bezierCurveTo(-s * 0.6, s * 0.8, -s * 0.9, -s * 0.4, 0, -s)
-  ctx.fill()
+  ctx.shadowColor = 'transparent'
+  ctx.fillStyle = 'rgba(40,50,90,0.55)'
+  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.06, s * 0.46, 0, 0, Math.PI * 2); ctx.fill()
   ctx.restore()
 }
 
@@ -90,144 +78,98 @@ export function Flutter() {
     window.addEventListener('resize', resize)
 
     const ps: P[] = []
-    let mx = W / 2, my = H / 2, lastMove = -1e9, lx = 0, ly = 0, now = 0
+    let mx = W / 2, my = H / 2, lastMove = -1e9, now = 0
     const hoverAt = new WeakMap<Element, number>()
 
-    const trim = () => {
+    const burst = (x: number, y: number, n: number, power: number) => {
+      for (let i = 0; i < n; i++) {
+        const ang = rnd(-Math.PI * 0.9, -Math.PI * 0.1)
+        const sp = rnd(1.2, 2.4) * power
+        ps.push({
+          mode: 0, x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, a: ang,
+          size: rnd(15, 22), ph: rnd(0, 6.28), seed: rnd(0, 100), age: 0, life: rnd(1600, 2400), fade: 1,
+        })
+      }
       while (ps.length > MAX) {
-        const i = ps.findIndex((p) => p.mode !== 1)
+        const i = ps.findIndex((p) => p.mode === 0)
         if (i < 0) break
         ps.splice(i, 1)
       }
     }
-    const burst = (x: number, y: number, n: number, power: number, bf: number) => {
-      for (let i = 0; i < n; i++) {
-        const ang = rnd(-Math.PI * 0.97, -Math.PI * 0.03)
-        const sp = rnd(1.4, 3.4) * power
-        const isBf = Math.random() < bf
-        ps.push({
-          kind: isBf ? 0 : 1, mode: 0, x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
-          a: ang, va: rnd(-0.1, 0.1), size: isBf ? rnd(16, 26) : rnd(6, 10), ph: rnd(0, 6.28), seed: rnd(0, 100),
-          age: 0, life: rnd(1500, 2300), fade: 1, c: pick(),
-        })
-      }
-      trim()
+    const turn = (p: P, want: number, max: number) => {
+      let diff = want - p.a
+      while (diff > Math.PI) diff -= Math.PI * 2
+      while (diff < -Math.PI) diff += Math.PI * 2
+      p.a += Math.max(-max, Math.min(max, diff))
     }
-    const ambientCount = () => ps.filter((p) => p.mode === 1).length
 
     const step = (dt: number) => {
       now += dt
-      const heroVisible = window.scrollY < H * 0.85 && fine
-      // 상주 나비: 히어로가 보일 때만 7마리
-      if (heroVisible && ambientCount() < 7 && Math.random() < 0.05) {
-        const fromLeft = Math.random() < 0.5
+      const active = fine && window.location.pathname === '/' && window.scrollY < H * 1.7
+      const amb = ps.filter((p) => p.mode === 1).length
+      if (active && amb < AMBIENT && Math.random() < 0.02) {
+        const left = Math.random() < 0.5
         ps.push({
-          kind: 0, mode: 1, x: fromLeft ? -20 : W + 20, y: rnd(H * 0.2, H * 0.8), vx: 0, vy: 0,
-          a: fromLeft ? 0 : Math.PI, va: 0, size: rnd(20, 30), ph: rnd(0, 6.28), seed: rnd(0, 100),
-          age: 0, life: 1e9, fade: 0, c: pick(),
+          mode: 1, x: left ? -30 : W + 30, y: rnd(H * 0.25, H * 0.75), vx: 0, vy: 0, a: left ? 0 : Math.PI,
+          size: rnd(22, 30), ph: rnd(0, 6.28), seed: rnd(0, 100), age: 0, life: 1e9, fade: 0,
         })
       }
       for (let i = ps.length - 1; i >= 0; i--) {
         const p = ps[i]
         p.age += dt
         if (p.mode === 1) {
-          const target = heroVisible ? 1 : 0
-          p.fade += (target - p.fade) * 0.04
-          if (target === 0 && p.fade < 0.03) { ps.splice(i, 1); continue }
-          const follow = now - lastMove < 2600
-          let speed = 1.1
-          if (follow) {
-            const tx = mx + Math.cos(now * 0.0021 + p.seed) * 70
-            const ty = my + Math.sin(now * 0.0027 + p.seed) * 46
-            const want = Math.atan2(ty - p.y, tx - p.x)
-            let diff = want - p.a
-            while (diff > Math.PI) diff -= Math.PI * 2
-            while (diff < -Math.PI) diff += Math.PI * 2
-            p.a += Math.max(-0.07, Math.min(0.07, diff))
-            speed = Math.max(0.8, Math.min(3.4, Math.hypot(tx - p.x, ty - p.y) * 0.025))
+          p.fade += ((active ? 1 : 0) - p.fade) * 0.03
+          if (!active && p.fade < 0.03) { ps.splice(i, 1); continue }
+          let speed = 0.8
+          if (now - lastMove < 2400) {
+            const tx = mx + Math.cos(now * 0.0016 + p.seed) * 90
+            const ty = my + Math.sin(now * 0.0021 + p.seed) * 60
+            turn(p, Math.atan2(ty - p.y, tx - p.x), 0.045)
+            speed = Math.max(0.6, Math.min(2.4, Math.hypot(tx - p.x, ty - p.y) * 0.02))
           } else {
-            p.a += Math.sin(now * 0.0013 + p.seed) * 0.022 + (Math.random() - 0.5) * 0.03
-            if (p.x < 30 || p.x > W - 30 || p.y < 90 || p.y > H - 30) {
-              const want = Math.atan2(H / 2 - p.y, W / 2 - p.x)
-              let diff = want - p.a
-              while (diff > Math.PI) diff -= Math.PI * 2
-              while (diff < -Math.PI) diff += Math.PI * 2
-              p.a += Math.max(-0.05, Math.min(0.05, diff))
-            }
+            p.a += Math.sin(now * 0.0011 + p.seed) * 0.018 + (Math.random() - 0.5) * 0.02
+            if (p.x < 40 || p.x > W - 40 || p.y < 90 || p.y > H - 40) turn(p, Math.atan2(H / 2 - p.y, W / 2 - p.x), 0.04)
           }
-          p.vx = Math.cos(p.a) * speed
-          p.vy = Math.sin(p.a) * speed
-          p.x += p.vx
-          p.y += p.vy
+          p.vx = Math.cos(p.a) * speed; p.vy = Math.sin(p.a) * speed
+          p.x += p.vx; p.y += p.vy
           continue
         }
         if (p.age >= p.life) { ps.splice(i, 1); continue }
-        if (p.kind === 0) {
-          p.vx *= 0.985
-          p.vy = p.vy * 0.985 - 0.012
-          p.x += p.vx + Math.sin(p.age * 0.008 + p.ph) * 0.55
-          p.y += p.vy + Math.cos(p.age * 0.006 + p.ph) * 0.3
-          p.a = Math.atan2(p.vy, p.vx)
-        } else {
-          p.vx *= 0.99
-          p.vy += 0.018
-          p.x += p.vx + Math.sin(p.age * 0.004 + p.ph) * 0.4
-          p.y += p.vy
-          p.a += p.va
-        }
+        p.vx *= 0.985; p.vy = p.vy * 0.985 - 0.01
+        p.x += p.vx + Math.sin(p.age * 0.006 + p.ph) * 0.4
+        p.y += p.vy + Math.cos(p.age * 0.005 + p.ph) * 0.25
+        p.a = Math.atan2(p.vy, p.vx)
       }
       ctx.clearRect(0, 0, W, H)
       for (const p of ps) {
-        const fadeIn = Math.min(1, p.age / 120)
-        const fadeOut = p.mode === 1 ? p.fade : Math.min(1, (p.life - p.age) / 600)
-        const alpha = Math.max(0, Math.min(fadeIn, fadeOut)) * (p.mode === 1 ? 0.95 : 0.9)
-        if (alpha <= 0.01) continue
-        if (p.kind === 0) drawButterfly(ctx, p, now, alpha)
-        else drawPetal(ctx, p, alpha)
+        const fadeIn = Math.min(1, p.age / 200)
+        const fadeOut = p.mode === 1 ? p.fade : Math.min(1, (p.life - p.age) / 700)
+        const alpha = Math.max(0, Math.min(fadeIn, fadeOut)) * 0.95
+        if (alpha > 0.01) drawButterfly(ctx, p, now, alpha)
       }
     }
 
     let last = performance.now(), raf = 0
-    const frame = (ts: number) => {
-      step(Math.min(48, ts - last))
-      last = ts
-      raf = requestAnimationFrame(frame)
-    }
+    const frame = (ts: number) => { step(Math.min(48, ts - last)); last = ts; raf = requestAnimationFrame(frame) }
     raf = requestAnimationFrame(frame)
 
-    const onMove = (e: MouseEvent) => {
-      mx = e.clientX; my = e.clientY; lastMove = now
-      if (!fine) return
-      const t = e.target as HTMLElement
-      if (t.closest('input, textarea')) return
-      if (Math.hypot(mx - lx, my - ly) > 34) {
-        lx = mx; ly = my
-        const isBf = Math.random() < 0.09
-        ps.push({
-          kind: isBf ? 0 : 1, mode: 2, x: mx, y: my, vx: rnd(-0.5, 0.5), vy: isBf ? rnd(-1, -0.2) : rnd(-0.3, 0.2),
-          a: rnd(0, 6.28), va: rnd(-0.06, 0.06), size: isBf ? rnd(12, 16) : rnd(5, 8), ph: rnd(0, 6.28), seed: 0,
-          age: 0, life: rnd(900, 1500), fade: 1, c: pick(),
-        })
-        trim()
-      }
-    }
+    const onMove = (e: MouseEvent) => { mx = e.clientX; my = e.clientY; lastMove = now }
     const onOver = (e: MouseEvent) => {
       if (!fine) return
       const el = (e.target as HTMLElement).closest?.(HOVER_SEL)
       if (!el || el.contains(e.relatedTarget as Node)) return
       const t = performance.now()
-      if (t - (hoverAt.get(el) ?? 0) < 700) return
+      if (t - (hoverAt.get(el) ?? 0) < 1500) return
       hoverAt.set(el, t)
-      burst(e.clientX, e.clientY, 6, 1, 0.65)
+      burst(e.clientX, e.clientY, 2, 1)
     }
-    const onDown = (e: PointerEvent) => burst(e.clientX, e.clientY, 12, 1.4, 0.5)
-
+    const onDown = (e: PointerEvent) => burst(e.clientX, e.clientY, 3, 1.2)
     window.addEventListener('mousemove', onMove)
     document.addEventListener('mouseover', onOver)
     window.addEventListener('pointerdown', onDown)
 
     if (import.meta.env.DEV) {
-      ;(window as unknown as { __fl: unknown }).__fl = { burst, step, count: () => ps.length }
+      ;(window as unknown as { __fl: unknown }).__fl = { burst: (x: number, y: number, n = 3) => burst(x, y, n, 1.2), step, count: () => ps.length }
     }
     return () => {
       cancelAnimationFrame(raf)

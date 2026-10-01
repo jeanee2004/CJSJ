@@ -210,7 +210,7 @@ export function warnings(a: Answers): Warning[] {
       w.push({ tone: 'todo', text: '계약하기 전에 안심전세앱(HUG)에서 이 집의 보증금 반환 위험을 확인하세요. 반환보증이 안 되면 대출이 막힐 수 있어요.' })
       break
     case 'contract':
-      if (interestAlive) w.push({ tone: 'stop', text: '잔금은 조금만 기다려 주세요. 세종 이자지원은 잔금을 치르기 전에 신청해야 하고, 치르고 나면 신청할 수 없어요.' })
+      if (interestAlive) w.push({ tone: 'stop', text: '집값의 마지막 큰 금액(잔금)은 조금만 기다려 주세요. 세종 이자지원은 잔금을 치르기 전에 신청해야 하고, 치르고 나면 신청할 수 없어요.' })
       if (buteemokAlive) w.push({ tone: 'todo', text: '버팀목은 보증금의 5%를 낸 뒤 신청할 수 있어요. 계약금 영수증을 챙기세요.' })
       break
     case 'paid':

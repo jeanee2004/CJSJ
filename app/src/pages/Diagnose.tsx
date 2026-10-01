@@ -198,7 +198,7 @@ const STEPS: Step[] = [
   },
 ]
 
-const LABELS: Record<string, string> = { age: 'ABOUT YOU', marital: 'ABOUT YOU', income: 'MONEY', livesApart: 'ABOUT YOU', ownsHome: 'HISTORY', hasLoan: 'HISTORY', usedBefore: 'HISTORY', deal: 'YOUR HOME', money: 'YOUR HOME', houseType: 'YOUR HOME', stage: 'TIMING' }
+const LABELS: Record<string, string> = { age: '나에 대해', marital: '나에 대해', income: '소득', livesApart: '나에 대해', ownsHome: '지원 이력', hasLoan: '지원 이력', usedBefore: '지원 이력', deal: '구하는 집', money: '구하는 집', houseType: '구하는 집', stage: '진행 단계' }
 
 export default function Diagnose() {
   const { answers, setAnswers } = useStore()
@@ -228,7 +228,7 @@ export default function Diagnose() {
     <main className="diag" style={{ ['--hc1' as string]: h1, ['--hc2' as string]: h2, ['--hx' as string]: 10 + idx * 8 }}>
       <div className="wrap">
         <div className="diag-top">
-          <span className="label">QUESTION {String(idx + 1).padStart(2, '0')} / {String(visible.length).padStart(2, '0')} · {LABELS[step.id]}</span>
+          <span className="label">질문 {String(idx + 1).padStart(2, '0')} / {String(visible.length).padStart(2, '0')} · {LABELS[step.id]}</span>
           <span className="label">약 {Math.max(1, Math.ceil((visible.length - idx) * 0.3))}분 남았어요</span>
         </div>
         <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={visible.length} aria-valuenow={idx + 1}><i style={{ width: `${((idx + 1) / visible.length) * 100}%` }} /></div>
