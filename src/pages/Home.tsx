@@ -1,7 +1,8 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { LayoutGroup, motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { HERO_VIDEO } from '../data/hero'
+import { HERO } from '../data/hero'
+import { HeroSequence } from '../lib/heroSequence'
 import { rank } from '../lib/search'
 import { Btn, Lines, Reveal, SourceBlock, Term, VBadge, Wave, reduced } from '../ui'
 import { POLICIES } from '../data/policies'
@@ -11,13 +12,16 @@ import { DataSection } from '../components/Charts'
 import { useStore } from '../store'
 
 /* ───────── 첫 화면: 영상 히어로 ─────────
-   · 세션 첫 방문에만 한 번 자동 재생하고 정해진 지점에서 멈춘다(설정: data/hero.ts)
-   · 재방문·모션 줄이기: 정지 장면만 보여주고, "영상 재생" 버튼을 누르면 재생한다 */
+   · 세션 첫 방문에만 자동 재생: 영상 1 → (1초간 서서히 섞이며) → 영상 2 → 마지막 장면에서 정지
+   · 재방문·모션 줄이기: 정지 장면만 보여주고 "영상 재생" 버튼을 누르면 처음부터 재생
+   · 영상·이어 붙이는 지점은 data/hero.ts 에서 바꾼다 */
 const HERO_KEY = 'cjsj.heroPlayed'
 function HeroVideo() {
   const { openModal, popupOpen } = useStore()
   const openDiagnose = () => openModal('diagnose')
-  const vid = useRef<HTMLVideoElement>(null)
+  const va = useRef<HTMLVideoElement>(null)
+  const vb = useRef<HTMLVideoElement>(null)
+  const seq = useRef<HeroSequence | null>(null)
   const resume = useRef(false)
   const [firstRun] = useState(() => {
     try { return !sessionStorage.getItem(HERO_KEY) } catch { return false }
@@ -26,56 +30,46 @@ function HeroVideo() {
   const [playing, setPlaying] = useState(false)
   const [started, setStarted] = useState(false)
 
-  const play = () => { void vid.current?.play().catch(() => undefined) }
-
-  // 첫 방문: 로딩 막이 걷힌 뒤(약 2.1초) 한 번 재생
   useEffect(() => {
-    if (!firstRun || still) return
-    const t = setTimeout(play, 2100)
-    return () => clearTimeout(t)
+    const a = va.current, b = vb.current
+    if (!a || !b) return
+    const s = new HeroSequence(a, b, {
+      clip1Start: HERO.clip1.start, clip1End: HERO.clip1.end,
+      clip2Start: HERO.clip2.start, clip2End: HERO.clip2.end, fade: HERO.fade,
+    })
+    seq.current = s
+    const id = setInterval(() => s.tick(), 60)
+    // 첫 방문: 로딩 막이 걷힌 뒤(약 2.1초) 처음부터 재생
+    const t = firstRun && !still ? setTimeout(() => s.start(), 2100) : undefined
+    return () => { clearInterval(id); if (t) clearTimeout(t); s.dispose() }
   }, [firstRun, still])
-
-  // 정해진 지점에 닿으면 멈춘다
-  useEffect(() => {
-    const id = setInterval(() => {
-      const el = vid.current
-      if (el && HERO_VIDEO.stopAt != null && !el.paused && el.currentTime >= HERO_VIDEO.stopAt) el.pause()
-    }, 100)
-    return () => clearInterval(id)
-  }, [])
 
   // 팝업이 열려 있는 동안에는 뒤의 영상을 잠시 멈췄다가 닫히면 이어서 재생한다
   useEffect(() => {
-    const el = vid.current
-    if (!el) return
+    const s = seq.current
+    if (!s) return
     if (popupOpen) {
-      resume.current = !el.paused
-      if (!el.paused) el.pause()
+      resume.current = playing
+      s.pause()
     } else if (resume.current) {
       resume.current = false
-      play()
+      s.resume()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [popupOpen])
 
-  const replay = () => {
-    const el = vid.current
-    if (!el) return
-    el.currentTime = 0
-    play()
-  }
   const autoplay = firstRun && !still
-  const src = autoplay ? HERO_VIDEO.src : `${HERO_VIDEO.src}#t=${HERO_VIDEO.still}`
   const showBtn = !playing && (started || !autoplay)
+  const mark = () => { try { sessionStorage.setItem(HERO_KEY, '1') } catch { /* noop */ } }
+  const onPlay = () => { setPlaying(true); setStarted(true); mark() }
+  // 두 영상 중 하나라도 재생 중이면 재생 중
+  const onPause = () => setPlaying(!(va.current?.paused ?? true) || !(vb.current?.paused ?? true))
 
   return (
     <section className="vhero" aria-labelledby="vh-title">
       <div className="vhero-media" aria-hidden="true">
-        <video
-          ref={vid} className="vhero-video" src={src} muted playsInline preload="auto"
-          onPlay={() => { setPlaying(true); setStarted(true); try { sessionStorage.setItem(HERO_KEY, '1') } catch { /* noop */ } }}
-          onPause={() => setPlaying(false)}
-        />
+        <video ref={va} className="vhero-video on" src={autoplay ? HERO.clip1.src : `${HERO.clip1.src}#t=${HERO.still}`} muted playsInline preload="auto" onPlay={onPlay} onPause={onPause} />
+        <video ref={vb} className="vhero-video" src={`${HERO.clip2.src}#t=${HERO.clip2.start}`} muted playsInline preload="auto" onPlay={onPlay} onPause={onPause} />
       </div>
       <div className="vhero-scrim" aria-hidden="true" />
       <div className="wrap vhero-inner">
@@ -93,7 +87,7 @@ function HeroVideo() {
         </div>
       </div>
       <div className="vh-right">
-        {showBtn && <button type="button" className="vh-replay" onClick={replay}>{started ? '↺ 처음부터 보기' : '▶ 영상 재생'}</button>}
+        {showBtn && <button type="button" className="vh-replay" onClick={() => seq.current?.restart()}>{started ? '↺ 처음부터 보기' : '▶ 영상 재생'}</button>}
       </div>
     </section>
   )
