@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { HeroSequence } from './heroSequence'
 import type { Vid } from './heroSequence'
 
-const OPTS = { clip1Start: 0, clip1End: 6.6, clip2Start: 2.9, clip2End: 9.9, fade: 1 }
+const CLIPS = [{ start: 0, end: 6.6 }, { start: 2.9, end: 9.9 as number | null }]
 
 interface FakeVid extends Vid { on: boolean }
 function fake(isA: boolean): FakeVid {
@@ -33,7 +33,7 @@ describe('HeroSequence (영상 1 → 영상 2 이어 재생)', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     a = fake(true); b = fake(false)
-    seq = new HeroSequence(a, b, OPTS)
+    seq = new HeroSequence([a, b], CLIPS, 1)
   })
   afterEach(() => vi.useRealTimers())
 
@@ -122,10 +122,36 @@ describe('HeroSequence (영상 1 → 영상 2 이어 재생)', () => {
   })
 
   it('clip2End 가 null 이면 영상 끝까지 재생한다', () => {
-    const s2 = new HeroSequence(a, b, { ...OPTS, clip2End: null })
+    const s2 = new HeroSequence([a, b], [CLIPS[0], { start: 2.9, end: null }], 1)
     s2.start()
     run(s2, [a, b], 5.8 + 7.5)
     expect(s2.phase).toBe(2)
     expect(b.currentTime).toBeCloseTo(10.055, 2)
+  })
+})
+
+describe('HeroSequence (영상 3개 이어 재생)', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  it('맨 앞 영상이 끝나기 1초 전에 영상 1로 섞여 들어가고 차례로 끝까지 간다', () => {
+    const z = fake(true); z.duration = 5.2
+    const a = fake(false), b = fake(false)
+    const seq = new HeroSequence([z, a, b], [{ start: 0, end: null }, ...CLIPS], 1)
+    seq.start()
+    run(seq, [z, a, b], 4.1)
+    expect(a.paused).toBe(true)
+    run(seq, [z, a, b], 0.2)
+    expect(seq.phase).toBe(1)
+    expect(a.on && !z.on).toBe(true)
+    expect(a.currentTime).toBeLessThan(0.5)
+    run(seq, [z, a, b], 1.2)
+    expect(z.paused).toBe(true)
+    run(seq, [z, a, b], 5.6 - 1.4 + 0.2)
+    expect(seq.phase).toBe(2)
+    expect(b.on).toBe(true)
+    run(seq, [z, a, b], 7.2)
+    expect(seq.done).toBe(true)
+    expect(b.paused).toBe(true)
   })
 })

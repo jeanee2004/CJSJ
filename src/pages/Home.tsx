@@ -12,13 +12,14 @@ import { DataSection } from '../components/Charts'
 import { useStore } from '../store'
 
 /* ───────── 첫 화면: 영상 히어로 ─────────
-   · 세션 첫 방문에만 자동 재생: 영상 1 → (1초간 서서히 섞이며) → 영상 2 → 마지막 장면에서 정지
+   · 세션 첫 방문에만 자동 재생: 영상 0 → 영상 1 → 영상 2 (각각 1초간 서서히 섞이며 이어짐) → 마지막 장면에서 정지
    · 재방문·모션 줄이기: 정지 장면만 보여주고 "영상 재생" 버튼을 누르면 처음부터 재생
    · 영상·이어 붙이는 지점은 data/hero.ts 에서 바꾼다 */
 const HERO_KEY = 'cjsj.heroPlayed'
 function HeroVideo() {
   const { openModal, popupOpen } = useStore()
   const openDiagnose = () => openModal('diagnose')
+  const v0 = useRef<HTMLVideoElement>(null)
   const va = useRef<HTMLVideoElement>(null)
   const vb = useRef<HTMLVideoElement>(null)
   const seq = useRef<HeroSequence | null>(null)
@@ -31,12 +32,9 @@ function HeroVideo() {
   const [started, setStarted] = useState(false)
 
   useEffect(() => {
-    const a = va.current, b = vb.current
-    if (!a || !b) return
-    const s = new HeroSequence(a, b, {
-      clip1Start: HERO.clip1.start, clip1End: HERO.clip1.end,
-      clip2Start: HERO.clip2.start, clip2End: HERO.clip2.end, fade: HERO.fade,
-    })
+    const z = v0.current, a = va.current, b = vb.current
+    if (!z || !a || !b) return
+    const s = new HeroSequence([z, a, b], [HERO.clip0, HERO.clip1, HERO.clip2], HERO.fade)
     seq.current = s
     const id = setInterval(() => s.tick(), 60)
     // 첫 방문: 로딩 막이 걷힌 뒤(약 2.1초) 처음부터 재생
@@ -62,13 +60,14 @@ function HeroVideo() {
   const showBtn = !playing && (started || !autoplay)
   const mark = () => { try { sessionStorage.setItem(HERO_KEY, '1') } catch { /* noop */ } }
   const onPlay = () => { setPlaying(true); setStarted(true); mark() }
-  // 두 영상 중 하나라도 재생 중이면 재생 중
-  const onPause = () => setPlaying(!(va.current?.paused ?? true) || !(vb.current?.paused ?? true))
+  // 영상 중 하나라도 재생 중이면 재생 중
+  const onPause = () => setPlaying([v0, va, vb].some((r) => !(r.current?.paused ?? true)))
 
   return (
     <section className="vhero" aria-labelledby="vh-title">
       <div className="vhero-media" aria-hidden="true">
-        <video ref={va} className="vhero-video on" src={autoplay ? HERO.clip1.src : `${HERO.clip1.src}#t=${HERO.still}`} muted playsInline preload="auto" onPlay={onPlay} onPause={onPause} />
+        <video ref={v0} className={`vhero-video${autoplay ? ' on' : ''}`} src={HERO.clip0.src} muted playsInline preload="auto" onPlay={onPlay} onPause={onPause} />
+        <video ref={va} className={`vhero-video${autoplay ? '' : ' on'}`} src={autoplay ? HERO.clip1.src : `${HERO.clip1.src}#t=${HERO.still}`} muted playsInline preload="auto" onPlay={onPlay} onPause={onPause} />
         <video ref={vb} className="vhero-video" src={`${HERO.clip2.src}#t=${HERO.clip2.start}`} muted playsInline preload="auto" onPlay={onPlay} onPause={onPause} />
       </div>
       <div className="vhero-scrim" aria-hidden="true" />

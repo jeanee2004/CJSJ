@@ -1,7 +1,9 @@
 // 히어로 배경 영상 설정.
 // 영상을 바꾸거나 이어 붙일 때는 파일을 public/ 에 넣고 아래 값만 고치면 된다.
 export const HERO = {
-  /** 첫 번째 영상은 end 지점에서 서서히 두 번째 영상으로 이어진다(디졸브). */
+  /** 맨 앞 영상(대학생 → 결혼): 끝에서 서서히 clip1 으로 이어진다. */
+  clip0: { src: '/intro0.mp4', start: 0, end: null as number | null },
+  /** clip1 은 end 지점에서 서서히 두 번째 영상으로 이어진다(디졸브). */
   clip1: { src: '/intro.mp4', start: 0, end: 6.6 },
   /** start 를 2.9초로 잡은 이유: 0~2.7초 사이에 영상 속 글자(“시무룩한”)가 들어 있다. */
   clip2: { src: '/intro2.mp4', start: 2.9, end: 9.9 as number | null },
