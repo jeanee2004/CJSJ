@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Btn, Roll, useMagnetic } from '../ui'
 import { useStore } from '../store'
@@ -15,6 +15,7 @@ export const NAV: { n: string; label: string; to?: string; action?: 'diagnose' |
 
 export function Header() {
   const { user, logout, setLoginOpen, openModal } = useStore()
+  const navigate = useNavigate()
   const [menu, setMenu] = useState(false)
   const [stuck, setStuck] = useState(false)
   const loc = useLocation()
@@ -53,7 +54,7 @@ export function Header() {
           </nav>
           <div className="header-actions">
             {user ? (
-              <button className="circle avatar" type="button" onClick={logout} title="로그아웃" aria-label={`${user.name}님, 눌러서 로그아웃`}>
+              <button className="circle avatar" type="button" onClick={() => { logout(); navigate('/') }} title="로그아웃" aria-label={`${user.name}님, 눌러서 로그아웃`}>
                 {user.name.slice(0, 1)}
               </button>
             ) : (

@@ -6,7 +6,7 @@ import { POLICIES, RULES } from '../data/policies'
 import { Btn, CountUp, Lines, SourceBlock, Term, VBadge } from '../ui'
 import { useStore } from '../store'
 import { Footer } from './Home'
-import { OpenModalRedirect } from '../components/Modals'
+import { Navigate } from 'react-router-dom'
 
 const LABEL: Record<Status, { t: string; g: string }> = {
   ok: { t: '신청할 수 있어요', g: '✓' },
@@ -23,13 +23,13 @@ const FILTERS: { id: 'all' | Status; t: string }[] = [
 ]
 
 export default function Result() {
-  const { answers: a, hasSaved, user, openModal } = useStore()
+  const { answers: a, hasSaved, user, openModal, persisted, openLogin } = useStore()
   const [f, setF] = useState<'all' | Status>('all')
   const [bank, setBank] = useState(4.5)
   const verdicts = useMemo(() => evaluate(a), [a])
   const warns = useMemo(() => warnings(a), [a])
   const cost = useMemo(() => compareCost(a, bank), [a, bank])
-  if (!hasSaved) return <OpenModalRedirect kind="diagnose" />
+  if (!hasSaved) return <Navigate to="/" replace />
 
   const count = (s: Status) => verdicts.filter((v) => v.status === s).length
   const shown = verdicts.filter((v) => f === 'all' || v.status === f)
@@ -57,6 +57,17 @@ export default function Result() {
             <div className="t-maybe"><b className="num"><CountUp to={count('maybe')} /></b><span>△ 확인해 보면 좋아요</span></div>
             <div className="t-no"><b className="num"><CountUp to={count('no')} /></b><span>✕ 지금은 어려워요</span></div>
           </div>
+
+          {!persisted && (
+            <div className="strip ask">
+              <span className="ico" aria-hidden="true">i</span>
+              <span>
+                <b>저장되지 않은 결과예요</b>
+                로그인하지 않으면 이 결과는 화면을 닫거나 새로고침할 때 사라져요. 회원등록(로그인)하면 내 계정에 저장돼서 언제든 다시 볼 수 있어요.
+                <span className="strip-act"><Btn size="sm" variant="light" onClick={() => openLogin()}>회원등록하고 저장하기</Btn></span>
+              </span>
+            </div>
+          )}
 
           {warns.map((w, i) => (
             <div key={i} className={`strip ${w.tone === 'stop' ? 'stop' : ''}`} role={w.tone === 'stop' ? 'alert' : undefined}>

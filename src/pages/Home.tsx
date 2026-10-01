@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { LayoutGroup, motion } from 'framer-motion'
-import { HeroLoop } from '../lib/heroLoop'
+import { useNavigate } from 'react-router-dom'
+import { HERO_VIDEO } from '../data/hero'
 import { rank } from '../lib/search'
 import { Btn, Lines, Reveal, SourceBlock, Term, VBadge, Wave, reduced } from '../ui'
 import { POLICIES } from '../data/policies'
@@ -10,47 +11,71 @@ import { DataSection } from '../components/Charts'
 import { useStore } from '../store'
 
 /* ───────── 첫 화면: 영상 히어로 ─────────
-   · 첫 방문: 0초부터 한 번 재생한 뒤, 끝부분 2.4초(4.2~6.6초)를 자연스럽게 반복한다
-   · 재방문: 처음부터 다시 틀지 않고 끝부분 반복만 잔잔하게 재생한다
-   · 되감을 때 뚝 끊기지 않도록 영상 두 개를 겹쳐 서로 부드럽게 섞는다(크로스페이드)
-   · 배경을 누르면 정지/재생, "처음부터 보기"로 처음부터 다시 볼 수 있다 */
+   · 세션 첫 방문에만 한 번 자동 재생하고 정해진 지점에서 멈춘다(설정: data/hero.ts)
+   · 재방문·모션 줄이기: 정지 장면만 보여주고, "영상 재생" 버튼을 누르면 재생한다 */
 const HERO_KEY = 'cjsj.heroPlayed'
-const LOOP = { loopStart: 4.2, loopEnd: 6.6, fade: 0.8 }
 function HeroVideo() {
-  const { openModal } = useStore()
+  const { openModal, popupOpen } = useStore()
   const openDiagnose = () => openModal('diagnose')
-  const va = useRef<HTMLVideoElement>(null)
-  const vb = useRef<HTMLVideoElement>(null)
-  const loop = useRef<HeroLoop | null>(null)
+  const vid = useRef<HTMLVideoElement>(null)
+  const resume = useRef(false)
   const [firstRun] = useState(() => {
     try { return !sessionStorage.getItem(HERO_KEY) } catch { return false }
   })
   const [still] = useState(() => reduced())
+  const [playing, setPlaying] = useState(false)
   const [started, setStarted] = useState(false)
 
-  useEffect(() => {
-    const a = va.current, b = vb.current
-    if (!a || !b) return
-    const l = new HeroLoop(a, b, LOOP)
-    loop.current = l
-    if (still) return () => l.dispose()
-    // 첫 방문은 로딩 막이 걷힌 뒤(약 2.1초) 처음부터, 재방문은 끝부분 반복부터
-    const t = setTimeout(() => l.start(firstRun), firstRun ? 2100 : 0)
-    const id = setInterval(() => l.tick(), 50)
-    return () => { clearTimeout(t); clearInterval(id); l.dispose() }
-  }, [still, firstRun])
+  const play = () => { void vid.current?.play().catch(() => undefined) }
 
-  const onPlay = () => {
-    setStarted(true)
-    try { sessionStorage.setItem(HERO_KEY, '1') } catch { /* noop */ }
+  // 첫 방문: 로딩 막이 걷힌 뒤(약 2.1초) 한 번 재생
+  useEffect(() => {
+    if (!firstRun || still) return
+    const t = setTimeout(play, 2100)
+    return () => clearTimeout(t)
+  }, [firstRun, still])
+
+  // 정해진 지점에 닿으면 멈춘다
+  useEffect(() => {
+    const id = setInterval(() => {
+      const el = vid.current
+      if (el && HERO_VIDEO.stopAt != null && !el.paused && el.currentTime >= HERO_VIDEO.stopAt) el.pause()
+    }, 100)
+    return () => clearInterval(id)
+  }, [])
+
+  // 팝업이 열려 있는 동안에는 뒤의 영상을 잠시 멈췄다가 닫히면 이어서 재생한다
+  useEffect(() => {
+    const el = vid.current
+    if (!el) return
+    if (popupOpen) {
+      resume.current = !el.paused
+      if (!el.paused) el.pause()
+    } else if (resume.current) {
+      resume.current = false
+      play()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [popupOpen])
+
+  const replay = () => {
+    const el = vid.current
+    if (!el) return
+    el.currentTime = 0
+    play()
   }
-  const src = still ? '/intro.mp4#t=6' : firstRun ? '/intro.mp4' : `/intro.mp4#t=${LOOP.loopStart}`
+  const autoplay = firstRun && !still
+  const src = autoplay ? HERO_VIDEO.src : `${HERO_VIDEO.src}#t=${HERO_VIDEO.still}`
+  const showBtn = !playing && (started || !autoplay)
 
   return (
     <section className="vhero" aria-labelledby="vh-title">
       <div className="vhero-media" aria-hidden="true">
-        <video ref={va} className="vhero-video on" src={src} muted playsInline preload="auto" onPlay={onPlay} />
-        <video ref={vb} className="vhero-video" src={`/intro.mp4#t=${LOOP.loopStart}`} muted playsInline preload="auto" onPlay={onPlay} />
+        <video
+          ref={vid} className="vhero-video" src={src} muted playsInline preload="auto"
+          onPlay={() => { setPlaying(true); setStarted(true); try { sessionStorage.setItem(HERO_KEY, '1') } catch { /* noop */ } }}
+          onPause={() => setPlaying(false)}
+        />
       </div>
       <div className="vhero-scrim" aria-hidden="true" />
       <div className="wrap vhero-inner">
@@ -68,7 +93,7 @@ function HeroVideo() {
         </div>
       </div>
       <div className="vh-right">
-        {started && <button type="button" className="vh-replay" onClick={() => loop.current?.restart()}>↺ 처음부터 보기</button>}
+        {showBtn && <button type="button" className="vh-replay" onClick={replay}>{started ? '↺ 처음부터 보기' : '▶ 영상 재생'}</button>}
       </div>
     </section>
   )
@@ -76,7 +101,14 @@ function HeroVideo() {
 
 /* ───────── 두 번째 화면: 인트로 (마우스에 반응하는 아치·구슬·로고) ───────── */
 function Intro() {
-  const { hasSaved } = useStore()
+  const { user, hasSaved, openLogin, openModal } = useStore()
+  const navigate = useNavigate()
+  // 지난 결과는 회원 전용: 비회원은 회원등록 안내, 회원은 저장된 결과로 이동(없으면 진단 팝업)
+  const onPast = () => {
+    if (!user) openLogin('history')
+    else if (hasSaved) navigate('/result')
+    else openModal('diagnose')
+  }
   const ref = useRef<HTMLElement>(null)
   useEffect(() => {
     const el = ref.current
@@ -106,9 +138,9 @@ function Intro() {
         <div className="arch a3"><img src="/photos/sejong-skyline.jpg" alt="" loading="lazy" decoding="async" style={{ objectPosition: '50% 55%' }} /></div>
         <div className="stairs" /><div className="orb" />
       </div>
-      <img className="hero-logo" src="/logo-lg.png" alt="청정 세종 CJSJ 로고" />
       <div className="grain" aria-hidden="true" />
       <div className="wrap hero-inner">
+        <div className="emblem"><img src="/logo-lg.png" alt="청정 세종 CJSJ 로고" /></div>
         <span className="label" style={{ color: 'var(--ink)' }}>청정 세종이라는 이름에는</span>
         <Lines
           as="h2" id="intro-t" className="display"
@@ -117,7 +149,7 @@ function Intro() {
         <p className="lead">청정(靑定)은 푸를 청에 정할 정, 청년이 세종에 마음 편히 자리 잡도록 돕고 싶은 마음을 담았어요. 어려운 경제 용어는 쉬운 말로 풀어서, 받을 수 있는 지원과 조심할 점을 차근차근 안내해 드릴게요.</p>
         <div className="hero-cta">
           <Btn to="/#policies">지원 제도 둘러보기</Btn>
-          {hasSaved && <Btn to="/result" variant="line">지난 결과 보기</Btn>}
+          <Btn onClick={onPast} variant="line">지난 결과 보기</Btn>
         </div>
       </div>
     </section>
@@ -299,10 +331,12 @@ export function Footer({ tone = 'home' }: { tone?: 'home' | 'paper' }) {
   return (
     <footer className={`footer ${tone === 'paper' ? 'from-paper' : ''}`}>
       <div className="wrap">
-        <div className="mega" aria-label="청정 세종">
-          <span>청정</span>
-          <img src="/logo-sm.png" alt="" />
-          <span>세종</span>
+        <div className="brandblock">
+          <img className="bb-logo" src="/logo-lg.png" alt="" />
+          <div>
+            <p className="bb-name">청정 세종</p>
+            <p className="bb-tag">청년이 머무는 곳, 세종이 시작되는 곳</p>
+          </div>
         </div>
         <div className="cols">
           <div>

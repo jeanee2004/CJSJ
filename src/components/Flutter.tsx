@@ -106,7 +106,7 @@ export function Flutter() {
 
     const step = (dt: number) => {
       now += dt
-      const active = fine && window.location.pathname === '/' && window.scrollY < H * 1.7
+      const active = fine && window.location.pathname === '/' && window.scrollY < H * 1.7 && !document.body.classList.contains('has-popup')
       const amb = ps.filter((p) => p.mode === 1).length
       if (active && amb < AMBIENT && Math.random() < 0.02) {
         const left = Math.random() < 0.5
