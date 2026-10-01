@@ -150,7 +150,7 @@ export default function Result() {
           </section>
         </div>
       </main>
-      <Footer />
+      <Footer tone="paper" />
     </>
   )
 }

@@ -70,9 +70,9 @@ function HeroVideo() {
       <div className="wrap vhero-inner">
         <span className="vh-pill">세종에서 처음 집을 구하는 청년 · 신혼부부를 위해</span>
         <Lines
-          as="h1" id="vh-title" className="display vh-en"
+          as="h1" id="vh-title" className="display"
           delay={(() => { try { return sessionStorage.getItem('cjsj.seen') ? 0.1 : 1.9 } catch { return 0.1 } })()}
-          lines={[<span className="en1" key="a">Where Youth Settles,</span>, <span className="en2" key="b">Sejong <span className="blush">Begins.</span></span>]}
+          lines={[<span className="l" key="a">청년이 머무는 곳,</span>, <span key="b">세종이 <span className="em">시작</span>되는 곳</span>]}
         />
         <p className="vh-sub">세종에서 첫 집, <b>어디서부터 시작하죠?</b></p>
         <p className="lead">받을 수 있는 지원금, 신청하는 순서, 놓치기 쉬운 함정까지 — 3분이면 쉬운 말로 알려드릴게요.</p>
@@ -124,7 +124,7 @@ function Intro() {
         <span className="label" style={{ color: 'var(--ink)' }}>청정 세종이라는 이름에는</span>
         <Lines
           as="h2" id="intro-t" className="display"
-          lines={[<span className="l" key="a"><Wave text="청년이 머무는 곳," /></span>, <span key="b"><Wave text="세종이 " /><Wave text="시작" accent /><Wave text="되는 곳" /></span>]}
+          lines={[<span className="l" key="a"><Wave text="내 집으로 가는 길," /></span>, <span key="b"><Wave text="함께 " /><Wave text="확인해" accent /><Wave text=" 봐요" /></span>]}
         />
         <p className="lead">청정(靑定)은 푸를 청에 정할 정, 청년이 세종에 마음 편히 자리 잡도록 돕고 싶은 마음을 담았어요. 어려운 경제 용어는 쉬운 말로 풀어서, 받을 수 있는 지원과 조심할 점을 차근차근 안내해 드릴게요.</p>
         <div className="hero-cta">
@@ -278,9 +278,9 @@ function Glossary() {
   )
 }
 
-export function Footer() {
+export function Footer({ tone = 'home' }: { tone?: 'home' | 'paper' }) {
   return (
-    <footer className="footer">
+    <footer className={`footer ${tone === 'paper' ? 'from-paper' : ''}`}>
       <div className="wrap">
         <div className="mega" aria-label="청정 세종">
           <span>청정</span>

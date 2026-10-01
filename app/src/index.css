@@ -607,3 +607,60 @@ input[type='range'] { width: 100%; accent-color: var(--accent); height: 28px; }
   .vhero h1.vh-en { font-size: clamp(30px, 9.4vw, 56px); margin: 16px 0 10px; }
   .vh-sub { font-size: 19px; }
 }
+
+/* ════════ v6: 제목 크기 낮추기 · 섹션을 그라데이션으로 이어 붙이기 ════════ */
+:root { --tint-sky: #e9f0f8; --tint-rose: #f6e4e9; --tint-lav: #ece7f5; }
+
+/* 한글 제목/소제목: 부담스럽지 않은 크기 */
+.vhero h1, .vhero h1.display { font-size: clamp(30px, 5.2vw, 76px); margin: 18px 0 14px; }
+.vh-sub { font-size: clamp(17px, 1.9vw, 24px); }
+.vhero .lead { font-size: 16px; }
+.hero2 h2 { font-size: clamp(28px, 4.8vw, 68px); }
+.sec-head h2 { font-size: clamp(27px, 4vw, 56px); }
+.result h1 { font-size: clamp(27px, 4.8vw, 64px); }
+.idx-name { font-size: clamp(19px, 2.2vw, 30px); }
+.idx-sum { font-size: 14px; }
+.facts dd.amount { font-size: 19px; }
+.facts dd { font-size: 15px; }
+.chart-card h3 { font-size: clamp(19px, 2vw, 26px); }
+.vd h3 { font-size: clamp(20px, 2.2vw, 28px); }
+.gl-row h3 { font-size: clamp(18px, 1.8vw, 23px); }
+.step h3 { font-size: 21px; }
+.diag-side h1 { font-size: clamp(24px, 3.2vw, 40px); }
+.cmp-wrap h2 { font-size: clamp(22px, 3vw, 36px); }
+.marquee span { font-size: clamp(22px, 3vw, 38px); }
+.mega { font-size: clamp(48px, 11vw, 160px); }
+.choice b { font-size: clamp(16px, 1.7vw, 20px); }
+.fullmenu a { font-size: clamp(28px, 7vw, 44px); }
+.modal h2 { font-size: 26px; }
+.sec-head p { font-size: 16.5px; }
+@media (max-aspect-ratio: 1/1), (max-width: 700px) {
+  .vhero h1, .vhero h1.display { font-size: clamp(26px, 7.4vw, 40px); margin: 14px 0 10px; }
+  .hero2 h2 { font-size: clamp(26px, 7.2vw, 40px); }
+  .sec-head h2 { font-size: clamp(25px, 7vw, 36px); }
+  .result h1 { font-size: clamp(26px, 7.4vw, 40px); }
+}
+
+/* ── 섹션 연결: 마퀴(네이비) → 인트로(파스텔) → 이용방법 → 제도 → 숫자(네이비) → 용어 → 의견 → 푸터(네이비) ── */
+.hero2 { padding-top: clamp(170px, 24vh, 230px); padding-bottom: 150px; }
+.hero2::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 220px; z-index: 1; pointer-events: none; background: linear-gradient(180deg, var(--ink), rgba(29, 39, 69, 0)); }
+.hero2::after { content: ''; position: absolute; inset: auto 0 0 0; height: 240px; z-index: 1; pointer-events: none; background: linear-gradient(180deg, rgba(251, 245, 244, 0), var(--paper)); }
+.marquee { border-block: 0; }
+
+#how { background: linear-gradient(180deg, var(--paper) 0%, var(--tint-sky) 100%); }
+#policies { background: linear-gradient(180deg, var(--tint-sky) 0%, var(--tint-rose) 55%, var(--tint-rose) 100%); }
+
+#data { position: relative; isolation: isolate; background: var(--ink); padding-top: clamp(190px, 18vw, 270px); padding-bottom: clamp(190px, 18vw, 270px); }
+#data::before, #data::after { content: ''; position: absolute; inset: 0 0 auto 0; height: 260px; z-index: -1; pointer-events: none; }
+#data::before { background: linear-gradient(180deg, var(--tint-rose), rgba(29, 39, 69, 0)); }
+#data::after { inset: auto 0 0 0; background: linear-gradient(180deg, rgba(29, 39, 69, 0), var(--paper)); }
+#data .wrap { position: relative; z-index: 1; }
+
+#glossary { background: linear-gradient(180deg, var(--paper) 0%, var(--paper) 55%, var(--tint-rose) 100%); }
+#feedback { background: linear-gradient(180deg, var(--tint-rose) 0%, var(--tint-lav) 100%); }
+
+.footer { position: relative; isolation: isolate; padding-top: 220px; }
+.footer::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 240px; z-index: -1; pointer-events: none; background: linear-gradient(180deg, var(--tint-lav), rgba(29, 39, 69, 0)); }
+.footer.from-paper::before { background: linear-gradient(180deg, var(--paper), rgba(29, 39, 69, 0)); }
+.footer .wrap { position: relative; z-index: 1; }
+@media (max-width: 700px) { .hero2 { padding-top: 190px; padding-bottom: 110px; } #data { padding-top: 200px; padding-bottom: 200px; } .footer { padding-top: 200px; } }
