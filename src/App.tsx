@@ -4,10 +4,10 @@ import { StoreProvider } from './store'
 import { Header } from './components/Header'
 import { LoginModal } from './components/LoginModal'
 import { Loader } from './components/Loader'
-import { Cursor } from './components/Cursor'
+import { ScrollTop } from './components/ScrollTop'
 import { Flutter } from './components/Flutter'
 import Home from './pages/Home'
-import Diagnose from './pages/Diagnose'
+import { Modals, OpenModalRedirect } from './components/Modals'
 import Result from './pages/Result'
 
 function ScrollManager() {
@@ -29,15 +29,16 @@ export default function App() {
       <Loader />
       <div className="aurora" aria-hidden="true" />
       <Flutter />
-      <Cursor />
       <Header />
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/diagnose" element={<Diagnose />} />
+        <Route path="/diagnose" element={<OpenModalRedirect kind="diagnose" />} />
         <Route path="/result" element={<Result />} />
         <Route path="*" element={<Home />} />
       </Routes>
       <LoginModal />
+      <Modals />
+      <ScrollTop />
     </StoreProvider>
   )
 }

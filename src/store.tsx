@@ -4,6 +4,7 @@ import { DEFAULT_ANSWERS } from './lib/eligibility'
 import type { Answers } from './lib/eligibility'
 
 // 데모용 상태. 서버 저장 없음 — 브라우저 localStorage에만 보관한다. (PRD: 익명·개인정보 미저장)
+export type Modal = 'diagnose' | 'feedback' | null
 interface User { name: string; via: string }
 interface Store {
   user: User | null
@@ -14,6 +15,9 @@ interface Store {
   hasSaved: boolean
   loginOpen: boolean
   setLoginOpen: (b: boolean) => void
+  modal: Modal
+  openModal: (m: Exclude<Modal, null>) => void
+  closeModal: () => void
 }
 
 const Ctx = createContext<Store | null>(null)
@@ -42,6 +46,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [answers, setAnswersState] = useState<Answers>(saved ?? DEFAULT_ANSWERS)
   const [hasSaved, setHasSaved] = useState(!!saved)
   const [loginOpen, setLoginOpen] = useState(false)
+  const [modal, setModal] = useState<Modal>(null)
 
   useEffect(() => write(K.user, user), [user])
   const setAnswers = useCallback((a: Answers) => {
@@ -59,6 +64,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     hasSaved,
     loginOpen,
     setLoginOpen,
+    modal,
+    openModal: (m) => setModal(m),
+    closeModal: () => setModal(null),
   }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

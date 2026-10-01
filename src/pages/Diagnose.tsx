@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
 import { DEFAULT_ANSWERS } from '../lib/eligibility'
 import type { Answers, Deal, HouseType, Marital, Stage } from '../lib/eligibility'
 import { Btn, Term } from '../ui'
@@ -200,7 +199,7 @@ const STEPS: Step[] = [
 
 const LABELS: Record<string, string> = { age: '나에 대해', marital: '나에 대해', income: '소득', livesApart: '나에 대해', ownsHome: '지원 이력', hasLoan: '지원 이력', usedBefore: '지원 이력', deal: '구하는 집', money: '구하는 집', houseType: '구하는 집', stage: '진행 단계' }
 
-export default function Diagnose() {
+export function DiagnoseFlow({ onClose }: { onClose: () => void }) {
   const { answers, setAnswers } = useStore()
   const nav = useNavigate()
   const [a, setA] = useState<Answers>({ ...DEFAULT_ANSWERS, unknown: [] })
@@ -212,7 +211,7 @@ export default function Diagnose() {
   const idx = Math.min(i, visible.length - 1)
   const step = visible[idx]
   const set = (p: Partial<Answers>) => setA((prev) => ({ ...prev, ...p }))
-  const finish = (final: Answers) => { setAnswers(final); nav('/result') }
+  const finish = (final: Answers) => { setAnswers(final); onClose(); nav('/result') }
   const go = (n: number) => { setDir(n > 0 ? 1 : -1); setI((x) => Math.max(0, x + n)) }
   const isLast = idx === visible.length - 1
   const ok = step.valid ? step.valid(a) : true
@@ -221,23 +220,18 @@ export default function Diagnose() {
   const autoNext = () => setTimeout(() => (isLast ? undefined : go(1)), 180)
   const title = typeof step.title === 'function' ? step.title(a) : step.title
 
-  const hues: [string, string][] = [['var(--blush)', 'var(--aqua)'], ['var(--mint)', 'var(--peri)'], ['var(--aqua)', 'var(--blush)'], ['var(--peri)', 'var(--mint)'], ['var(--blush)', 'var(--mint)'], ['var(--lime)', 'var(--aqua)']]
+  const hues: [string, string][] = [['var(--blush)', 'var(--aqua)'], ['var(--mint)', 'var(--peri)'], ['var(--aqua)', 'var(--blush)'], ['var(--peri)', 'var(--mint)'], ['var(--blush)', 'var(--mint)'], ['var(--tint)', 'var(--aqua)']]
   const [h1, h2] = hues[idx % hues.length]
 
   return (
-    <main className="diag" style={{ ['--hc1' as string]: h1, ['--hc2' as string]: h2, ['--hx' as string]: 10 + idx * 8 }}>
-      <div className="wrap">
+    <div className="diag-flow" style={{ ['--hc1' as string]: h1, ['--hc2' as string]: h2 }}>
+      <div>
         <div className="diag-top">
           <span className="label">질문 {String(idx + 1).padStart(2, '0')} / {String(visible.length).padStart(2, '0')} · {LABELS[step.id]}</span>
           <span className="label">약 {Math.max(1, Math.ceil((visible.length - idx) * 0.3))}분 남았어요</span>
         </div>
         <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={visible.length} aria-valuenow={idx + 1}><i style={{ width: `${((idx + 1) / visible.length) * 100}%` }} /></div>
-        <AnimatePresence mode="wait" custom={dir}>
-          <motion.section
-            key={step.id} className="diag-grid" aria-live="polite"
-            initial={{ opacity: 0, y: 28 * dir }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 * dir }}
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          >
+          <section key={step.id} className="diag-grid step-in" aria-live="polite" style={{ ['--dir' as string]: dir }}>
             <div className="diag-side">
               <span className="diag-no" aria-hidden="true">{String(idx + 1).padStart(2, '0')}</span>
               <h1>{title}</h1>
@@ -250,10 +244,9 @@ export default function Diagnose() {
                 <Btn onClick={next} disabled={!ok}>{isLast ? '결과 보기' : '다음'}</Btn>
               </div>
             </div>
-          </motion.section>
-        </AnimatePresence>
+          </section>
         <p className="hint" style={{ marginTop: 36 }}>입력한 내용은 서버로 보내지 않고 이 기기에만 저장돼요.</p>
       </div>
-    </main>
+    </div>
   )
 }

@@ -1,12 +1,12 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { LayoutGroup, motion } from 'framer-motion'
 import { HeroLoop } from '../lib/heroLoop'
+import { rank } from '../lib/search'
 import { Btn, Lines, Reveal, SourceBlock, Term, VBadge, Wave, reduced } from '../ui'
 import { POLICIES } from '../data/policies'
 import type { PolicyInfo } from '../data/policies'
 import { TERMS } from '../data/terms'
 import { DataSection } from '../components/Charts'
-import { Feedback } from '../components/Feedback'
 import { useStore } from '../store'
 
 /* ───────── 첫 화면: 영상 히어로 ─────────
@@ -17,6 +17,8 @@ import { useStore } from '../store'
 const HERO_KEY = 'cjsj.heroPlayed'
 const LOOP = { loopStart: 4.2, loopEnd: 6.6, fade: 0.8 }
 function HeroVideo() {
+  const { openModal } = useStore()
+  const openDiagnose = () => openModal('diagnose')
   const va = useRef<HTMLVideoElement>(null)
   const vb = useRef<HTMLVideoElement>(null)
   const loop = useRef<HeroLoop | null>(null)
@@ -24,7 +26,6 @@ function HeroVideo() {
     try { return !sessionStorage.getItem(HERO_KEY) } catch { return false }
   })
   const [still] = useState(() => reduced())
-  const [playing, setPlaying] = useState(false)
   const [started, setStarted] = useState(false)
 
   useEffect(() => {
@@ -39,24 +40,17 @@ function HeroVideo() {
     return () => { clearTimeout(t); clearInterval(id); l.dispose() }
   }, [still, firstRun])
 
-  const onSection = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('a, button')) return
-    loop.current?.toggle()
-  }
   const onPlay = () => {
-    setPlaying(true); setStarted(true)
+    setStarted(true)
     try { sessionStorage.setItem(HERO_KEY, '1') } catch { /* noop */ }
-  }
-  const onPause = () => {
-    if (va.current?.paused && vb.current?.paused) setPlaying(false)
   }
   const src = still ? '/intro.mp4#t=6' : firstRun ? '/intro.mp4' : `/intro.mp4#t=${LOOP.loopStart}`
 
   return (
-    <section className="vhero" aria-labelledby="vh-title" onClick={onSection} data-cursor={playing ? '정지' : '재생'}>
+    <section className="vhero" aria-labelledby="vh-title">
       <div className="vhero-media" aria-hidden="true">
-        <video ref={va} className="vhero-video on" src={src} muted playsInline preload="auto" onPlay={onPlay} onPause={onPause} />
-        <video ref={vb} className="vhero-video" src={`/intro.mp4#t=${LOOP.loopStart}`} muted playsInline preload="auto" onPlay={onPlay} onPause={onPause} />
+        <video ref={va} className="vhero-video on" src={src} muted playsInline preload="auto" onPlay={onPlay} />
+        <video ref={vb} className="vhero-video" src={`/intro.mp4#t=${LOOP.loopStart}`} muted playsInline preload="auto" onPlay={onPlay} />
       </div>
       <div className="vhero-scrim" aria-hidden="true" />
       <div className="wrap vhero-inner">
@@ -69,13 +63,12 @@ function HeroVideo() {
         <p className="vh-sub">세종에서 첫 집, <b>어디서부터 시작하죠?</b></p>
         <p className="lead">받을 수 있는 지원금, 신청하는 순서, 놓치기 쉬운 함정까지 — 3분이면 쉬운 말로 알려드릴게요.</p>
         <div className="hero-cta">
-          <Btn to="/diagnose" variant="light">내 상황 확인해 보기</Btn>
+          <Btn onClick={openDiagnose} variant="light">내 상황 확인해 보기</Btn>
           <Btn to="/#intro" variant="glass">청정 세종 이야기</Btn>
         </div>
       </div>
       <div className="vh-right">
         {started && <button type="button" className="vh-replay" onClick={() => loop.current?.restart()}>↺ 처음부터 보기</button>}
-        <span className="vh-scroll">아래로 ↓</span>
       </div>
     </section>
   )
@@ -89,19 +82,20 @@ function Intro() {
     const el = ref.current
     if (!el || reduced() || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return
     let tx = 0, ty = 0, x = 0, y = 0, raf = 0
-    const move = (e: MouseEvent) => {
-      const r = el.getBoundingClientRect()
-      tx = ((e.clientX - r.left) / r.width - 0.5) * 2
-      ty = ((e.clientY - r.top) / r.height - 0.5) * 2
-    }
+    // 마우스가 멈춰 값이 안정되면 계산을 멈춘다 (움직이면 다시 시작)
     const tick = () => {
       x += (tx - x) * 0.16; y += (ty - y) * 0.16
       el.style.setProperty('--px', x.toFixed(3))
       el.style.setProperty('--py', y.toFixed(3))
-      raf = requestAnimationFrame(tick)
+      raf = Math.abs(tx - x) < 0.002 && Math.abs(ty - y) < 0.002 ? 0 : requestAnimationFrame(tick)
+    }
+    const move = (e: MouseEvent) => {
+      const r = el.getBoundingClientRect()
+      tx = ((e.clientX - r.left) / r.width - 0.5) * 2
+      ty = ((e.clientY - r.top) / r.height - 0.5) * 2
+      if (!raf) raf = requestAnimationFrame(tick)
     }
     el.addEventListener('mousemove', move)
-    raf = requestAnimationFrame(tick)
     return () => { el.removeEventListener('mousemove', move); cancelAnimationFrame(raf) }
   }, [])
   return (
@@ -112,7 +106,7 @@ function Intro() {
         <div className="arch a3"><img src="/photos/sejong-skyline.jpg" alt="" loading="lazy" decoding="async" style={{ objectPosition: '50% 55%' }} /></div>
         <div className="stairs" /><div className="orb" />
       </div>
-      <img className="hero-logo" src="/logo-lg.png" alt="청정 세종 CJSJ 로고" data-cursor="Hello" />
+      <img className="hero-logo" src="/logo-lg.png" alt="청정 세종 CJSJ 로고" />
       <div className="grain" aria-hidden="true" />
       <div className="wrap hero-inner">
         <span className="label" style={{ color: 'var(--ink)' }}>청정 세종이라는 이름에는</span>
@@ -162,7 +156,7 @@ function How() {
         <div className="steps">
           {STEPS.map((s, i) => (
             <Reveal key={s.n} delay={i * 0.1}>
-              <div className="step" data-cursor="Step">
+              <div className="step">
                 <span className="big" aria-hidden="true">{s.n}</span>
                 <h3>{s.t}</h3>
                 <p>{s.d}</p>
@@ -180,7 +174,7 @@ function IdxItem({ p, i, open, onToggle }: { p: PolicyInfo; i: number; open: boo
   const pid = useId()
   return (
     <li className={`idx-item ${open ? 'open' : ''}`}>
-      <button className="idx-head" type="button" aria-expanded={open} aria-controls={pid} onClick={onToggle} data-cursor={open ? '닫기' : '열기'}>
+      <button className="idx-head" type="button" aria-expanded={open} aria-controls={pid} onClick={onToggle}>
         <span className="idx-no">{String(i + 1).padStart(2, '0')}</span>
         <span className="idx-name">{p.name}</span>
         <span className="idx-sum">{p.easy}</span>
@@ -245,19 +239,49 @@ function Policies() {
   )
 }
 
+const POPULAR = ['deposit', 'jeonse', 'wolse', 'jan', 'pickone']
+const SEARCH_ITEMS = TERMS.map((t) => ({ id: t.id, fields: [t.word, ...(t.alias ?? [])], long: t.easy }))
 function Glossary() {
   const [q, setQ] = useState('')
-  const list = TERMS.filter((t) => (t.word + t.easy).includes(q.trim()))
+  const { hits, suggestions } = useMemo(() => rank(SEARCH_ITEMS, q), [q])
+  const byId = (id: string) => TERMS.find((t) => t.id === id)!
+  const list = hits.map(byId)
+  const typed = q.trim().length > 0
   return (
     <section className="sec" id="glossary" aria-labelledby="gl-t">
       <div className="wrap">
         <div className="sec-head">
           <div className="eyebrow"><i>04</i><span className="label">쉬운 용어</span></div>
-          <p>지원 제도에서 자주 나오는 말을 한 문장으로 풀어 두었어요. 검색해 보셔도 좋고, 천천히 훑어보셔도 좋아요.</p>
+          <p>지원 제도에서 자주 나오는 말을 한 문장으로 풀어 두었어요. 검색해 보셔도 좋고, 천천히 훑어보셔도 좋아요. 글자가 조금 틀려도, 초성(ㅂㅈㄱ)만 입력해도 찾아 드려요.</p>
           <Lines id="gl-t" className="display" lines={[<span className="l" key="1">낯선 말은</span>, <span key="2">여기서 <span className="em">쉽게</span> 찾아보세요</span>]} />
         </div>
         <label className="sr-only" htmlFor="gq">용어 검색</label>
-        <input id="gq" className="gloss-search" placeholder="예: 보증금, 전세, 잔금" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input id="gq" className="gloss-search" placeholder="예: 보증금, 전세, 잔금, ㅂㅈㄱ" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" />
+        {!typed && (
+          <p className="gloss-chips" aria-label="자주 찾는 말">
+            <span className="hint">자주 찾는 말</span>
+            {POPULAR.map((id) => <button key={id} type="button" className="chip-s" onClick={() => setQ(byId(id).word.replace(/ \(.*\)/, ''))}>{byId(id).word.replace(/ \(.*\)/, '')}</button>)}
+          </p>
+        )}
+        {typed && list.length === 0 && (
+          <div className="didyou" role="status">
+            {suggestions.length > 0 ? (
+              <>
+                <p>“{q.trim()}”에 맞는 말이 없네요. <b>혹시 이걸 찾으셨나요?</b></p>
+                <p className="gloss-chips">
+                  {suggestions.map((id) => <button key={id} type="button" className="chip-s on" onClick={() => setQ(byId(id).word.replace(/ \(.*\)/, ''))}>{byId(id).word}</button>)}
+                </p>
+              </>
+            ) : (
+              <>
+                <p>“{q.trim()}”와 비슷한 말을 찾지 못했어요. 아래 자주 찾는 말을 눌러 보시겠어요?</p>
+                <p className="gloss-chips">
+                  {POPULAR.map((id) => <button key={id} type="button" className="chip-s" onClick={() => setQ(byId(id).word.replace(/ \(.*\)/, ''))}>{byId(id).word}</button>)}
+                </p>
+              </>
+            )}
+          </div>
+        )}
         <div className="gloss">
           {list.map((t) => (
             <div className="gl-row" key={t.id}>
@@ -265,7 +289,6 @@ function Glossary() {
               <div><p>{t.easy}</p>{t.example && <p className="ex">예) {t.example}</p>}</div>
             </div>
           ))}
-          {list.length === 0 && <p style={{ padding: '24px 0' }}>찾는 말이 없네요. 다른 단어로 검색해 보시겠어요?</p>}
         </div>
       </div>
     </section>
@@ -334,16 +357,6 @@ export default function Home() {
         </div>
       </section>
       <Glossary />
-      <section className="sec cream2" id="feedback" aria-labelledby="fb-t">
-        <div className="wrap">
-          <div className="sec-head">
-            <div className="eyebrow"><i>05</i><span className="label">의견 남기기</span></div>
-            <p>들려주신 이야기는 이름 없이 모아서, 세종시에 필요한 지원을 전할 때 소중하게 쓸게요.</p>
-            <Lines id="fb-t" className="display" lines={[<span className="l" key="1">집을 구할 때</span>, <span key="2">가장 <span className="em">마음 쓰이는</span> 비용은?</span>]} />
-          </div>
-          <div style={{ maxWidth: 860 }}><Feedback /></div>
-        </div>
-      </section>
       <Footer />
     </>
   )

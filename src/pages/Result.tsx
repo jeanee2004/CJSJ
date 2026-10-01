@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
 import { LayoutGroup, motion } from 'framer-motion'
 import { compareCost, evaluate, warnings } from '../lib/eligibility'
 import type { Status } from '../lib/eligibility'
 import { POLICIES, RULES } from '../data/policies'
 import { Btn, CountUp, Lines, SourceBlock, Term, VBadge } from '../ui'
 import { useStore } from '../store'
-import { Feedback } from '../components/Feedback'
 import { Footer } from './Home'
+import { OpenModalRedirect } from '../components/Modals'
 
 const LABEL: Record<Status, { t: string; g: string }> = {
   ok: { t: '신청할 수 있어요', g: '✓' },
@@ -24,13 +23,13 @@ const FILTERS: { id: 'all' | Status; t: string }[] = [
 ]
 
 export default function Result() {
-  const { answers: a, hasSaved, user } = useStore()
+  const { answers: a, hasSaved, user, openModal } = useStore()
   const [f, setF] = useState<'all' | Status>('all')
   const [bank, setBank] = useState(4.5)
   const verdicts = useMemo(() => evaluate(a), [a])
   const warns = useMemo(() => warnings(a), [a])
   const cost = useMemo(() => compareCost(a, bank), [a, bank])
-  if (!hasSaved) return <Navigate to="/diagnose" replace />
+  if (!hasSaved) return <OpenModalRedirect kind="diagnose" />
 
   const count = (s: Status) => verdicts.filter((v) => v.status === s).length
   const shown = verdicts.filter((v) => f === 'all' || v.status === f)
@@ -140,14 +139,13 @@ export default function Result() {
           </p>
 
           <div className="restart">
-            <Btn to="/diagnose">다시 해 보기</Btn>
+            <Btn onClick={() => openModal('diagnose')}>다시 해 보기</Btn>
             <Btn to="/#policies" variant="line">제도 전체 보기</Btn>
           </div>
 
-          <section style={{ margin: '80px 0 100px' }} aria-labelledby="fb-r">
-            <Lines id="fb-r" className="display" lines={[<span className="l" key="1">집을 구할 때</span>, <span key="2">가장 <span className="em">마음 쓰이는</span> 비용은?</span>]} />
-            <div style={{ maxWidth: 860, marginTop: 36 }}><Feedback /></div>
-          </section>
+          <div style={{ margin: '12px 0 100px' }}>
+            <Btn variant="line" onClick={() => openModal('feedback')}>의견 남기기</Btn>
+          </div>
         </div>
       </main>
       <Footer tone="paper" />

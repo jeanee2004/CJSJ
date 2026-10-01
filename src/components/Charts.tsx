@@ -11,7 +11,7 @@ const DIM = 0.28
 
 function Frame({ meta, children, table, legend }: { meta: ChartMeta; children: ReactNode; table: { k: string; v: string }[]; legend?: string }) {
   return (
-    <div className="chart-card" data-cursor="보기">
+    <div className="chart-card">
       <VBadge v={meta.verified} />
       <h3>{meta.title}</h3>
       <p className="take">{meta.takeaway}</p>

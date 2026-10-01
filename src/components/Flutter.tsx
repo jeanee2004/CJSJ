@@ -78,6 +78,7 @@ export function Flutter() {
     window.addEventListener('resize', resize)
 
     const ps: P[] = []
+    let painted = false
     let mx = W / 2, my = H / 2, lastMove = -1e9, now = 0
     const hoverAt = new WeakMap<Element, number>()
 
@@ -140,6 +141,11 @@ export function Flutter() {
         p.y += p.vy + Math.cos(p.age * 0.005 + p.ph) * 0.25
         p.a = Math.atan2(p.vy, p.vx)
       }
+      if (ps.length === 0) {
+        if (painted) { ctx.clearRect(0, 0, W, H); painted = false }
+        return
+      }
+      painted = true
       ctx.clearRect(0, 0, W, H)
       for (const p of ps) {
         const fadeIn = Math.min(1, p.age / 200)
