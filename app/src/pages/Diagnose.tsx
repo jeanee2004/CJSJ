@@ -4,17 +4,18 @@ import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { DEFAULT_ANSWERS } from '../lib/eligibility'
 import type { Answers, Deal, HouseType, Marital, Stage } from '../lib/eligibility'
-import { Term } from '../ui'
+import { Btn, Term } from '../ui'
 import { useStore } from '../store'
 
 interface Opt<T> { v: T; t: string; d?: string }
 function Choice<T extends string | boolean>({ opts, value, onPick }: { opts: Opt<T>[]; value: T | undefined; onPick: (v: T) => void }) {
   return (
-    <div className="opts" role="group">
-      {opts.map((o) => (
-        <button key={String(o.v)} type="button" className="opt" aria-pressed={value === o.v} onClick={() => onPick(o.v)}>
-          {value === o.v ? '✓ ' : ''}{o.t}
-          {o.d && <small>{o.d}</small>}
+    <div className="choices" role="group">
+      {opts.map((o, i) => (
+        <button key={String(o.v)} type="button" className="choice" aria-pressed={value === o.v} onClick={() => onPick(o.v)} data-cursor="고르기">
+          <span className="k">{String.fromCharCode(65 + i)}</span>
+          <span><b>{o.t}</b>{o.d && <small>{o.d}</small>}</span>
+          <span className="tick" aria-hidden="true">{value === o.v ? '✓' : ''}</span>
         </button>
       ))}
     </div>
@@ -24,12 +25,12 @@ function Choice<T extends string | boolean>({ opts, value, onPick }: { opts: Opt
 function NumberField({ value, onChange, unit, presets, hint, max }: { value: number; onChange: (n: number) => void; unit: string; presets: number[]; hint?: ReactNode; max?: number }) {
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div className="num-field">
         <input
           className="num-input" type="number" inputMode="numeric" min={0} max={max} value={Number.isNaN(value) ? '' : value}
           onChange={(e) => onChange(e.target.value === '' ? NaN : Math.max(0, Number(e.target.value)))} aria-label={`금액(${unit})`}
         />
-        <b style={{ whiteSpace: 'nowrap' }}>{unit}</b>
+        <b>{unit}</b>
       </div>
       <div className="preset">
         {presets.map((p) => (
@@ -220,33 +221,38 @@ export default function Diagnose() {
   const autoNext = () => setTimeout(() => (isLast ? undefined : go(1)), 180)
   const title = typeof step.title === 'function' ? step.title(a) : step.title
 
+  const hues: [string, string][] = [['var(--blush)', 'var(--aqua)'], ['var(--mint)', 'var(--peri)'], ['var(--aqua)', 'var(--blush)'], ['var(--peri)', 'var(--mint)'], ['var(--blush)', 'var(--mint)'], ['var(--lime)', 'var(--aqua)']]
+  const [h1, h2] = hues[idx % hues.length]
+
   return (
-    <main className="diag">
+    <main className="diag" style={{ ['--hc1' as string]: h1, ['--hc2' as string]: h2, ['--hx' as string]: 10 + idx * 8 }}>
       <div className="wrap">
-        <div className="qcard-top" style={{ maxWidth: 720, margin: '0 auto' }}>
-          <div className="diag-top">
-            <span className="label">QUESTION {String(idx + 1).padStart(2, '0')} / {String(visible.length).padStart(2, '0')}</span>
-            <span className="label">약 {Math.max(1, Math.ceil((visible.length - idx) * 0.3))}분 남았어요</span>
-          </div>
-          <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={visible.length} aria-valuenow={idx + 1}><i style={{ width: `${((idx + 1) / visible.length) * 100}%` }} /></div>
+        <div className="diag-top">
+          <span className="label">QUESTION {String(idx + 1).padStart(2, '0')} / {String(visible.length).padStart(2, '0')} · {LABELS[step.id]}</span>
+          <span className="label">약 {Math.max(1, Math.ceil((visible.length - idx) * 0.3))}분 남았어요</span>
         </div>
+        <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={visible.length} aria-valuenow={idx + 1}><i style={{ width: `${((idx + 1) / visible.length) * 100}%` }} /></div>
         <AnimatePresence mode="wait" custom={dir}>
           <motion.section
-            key={step.id} className="qcard" aria-live="polite"
-            initial={{ opacity: 0, x: 40 * dir }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 * dir }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            key={step.id} className="diag-grid" aria-live="polite"
+            initial={{ opacity: 0, y: 28 * dir }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 * dir }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           >
-            <span className="label">{LABELS[step.id]}</span>
-            <h1>{title}</h1>
-            <div className="why"><b>왜 물어요?</b> {step.why}</div>
-            {step.body(a, set, () => { if (!isLast) autoNext() })}
-            <div className="nav-row">
-              <button className="back" type="button" disabled={idx === 0} onClick={() => go(-1)} style={{ visibility: idx === 0 ? 'hidden' : 'visible' }}>← 이전</button>
-              <button className="pill" type="button" disabled={!ok} onClick={next}>{isLast ? '결과 보기' : '다음'} <span className="arrow">↘</span></button>
+            <div className="diag-side">
+              <span className="diag-no" aria-hidden="true">{String(idx + 1).padStart(2, '0')}</span>
+              <h1>{title}</h1>
+              <div className="why"><b>왜 물어요?</b>{step.why}</div>
+            </div>
+            <div className="diag-main">
+              {step.body(a, set, () => { if (!isLast) autoNext() })}
+              <div className="nav-row">
+                <button className="back" type="button" onClick={() => go(-1)} style={{ visibility: idx === 0 ? 'hidden' : 'visible' }}>← 이전</button>
+                <Btn onClick={next} disabled={!ok}>{isLast ? '결과 보기' : '다음'}</Btn>
+              </div>
             </div>
           </motion.section>
         </AnimatePresence>
-        <p className="hint" style={{ textAlign: 'center', marginTop: 16 }}>입력한 내용은 서버로 보내지 않고 이 기기에만 저장돼요.</p>
+        <p className="hint" style={{ marginTop: 36 }}>입력한 내용은 서버로 보내지 않고 이 기기에만 저장돼요.</p>
       </div>
     </main>
   )

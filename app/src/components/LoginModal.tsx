@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { Btn } from '../ui'
 import { useStore } from '../store'
 
 // 데모용 로그인: 실제 인증·서버 전송 없음. 이름만 이 브라우저에 저장한다.
@@ -29,13 +30,12 @@ export function LoginModal() {
           <motion.div
             className="modal" role="dialog" aria-modal="true" aria-labelledby="login-title"
             onClick={(e) => e.stopPropagation()}
-            initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 24, opacity: 0 }}
-            transition={{ ease: [0.22, 1, 0.36, 1], duration: 0.4 }}
+            initial={{ y: 40, opacity: 0, rotate: -1.5 }} animate={{ y: 0, opacity: 1, rotate: 0 }} exit={{ y: 40, opacity: 0 }}
+            transition={{ ease: [0.22, 1, 0.36, 1], duration: 0.6 }}
           >
-            <button className="icon-btn close" type="button" aria-label="닫기" onClick={() => setLoginOpen(false)}>✕</button>
-            <span className="label">LOG IN</span>
-            <h2 id="login-title">내 결과를 이어서 볼까요?</h2>
-            <p style={{ color: 'var(--ink-600)' }}>로그인하면 지난번 진단 결과를 다시 불러와요.</p>
+            <button className="circle close" type="button" aria-label="닫기" onClick={() => setLoginOpen(false)}>✕</button>
+            <span className="label">LOG IN · DEMO</span>
+            <h2 id="login-title">지난 결과를<br /><span className="it" style={{ fontSize: '1.15em' }}>이어서</span> 볼까요?</h2>
             <div className="demo-note">
               <b>데모 화면이에요.</b> 실제 계정은 만들어지지 않고, 입력한 내용은 이 기기 브라우저에만 저장돼요. 서버로 보내지 않아요.
             </div>
@@ -48,7 +48,7 @@ export function LoginModal() {
                 <label htmlFor="nick">또는 별명만 입력하기</label>
                 <input id="nick" value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 세종청년" maxLength={12} />
               </div>
-              <button className="pill" style={{ width: '100%', justifyContent: 'center' }} type="submit">시작하기</button>
+              <Btn type="submit">시작하기</Btn>
             </form>
           </motion.div>
         </motion.div>

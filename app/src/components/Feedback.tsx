@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import { Btn } from '../ui'
 
 const OPTIONS = [
-  { id: 'agent', t: '중개보수(부동산 수수료)', d: '집 계약할 때 부동산에 내는 돈' },
+  { id: 'agent', t: '중개보수 (부동산 수수료)', d: '집 계약할 때 부동산에 내는 돈' },
   { id: 'move', t: '이사비', d: '짐 옮기는 비용, 청소, 입주 준비' },
   { id: 'guarantee', t: '보증료', d: '보증금 보호 보험·대출 보증 수수료' },
   { id: 'deposit', t: '보증금 자체', d: '큰 목돈을 한 번에 마련하는 일' },
@@ -22,19 +23,19 @@ export function Feedback() {
     setDone(true)
   }
   return (
-    <div className="card feedback">
-      <p style={{ fontWeight: 700, marginBottom: 14 }}>해당하는 걸 모두 골라주세요.</p>
-      <div className="opts">
-        {OPTIONS.map((o) => (
-          <button key={o.id} type="button" className="opt" aria-pressed={sel.includes(o.id)} onClick={() => toggle(o.id)}>
-            {sel.includes(o.id) ? '✓ ' : ''}{o.t}
-            <small>{o.d}</small>
+    <div>
+      <div className="choices" role="group" aria-label="가장 부담스러운 비용 (복수 선택)">
+        {OPTIONS.map((o, i) => (
+          <button key={o.id} type="button" className="choice" aria-pressed={sel.includes(o.id)} onClick={() => toggle(o.id)} data-cursor="고르기">
+            <span className="k">{String.fromCharCode(65 + i)}</span>
+            <span><b>{o.t}</b><small>{o.d}</small></span>
+            <span className="tick" aria-hidden="true">{sel.includes(o.id) ? '✓' : ''}</span>
           </button>
         ))}
       </div>
       <div className="nav-row">
-        <span className="hint">개인정보는 받지 않아요.</span>
-        <button className="pill" type="button" disabled={sel.length === 0} onClick={submit}>보내기</button>
+        <span className="hint">개인정보는 받지 않아요. 여러 개를 골라도 돼요.</span>
+        <Btn disabled={sel.length === 0} onClick={submit}>보내기</Btn>
       </div>
       {done && <div className="thanks" role="status">고마워요! 이 기기에 저장했어요. (데모 단계라 서버로는 전송되지 않아요)</div>}
     </div>
