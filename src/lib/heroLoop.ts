@@ -18,6 +18,15 @@ export interface LoopOpts {
   fade: number // 초
 }
 
+// 재생 요청이 브라우저에 의해 중단돼도(백그라운드 탭 절전 등) 오류로 남기지 않는다.
+// 탭이 다시 보이면 브라우저가 이어서 재생한다.
+function safePlay(v: Vid) {
+  try {
+    const r = v.play()
+    if (r && typeof (r as Promise<void>).catch === 'function') (r as Promise<void>).catch(() => undefined)
+  } catch { /* noop */ }
+}
+
 export class HeroLoop {
   private cur: 0 | 1 = 0
   private crossing = false
@@ -36,14 +45,14 @@ export class HeroLoop {
   /** 처음부터 재생(첫 방문) 또는 끝부분 시작점부터 재생(재방문) */
   start(fromBeginning: boolean) {
     this.now.currentTime = fromBeginning ? 0 : this.o.loopStart
-    void this.now.play()
+    safePlay(this.now)
   }
 
   /** 50ms 정도 간격으로 호출한다 */
   tick() {
     const n = this.now
     // 백그라운드 탭 등으로 시점을 놓쳐 영상 끝까지 갔다면 끝부분 시작점으로 바로 되돌린다
-    if (n.ended) { n.currentTime = this.o.loopStart; void n.play(); return }
+    if (n.ended) { n.currentTime = this.o.loopStart; safePlay(n); return }
     if (!n.paused && !this.crossing && n.currentTime >= this.o.loopEnd - this.o.fade) this.crossfade()
   }
 
@@ -53,7 +62,7 @@ export class HeroLoop {
     this.cur = this.cur === 0 ? 1 : 0
     const next = this.now
     next.currentTime = this.o.loopStart
-    void next.play()
+    safePlay(next)
     next.classList.add('on')
     old.classList.remove('on')
     const t = setTimeout(() => {
@@ -65,7 +74,7 @@ export class HeroLoop {
     this.timers.add(t)
   }
 
-  play() { void this.now.play() }
+  play() { safePlay(this.now) }
   pause() { this.v[0].pause(); this.v[1].pause() }
   toggle() { if (this.now.paused) this.play(); else this.pause() }
 
@@ -80,7 +89,7 @@ export class HeroLoop {
     o.classList.remove('on')
     n.classList.add('on')
     n.currentTime = 0
-    void n.play()
+    safePlay(n)
   }
 
   dispose() {
