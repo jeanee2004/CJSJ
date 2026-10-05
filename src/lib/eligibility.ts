@@ -22,6 +22,7 @@ export interface Answers {
   rent: number // 만원/월
   houseType: HouseType
   stage: Stage
+  aware?: string[] // 이미 알고 있던 제도 id (하나도 몰랐으면 ['none'])
   unknown?: string[] // "모름"이라고 답한 항목 (결과에서 다시 확인하도록 안내)
 }
 
@@ -61,7 +62,7 @@ function residenceTodo(a: Answers, v: Verdict) {
   }
   v.todo.push(msg[a.residence])
   if (v.status === 'ok') v.status = 'maybe'
-  v.reasons.push(msg[a.residence])
+  v.reasons.push(a.residence === 'outside' ? '아직 세종에 살지 않아서 지금은 신청할 수 없고, 이사 후에 가능해요.' : '세종 주민등록과 실거주가 모두 필요한데 지금은 하나가 빠져 있어요.')
 }
 
 function make(id: PolicyId): Verdict {

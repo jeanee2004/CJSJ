@@ -164,6 +164,39 @@ const STEPS: Step[] = [
     ),
   },
   {
+    id: 'aware',
+    title: '이 중에 이미 알고 있던 지원이 있나요?',
+    why: <>세종 청년 조사에서도 지원이 있는 줄 몰라서 못 받은 경우가 많아요. 몰랐다고 해서 이상한 게 아니에요. 아는 것만 골라 주시면, 결과에서 <b>몰랐던 지원을 따로 짚어</b> 드릴게요.</>,
+    body: (a, set) => {
+      const sel = a.aware ?? []
+      const toggle = (id: string) => {
+        if (id === 'none') return set({ aware: sel.includes('none') ? [] : ['none'] })
+        const base = sel.filter((x) => x !== 'none')
+        set({ aware: base.includes(id) ? base.filter((x) => x !== id) : [...base, id] })
+      }
+      const opts: [string, string, string][] = [
+        ['sejongRent', '세종시 청년 월세(임대료) 지원', '매달 월세를 도와주는 세종시 사업'],
+        ['sejongInterest', '세종시 전세대출 이자지원', '전세대출 이자 일부를 세종시가 내줘요'],
+        ['molitRent', '국토교통부 청년월세 지원', '전국 청년 월세 지원, 복지로에서 신청'],
+        ['buteemok', '버팀목 전세대출', '낮은 금리 전세자금 대출 (청년·신혼)'],
+        ['none', '하나도 몰랐어요', '괜찮아요, 결과에서 하나씩 알려드릴게요'],
+      ]
+      return (
+        <div className="choices" role="group">
+          {opts.map(([id, t, d], i) => (
+            <button key={id} type="button" className="choice" aria-pressed={sel.includes(id)} onClick={() => toggle(id)}>
+              <span className="k">{String.fromCharCode(65 + i)}</span>
+              <span><b>{t}</b><small>{d}</small></span>
+              <span className="tick" aria-hidden="true">{sel.includes(id) ? '✓' : ''}</span>
+            </button>
+          ))}
+          <p className="hint">여러 개 고를 수 있어요.</p>
+        </div>
+      )
+    },
+    valid: (a) => (a.aware?.length ?? 0) > 0,
+  },
+  {
     id: 'deal',
     title: '어떤 방식으로 집을 구하고 계세요?',
     why: <>전세인지 월세인지에 따라 받을 수 있는 지원이 완전히 달라요. 헷갈리면 아래 설명을 보세요.</>,
@@ -227,7 +260,7 @@ const STEPS: Step[] = [
   },
 ]
 
-const LABELS: Record<string, string> = { age: '나에 대해', residence: '나에 대해', marital: '나에 대해', income: '소득', livesApart: '나에 대해', ownsHome: '지원 이력', hasLoan: '지원 이력', usedBefore: '지원 이력', deal: '구하는 집', money: '구하는 집', houseType: '구하는 집', stage: '진행 단계' }
+const LABELS: Record<string, string> = { age: '나에 대해', residence: '나에 대해', marital: '나에 대해', income: '소득', livesApart: '나에 대해', ownsHome: '지원 이력', hasLoan: '지원 이력', usedBefore: '지원 이력', aware: '지원 이력', deal: '구하는 집', money: '구하는 집', houseType: '구하는 집', stage: '진행 단계' }
 
 export function DiagnoseFlow({ onClose }: { onClose: () => void }) {
   const { answers, setAnswers } = useStore()

@@ -40,6 +40,10 @@ export default function Result() {
   const shown = verdicts.filter((v) => f === 'all' || v.status === f)
   const pickOne = verdicts.some((v) => v.codes.includes('EXCL_PICK_ONE') && v.id === 'sejongInterest')
   const unknown = (a.unknown ?? []).filter((k) => UNKNOWN_TXT[k])
+  const knownIds = (a.aware ?? []).flatMap((k) => (k === 'buteemok' ? ['youthButeemok', 'newlywedButeemok'] : [k]))
+  const missed = a.aware?.length
+    ? verdicts.filter((v) => v.status !== 'no' && !knownIds.includes(v.id)).map((v) => POLICIES.find((p) => p.id === v.id)!.name)
+    : []
   const best = count('ok') + count('maybe')
 
   return (
@@ -80,6 +84,12 @@ export default function Result() {
               <span><b>{w.tone === 'stop' ? '이것만은 조심해 주세요' : '미리 챙겨 두면 좋아요'}</b>{w.text}</span>
             </div>
           ))}
+          {missed.length > 0 && (
+            <div className="strip">
+              <span className="ico" aria-hidden="true">★</span>
+              <span><b>몰랐다고 하신 지원 중에 받을 수 있는 게 있어요</b>{missed.join(' · ')} — 아래 카드에서 신청 방법을 확인하세요.</span>
+            </div>
+          )}
           {unknown.length > 0 && (
             <div className="strip ask">
               <span className="ico" aria-hidden="true">?</span>
