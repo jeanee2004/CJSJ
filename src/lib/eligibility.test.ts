@@ -36,6 +36,14 @@ describe('페르소나 판정', () => {
   })
 })
 
+describe('세종시 조사 반영', () => {
+  it('세종 거주가 아니면 세종 지원은 조건부 + 전입 안내', () => {
+    const r = run({ age: 26, income: 3000, deal: 'wolse', residence: 'outside' })
+    expect(r.sejongRent.status).toBe('maybe')
+    expect(r.sejongRent.todo.some((t) => t.includes('전입'))).toBe(true)
+  })
+})
+
 describe('규칙', () => {
   it('택1: 신혼 버팀목과 세종 이자지원이 둘 다 가능하면 조건부 + 택1 코드', () => {
     const r = run({ age: 30, marital: 'newlywed', income: 6000, deal: 'jeonse', deposit: 20000 })

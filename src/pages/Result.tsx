@@ -14,6 +14,11 @@ const LABEL: Record<Status, { t: string; g: string }> = {
   no: { t: '지금은 어려워요', g: '✕' },
 }
 const UNKNOWN_TXT: Record<string, string> = {
+  income: '1년 소득이 얼마인지 (소득 증빙은 홈택스에서 뗄 수 있어요)',
+  ownsHome: '내 이름으로 된 집이 없는지',
+  livesApart: '부모님과 주민등록 주소가 따로인지 (주민등록등본에서 확인)',
+  deal: '계약이 전세인지 월세인지 (계약서의 "차임/월세" 칸을 보세요)',
+  money: '보증금·월세가 얼마인지',
   hasLoan: '기존 전세대출이 있는지',
   usedBefore: '세종시 지원을 받은 적이 있는지',
   houseType: '구하는 집이 다중주택(원룸·고시원)인지',

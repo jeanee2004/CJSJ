@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DEFAULT_ANSWERS } from '../lib/eligibility'
-import type { Answers, Deal, HouseType, Marital, Stage } from '../lib/eligibility'
+import type { Answers, Deal, HouseType, Marital, Residence, Stage } from '../lib/eligibility'
 import { Btn, Term } from '../ui'
 import { useStore } from '../store'
 
@@ -71,6 +71,19 @@ const STEPS: Step[] = [
     ),
   },
   {
+    id: 'residence',
+    title: '지금 어디에 살고 계신가요?',
+    why: <>세종시 지원은 <b>세종에 주민등록이 있고 실제로도 살아야</b> 받을 수 있어요. 주민등록 주소와 실제 사는 곳이 다른 청년이 많아서 먼저 여쭤봐요. <Term id="move" />을 했는지가 중요해요.</>,
+    body: (a, set, next) => (
+      <Choice<Residence> value={a.residence} onPick={(v) => { set({ residence: v }); next() }} opts={[
+        { v: 'both', t: '세종에 주소도 있고, 실제로도 살아요' },
+        { v: 'liveOnly', t: '세종에 살지만 주소는 다른 곳이에요', d: '기숙사·직장 근처 자취 등, 전입신고를 안 한 경우' },
+        { v: 'regOnly', t: '주소만 세종이고 실제로는 다른 곳에 살아요' },
+        { v: 'outside', t: '아직 세종에 살지 않아요', d: '세종으로 이사를 알아보는 중' },
+      ]} />
+    ),
+  },
+  {
     id: 'marital',
     title: '지금 어떤 상황이신가요?',
     why: <>혼자이신지, 결혼하셨는지에 따라 소득 기준이 크게 달라져요. 결혼 7년 이내이거나 6개월 안에 결혼할 예정이면 <b>신혼부부</b> 제도를 볼 수 있어요.</>,
@@ -79,7 +92,7 @@ const STEPS: Step[] = [
         value={a.marital}
         onPick={(v) => { set({ marital: v, ...(v !== 'single' ? { livesApart: true } : {}) }); next() }}
         opts={[
-          { v: 'single', t: '혼자 살아요 (미혼)', d: '1인 가구' },
+          { v: 'single', t: '혼자예요 (미혼·이혼·사별)', d: '부모님·친구와 살아도 결혼하지 않았다면 여기예요' },
           { v: 'newlywed', t: '결혼했어요 (7년 이내)', d: '신혼부부' },
           { v: 'planning', t: '곧 결혼해요 (6개월 이내)', d: '예비부부' },
         ]}
@@ -90,39 +103,50 @@ const STEPS: Step[] = [
     id: 'income',
     title: (a: Answers) => (a.marital === 'single' ? '1년 소득은 대략 얼마인가요?' : '두 분의 1년 소득을 합치면 얼마인가요?'),
     why: <><Term id="income" />은 세금 떼기 전 1년 치 수입이에요. 부부라면 둘이 번 돈을 합쳐요(<Term id="combined" />). 월급 250만원이면 약 3,000만원이에요.</>,
-    body: (a, set) => (
-      <NumberField
-        value={a.income} onChange={(n) => set({ income: n })} unit="만원 / 연" presets={[0, 2000, 3000, 4000, 5000, 6500, 8500]}
-        hint={`월급으로 환산하면 약 ${Number.isNaN(a.income) ? 0 : Math.round(a.income / 12).toLocaleString()}만원이에요. 소득이 없는 대학생이라면 0을 눌러 주세요.`}
-      />
+    body: (a, set, next) => (
+      <>
+        <NumberField
+          value={a.income} onChange={(n) => set({ income: n, unknown: UNK(a, 'income', false) })} unit="만원 / 연" presets={[0, 2000, 3000, 4000, 5000, 6500, 8500]}
+          hint={`월급으로 환산하면 약 ${Number.isNaN(a.income) ? 0 : Math.round(a.income / 12).toLocaleString()}만원이에요. 월급·알바비·용돈·장학금·정부지원금을 다 더해서 생각하세요. 소득이 없는 대학생이라면 0을 눌러 주세요.`}
+        />
+        <p className="label" style={{ margin: '18px 0 6px' }}>월 소득을 잘 모르겠다면, 가까운 것을 골라 보세요</p>
+        <div className="preset">
+          {([['학생·무직 (0)', 0], ['알바 월 100만원대', 1500], ['월 200만원대', 2800], ['월 300만원대', 3800], ['월 400만원대', 5000]] as [string, number][]).map(([t, n]) => (
+            <button key={t} type="button" onClick={() => set({ income: n, unknown: UNK(a, 'income', false) })}>{t}</button>
+          ))}
+          <button type="button" onClick={() => { set({ income: 3000, unknown: UNK(a, 'income', true) }); next() }}>정말 모르겠어요</button>
+        </div>
+      </>
     ),
     valid: (a) => !Number.isNaN(a.income),
   },
   {
     id: 'livesApart',
     title: '부모님과 따로 살고 계신가요?',
-    why: <>부모님과 주소가 같으면 못 받는 월세 지원이 있어요. 주민등록상 주소 기준이에요.</>,
+    why: <>부모님과 주소가 같으면 못 받는 월세 지원이 있어요. 실제로 따로 살아도 <b>주민등록상 주소</b>가 같으면 같은 집으로 봐요. 주민등록등본을 보면 알 수 있어요.</>,
     show: (a) => a.marital === 'single',
     body: (a, set, next) => (
-      <Choice<boolean> value={a.livesApart} onPick={(v) => { set({ livesApart: v }); next() }} opts={[
-        { v: true, t: '네, 주소가 따로예요' }, { v: false, t: '아니요, 같은 주소예요', d: '부모님 집에 같이 있어요' },
+      <Choice<string> value={a.unknown?.includes('livesApart') ? 'unk' : String(a.livesApart)} onPick={(v) => { set({ livesApart: v !== 'false', unknown: UNK(a, 'livesApart', v === 'unk') }); next() }} opts={[
+        { v: 'true', t: '네, 주소가 따로예요' }, { v: 'false', t: '아니요, 같은 주소예요', d: '부모님 집에 같이 있어요' },
+        { v: 'unk', t: '잘 모르겠어요', d: '따로 살지만 주소를 안 옮겼을 수 있어요. 따로라고 보고 계산한 뒤 확인하실 수 있게 알려드려요' },
       ]} />
     ),
   },
   {
     id: 'ownsHome',
     title: <>내 이름으로 된 집이 있나요?</>,
-    why: <>대부분 <Term id="nohome" /> 사람만 받을 수 있어요. 부모님 집은 해당 안 돼요.</>,
+    why: <>대부분 <Term id="nohome" /> 사람만 받을 수 있어요. 부모님 집, 지금 세 들어 사는 집은 내 집이 아니에요. 결혼했다면 <b>배우자 이름의 집</b>도 포함해요.</>,
     body: (a, set, next) => (
-      <Choice<boolean> value={a.ownsHome} onPick={(v) => { set({ ownsHome: v }); next() }} opts={[
-        { v: false, t: '없어요 (무주택)' }, { v: true, t: '있어요' },
+      <Choice<string> value={a.unknown?.includes('ownsHome') ? 'unk' : String(a.ownsHome)} onPick={(v) => { set({ ownsHome: v === 'true', unknown: UNK(a, 'ownsHome', v === 'unk') }); next() }} opts={[
+        { v: 'false', t: '없어요 (무주택)', d: '부모님 집에 살거나 전세·월세로 살고 있어요' }, { v: 'true', t: '있어요', d: '나 또는 배우자 이름으로 된 집·분양권이 있어요' },
+        { v: 'unk', t: '잘 모르겠어요', d: '상속·공동명의 등이 헷갈려요. 없다고 보고 계산한 뒤 확인하실 수 있게 알려드려요' },
       ]} />
     ),
   },
   {
     id: 'hasLoan',
     title: '지금 이용 중인 전세대출이 있나요?',
-    why: <>이미 전세대출(<Term id="buteemok" /> 등)이 있으면 세종 <Term id="interest" />을 못 받아요. 둘이 겹치면 안 되거든요.</>,
+    why: <>이미 전세대출(<Term id="buteemok" />·중기청년 전세대출·청년주택드림 등)이 있으면 세종 <Term id="interest" />을 못 받아요. 둘이 겹치면 안 되거든요. 월세만 살고 있다면 &quot;없어요&quot;예요.</>,
     body: (a, set, next) => (
       <Choice<string> value={a.unknown?.includes('hasLoan') ? 'unk' : String(a.hasLoan)} onPick={(v) => { set({ hasLoan: v === 'true', unknown: UNK(a, 'hasLoan', v === 'unk') }); next() }} opts={[
         { v: 'false', t: '없어요' }, { v: 'true', t: '있어요' }, { v: 'unk', t: '잘 모르겠어요', d: '없다고 보고 계산한 뒤, 결과에서 다시 확인하실 수 있게 알려드려요' },
@@ -144,17 +168,18 @@ const STEPS: Step[] = [
     title: '어떤 방식으로 집을 구하고 계세요?',
     why: <>전세인지 월세인지에 따라 받을 수 있는 지원이 완전히 달라요. 헷갈리면 아래 설명을 보세요.</>,
     body: (a, set, next) => (
-      <Choice<Deal> value={a.deal} onPick={(v) => { set({ deal: v, ...(v === 'jeonse' ? { rent: 0, deposit: 12000 } : { rent: a.rent || 50, deposit: a.deposit > 10000 ? 1000 : a.deposit }) }); next() }} opts={[
+      <Choice<Deal | 'unk'> value={a.unknown?.includes('deal') ? 'unk' : a.deal} onPick={(v) => { const d: Deal = v === 'unk' ? 'wolse' : v; set({ deal: d, unknown: UNK(a, 'deal', v === 'unk'), ...(d === 'jeonse' ? { rent: 0, deposit: 12000 } : { rent: a.rent || 50, deposit: a.deposit > 10000 ? 1000 : a.deposit }) }); next() }} opts={[
         { v: 'jeonse', t: '전세', d: '큰 보증금만 맡기고 월세는 없어요' },
         { v: 'banjeonse', t: '반전세', d: '보증금이 꽤 크고 월세도 조금 내요' },
         { v: 'wolse', t: '월세 (보증부 월세)', d: '보증금은 작게, 매달 월세를 내요' },
+        { v: 'unk', t: '아직 잘 모르겠어요', d: '계약서에 매달 내는 돈(차임·월세)이 있으면 월세, 없으면 전세예요. 월세라고 보고 계산한 뒤 알려드려요' },
       ]} />
     ),
   },
   {
     id: 'money',
     title: (a: Answers) => (a.deal === 'jeonse' ? '전세금(보증금)은 얼마 정도인가요?' : '보증금과 월세는 얼마 정도인가요?'),
-    why: <><Term id="deposit" />과 월세가 정해진 금액을 넘으면 지원이 안 돼요. 아직 정해지지 않았다면 대략 생각하는 금액을 넣어요.</>,
+    why: <><Term id="deposit" />과 월세가 정해진 금액을 넘으면 지원이 안 돼요. 아직 정해지지 않았다면 대략 생각하는 금액을 넣어요. 관리비·공과금은 빼고 월세만 적어요.</>,
     body: (a, set) => (
       <>
         <p className="label" style={{ marginBottom: 6 }}>보증금</p>
@@ -166,6 +191,11 @@ const STEPS: Step[] = [
             <NumberField value={a.rent} onChange={(n) => set({ rent: n })} unit="만원 / 월" presets={[30, 40, 50, 60, 70]} />
           </>
         )}
+        <div className="preset" style={{ marginTop: 18 }}>
+          <button type="button" onClick={() => set({ unknown: UNK(a, 'money', !a.unknown?.includes('money')) })} aria-pressed={!!a.unknown?.includes('money')}>
+            {a.unknown?.includes('money') ? '✓ ' : ''}아직 정해지지 않아 대략 넣었어요
+          </button>
+        </div>
       </>
     ),
     valid: (a) => !Number.isNaN(a.deposit) && a.deposit >= 0 && (a.deal === 'jeonse' || !Number.isNaN(a.rent)),
@@ -197,7 +227,7 @@ const STEPS: Step[] = [
   },
 ]
 
-const LABELS: Record<string, string> = { age: '나에 대해', marital: '나에 대해', income: '소득', livesApart: '나에 대해', ownsHome: '지원 이력', hasLoan: '지원 이력', usedBefore: '지원 이력', deal: '구하는 집', money: '구하는 집', houseType: '구하는 집', stage: '진행 단계' }
+const LABELS: Record<string, string> = { age: '나에 대해', residence: '나에 대해', marital: '나에 대해', income: '소득', livesApart: '나에 대해', ownsHome: '지원 이력', hasLoan: '지원 이력', usedBefore: '지원 이력', deal: '구하는 집', money: '구하는 집', houseType: '구하는 집', stage: '진행 단계' }
 
 export function DiagnoseFlow({ onClose }: { onClose: () => void }) {
   const { answers, setAnswers } = useStore()

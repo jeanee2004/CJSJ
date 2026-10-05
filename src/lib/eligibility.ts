@@ -5,9 +5,12 @@ export type Marital = 'single' | 'newlywed' | 'planning'
 export type Deal = 'jeonse' | 'banjeonse' | 'wolse'
 export type Stage = 'explore' | 'contract' | 'paid' | 'movedin'
 export type HouseType = 'normal' | 'multi'
+// 세종시 청년 주거실태조사(2026) S2 거주 형태와 같은 구분
+export type Residence = 'both' | 'regOnly' | 'liveOnly' | 'outside'
 
 export interface Answers {
   age: number
+  residence: Residence // 주민등록·실거주 지역
   marital: Marital
   income: number // 만원, 연 (부부면 합산)
   livesApart: boolean // 부모와 주소 분리
@@ -47,6 +50,19 @@ export interface Verdict {
 }
 
 const isCouple = (a: Answers) => a.marital !== 'single'
+
+// 세종시 지원은 세종에 주민등록 + 실거주가 모두 있어야 해서, 아닌 경우 해야 할 일을 알려 준다
+function residenceTodo(a: Answers, v: Verdict) {
+  if (v.status === 'no' || a.residence === 'both') return
+  const msg: Record<Exclude<Residence, 'both'>, string> = {
+    regOnly: '주민등록은 세종인데 실제로는 다른 곳에 살고 있어요. 실제 거주지가 세종이어야 해서 이사 후 신청하세요.',
+    liveOnly: '세종에 살지만 주민등록은 다른 곳이에요. 전입신고(주소 옮기기)를 먼저 해야 신청할 수 있어요.',
+    outside: '아직 세종에 살지 않아요. 세종으로 이사하고 전입신고를 한 뒤에 신청할 수 있어요.',
+  }
+  v.todo.push(msg[a.residence])
+  if (v.status === 'ok') v.status = 'maybe'
+  v.reasons.push(msg[a.residence])
+}
 
 function make(id: PolicyId): Verdict {
   return { id, status: 'ok', reasons: [], codes: [], todo: [] }
@@ -95,6 +111,7 @@ function sejongInterest(a: Answers): Verdict {
       v.todo.push('예비부부는 혼인 예정일 증명 서류가 필요할 수 있어요. 공고문을 확인하세요.')
   }
   if (v.status === 'maybe' && v.reasons.length === 1 && a.stage === 'explore') v.status = 'ok'
+  residenceTodo(a, v)
   return v
 }
 
@@ -115,6 +132,7 @@ function sejongRent(a: Answers): Verdict {
     if (a.stage === 'movedin') warn(v, '자격은 맞아요. 다만 1년에 사흘만 접수해요(2026년은 3월 3~5일).', '다음 접수 공고(보통 2~3월)를 알림으로 챙기세요.')
     else warn(v, '자격은 맞아요. 세종에 전입(주소 이전)한 뒤에야 신청할 수 있어요. 접수는 1년에 사흘뿐이에요.', '전입 후 다음 접수 시기를 확인하세요. 그동안은 월세 부담을 직접 져야 해요.')
   }
+  residenceTodo(a, v)
   return v
 }
 
@@ -263,6 +281,7 @@ export function entryCostMonths(costs: number, monthlyRent: number): number {
 
 export const DEFAULT_ANSWERS: Answers = {
   age: 26,
+  residence: 'both',
   marital: 'single',
   income: 3000,
   livesApart: true,
