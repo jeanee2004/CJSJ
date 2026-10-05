@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { LayoutGroup, motion } from 'framer-motion'
 import { compareCost, evaluate, warnings } from '../lib/eligibility'
+import { summarize } from '../lib/survey'
+import type { Survey } from '../data/survey'
 import type { Status } from '../lib/eligibility'
 import { POLICIES, RULES } from '../data/policies'
 import { Btn, CountUp, Lines, SourceBlock, Term, VBadge } from '../ui'
@@ -23,6 +25,12 @@ const UNKNOWN_TXT: Record<string, string> = {
   usedBefore: '세종시 지원을 받은 적이 있는지',
   houseType: '구하는 집이 다중주택(원룸·고시원)인지',
 }
+const BARRIER_TIP: Record<string, string> = {
+  '2': '절차가 복잡하다고 하신 분이 많아요. 아래 카드의 "다음에 할 일"에 순서대로 적어 두었어요.',
+  '3': '서류 준비가 부담스럽다면 정부24·홈택스에서 온라인으로 뗄 수 있는 것부터 챙겨 보세요.',
+  '4': '신청 방법·시기는 아래 카드의 "신청하기" 버튼과 접수 일정에서 확인할 수 있어요.',
+  '6': '지원 금액이 적더라도 월세 지원과 이자 지원을 비교해 더 큰 쪽을 고를 수 있어요.',
+}
 const FILTERS: { id: 'all' | Status; t: string }[] = [
   { id: 'all', t: '전체' }, { id: 'ok', t: '✓ 신청할 수 있어요' }, { id: 'maybe', t: '△ 확인해 보면 좋아요' }, { id: 'no', t: '✕ 지금은 어려워요' },
 ]
@@ -44,6 +52,7 @@ export default function Result() {
   const missed = a.aware?.length
     ? verdicts.filter((v) => v.status !== 'no' && !knownIds.includes(v.id)).map((v) => POLICIES.find((p) => p.id === v.id)!.name)
     : []
+  const sum = a.survey ? summarize(a.survey as Survey) : null
   const best = count('ok') + count('maybe')
 
   return (
@@ -84,6 +93,20 @@ export default function Result() {
               <span><b>{w.tone === 'stop' ? '이것만은 조심해 주세요' : '미리 챙겨 두면 좋아요'}</b>{w.text}</span>
             </div>
           ))}
+          {sum && (
+            <section className="strip" style={{ display: 'block', marginTop: 24 }} aria-label="내 응답 요약">
+              <b>세종시 조사에 답해 주신 내용으로 정리했어요</b>
+              <div className="sum">
+                <div><b className="num">{sum.known}/{sum.total}</b><small>알고 있거나 써 본 주거정책 (몰랐다면 아래 카드에서 하나씩 알려드릴게요)</small></div>
+                {sum.housingCost !== undefined && <div><b className="num">{sum.housingCost.toLocaleString()}<span style={{ fontSize: '0.4em' }}>만원</span></b><small>매달 나가는 집 돈 (월세+관리비+대출상환){sum.ratio !== undefined ? ` · 소득의 약 ${sum.ratio}%` : ''}</small></div>}
+                {sum.burden && <div><b className="num" style={{ fontSize: 28 }}>{sum.burden}</b><small>소득 대비 주거비 부담</small></div>}
+                {sum.topPolicy && <div><b className="num" style={{ fontSize: 28 }}>{sum.topPolicy}</b><small>가장 먼저 필요하다고 고른 정책</small></div>}
+              </div>
+              {sum.barrierCode && BARRIER_TIP[sum.barrierCode] && <p style={{ marginTop: 14 }}><b>신청을 망설인 이유 · {sum.barrier}</b> {BARRIER_TIP[sum.barrierCode]}</p>}
+              {sum.channels.length > 0 && <p style={{ marginTop: 10 }}>소식은 <b>{sum.channels.join(', ')}</b>으로 받고 싶다고 하셨어요. 접수 일정은 세종시 공고가 올라오는 곳에서 가장 먼저 확인할 수 있어요.</p>}
+            </section>
+          )}
+
           {missed.length > 0 && (
             <div className="strip">
               <span className="ico" aria-hidden="true">★</span>
@@ -93,7 +116,7 @@ export default function Result() {
           {unknown.length > 0 && (
             <div className="strip ask">
               <span className="ico" aria-hidden="true">?</span>
-              <span><b>"잘 모르겠어요"라고 하신 항목</b>없다고 보고 계산했어요. 한 번 확인해 보세요: {unknown.map((k) => UNKNOWN_TXT[k]).join(' / ')}</span>
+              <span><b>"잘 모르겠어요"라고 하신 항목</b>대략적인 값(소득은 연 3,000만원, 집은 없음, 월세 50만원 등)으로 계산했어요. 한 번 확인해 보세요: {unknown.map((k) => UNKNOWN_TXT[k]).join(' / ')}</span>
             </div>
           )}
 

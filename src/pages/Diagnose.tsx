@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DEFAULT_ANSWERS } from '../lib/eligibility'
-import type { Answers, Deal, HouseType, Marital, Residence, Stage } from '../lib/eligibility'
-import { Btn, Term } from '../ui'
+import { SECTIONS } from '../data/survey'
+import type { Opt as SOpt, Q, Survey, Val } from '../data/survey'
+import { deriveAnswers, visibleQuestions } from '../lib/survey'
+import { Btn } from '../ui'
 import { useStore } from '../store'
 
 interface Opt<T> { v: T; t: string; d?: string }
@@ -21,10 +22,10 @@ function Choice<T extends string | boolean>({ opts, value, onPick }: { opts: Opt
   )
 }
 
-function NumberField({ value, onChange, unit, presets, hint, max }: { value: number; onChange: (n: number) => void; unit: string; presets: number[]; hint?: ReactNode; max?: number }) {
+function NumberField({ value, onChange, unit, presets, hint, max, compact }: { value: number; onChange: (n: number) => void; unit: string; presets: number[]; hint?: ReactNode; max?: number; compact?: boolean }) {
   return (
     <>
-      <div className="num-field">
+      <div className={`num-field${compact ? ' compact' : ''}`}>
         <input
           className="num-input" type="number" inputMode="numeric" min={0} max={max} value={Number.isNaN(value) ? '' : value}
           onChange={(e) => onChange(e.target.value === '' ? NaN : Math.max(0, Number(e.target.value)))} aria-label={`금액(${unit})`}
@@ -41,274 +42,208 @@ function NumberField({ value, onChange, unit, presets, hint, max }: { value: num
   )
 }
 
-interface Step {
-  id: string
-  title: ReactNode | ((a: Answers) => ReactNode)
-  why: ReactNode
-  show?: (a: Answers) => boolean
-  body: (a: Answers, set: (p: Partial<Answers>) => void, next: () => void) => ReactNode
-  valid?: (a: Answers) => boolean
-}
+const UNK = 'unk'
+const EXCLUSIVE = /^(해당 없음|없음|겪은 적 없음|아무것도 안 함|받고 있는 지원 없음|찾아본 적 없음)/
+const DRAFT = 'cjsj.draft'
+const withUnk = (q: Q): SOpt[] => [...(q.opts ?? []), ...(q.unk ? [{ v: UNK, t: '잘 모르겠어요', d: '괜찮아요. 결과에서 어떻게 확인하는지 알려드릴게요' }] : [])]
 
-const UNK = (a: Answers, key: string, on: boolean): string[] => {
-  const s = new Set(a.unknown ?? [])
-  if (on) s.add(key)
-  else s.delete(key)
-  return [...s]
-}
+function QBody({ q, sv, set, next }: { q: Q; sv: Survey; set: (v: Val | undefined | ((prev: Val | undefined) => Val | undefined)) => void; next: () => void }) {
+  const v = sv[q.id]
+  if (q.kind === 'single')
+    return <Choice<string> value={typeof v === 'string' ? v : undefined} onPick={(x) => { set(x); next() }} opts={withUnk(q)} />
 
-const STEPS: Step[] = [
-  {
-    id: 'age',
-    title: '올해 만 몇 살이신가요?',
-    why: <>제도마다 나이 기준이 달라서 여쭤봐요(19~34세 / 19~39세). <b>만 나이</b>는 생일이 지나야 한 살 늘어나요.</>,
-    body: (a, set) => (
-      <div className="stepper">
-        <button type="button" aria-label="한 살 줄이기" onClick={() => set({ age: Math.max(15, a.age - 1) })}>−</button>
-        <output aria-live="polite">{a.age}<small>세</small></output>
-        <button type="button" aria-label="한 살 늘리기" onClick={() => set({ age: Math.min(60, a.age + 1) })}>＋</button>
-      </div>
-    ),
-  },
-  {
-    id: 'residence',
-    title: '지금 어디에 살고 계신가요?',
-    why: <>세종시 지원은 <b>세종에 주민등록이 있고 실제로도 살아야</b> 받을 수 있어요. 주민등록 주소와 실제 사는 곳이 다른 청년이 많아서 먼저 여쭤봐요. <Term id="move" />을 했는지가 중요해요.</>,
-    body: (a, set, next) => (
-      <Choice<Residence> value={a.residence} onPick={(v) => { set({ residence: v }); next() }} opts={[
-        { v: 'both', t: '세종에 주소도 있고, 실제로도 살아요' },
-        { v: 'liveOnly', t: '세종에 살지만 주소는 다른 곳이에요', d: '기숙사·직장 근처 자취 등, 전입신고를 안 한 경우' },
-        { v: 'regOnly', t: '주소만 세종이고 실제로는 다른 곳에 살아요' },
-        { v: 'outside', t: '아직 세종에 살지 않아요', d: '세종으로 이사를 알아보는 중' },
-      ]} />
-    ),
-  },
-  {
-    id: 'marital',
-    title: '지금 어떤 상황이신가요?',
-    why: <>혼자이신지, 결혼하셨는지에 따라 소득 기준이 크게 달라져요. 결혼 7년 이내이거나 6개월 안에 결혼할 예정이면 <b>신혼부부</b> 제도를 볼 수 있어요.</>,
-    body: (a, set, next) => (
-      <Choice<Marital>
-        value={a.marital}
-        onPick={(v) => { set({ marital: v, ...(v !== 'single' ? { livesApart: true } : {}) }); next() }}
-        opts={[
-          { v: 'single', t: '혼자예요 (미혼·이혼·사별)', d: '부모님·친구와 살아도 결혼하지 않았다면 여기예요' },
-          { v: 'newlywed', t: '결혼했어요 (7년 이내)', d: '신혼부부' },
-          { v: 'planning', t: '곧 결혼해요 (6개월 이내)', d: '예비부부' },
-        ]}
-      />
-    ),
-  },
-  {
-    id: 'income',
-    title: (a: Answers) => (a.marital === 'single' ? '1년 소득은 대략 얼마인가요?' : '두 분의 1년 소득을 합치면 얼마인가요?'),
-    why: <><Term id="income" />은 세금 떼기 전 1년 치 수입이에요. 부부라면 둘이 번 돈을 합쳐요(<Term id="combined" />). 월급 250만원이면 약 3,000만원이에요.</>,
-    body: (a, set, next) => (
-      <>
-        <NumberField
-          value={a.income} onChange={(n) => set({ income: n, unknown: UNK(a, 'income', false) })} unit="만원 / 연" presets={[0, 2000, 3000, 4000, 5000, 6500, 8500]}
-          hint={`월급으로 환산하면 약 ${Number.isNaN(a.income) ? 0 : Math.round(a.income / 12).toLocaleString()}만원이에요. 월급·알바비·용돈·장학금·정부지원금을 다 더해서 생각하세요. 소득이 없는 대학생이라면 0을 눌러 주세요.`}
-        />
-        <p className="label" style={{ margin: '18px 0 6px' }}>월 소득을 잘 모르겠다면, 가까운 것을 골라 보세요</p>
-        <div className="preset">
-          {([['학생·무직 (0)', 0], ['알바 월 100만원대', 1500], ['월 200만원대', 2800], ['월 300만원대', 3800], ['월 400만원대', 5000]] as [string, number][]).map(([t, n]) => (
-            <button key={t} type="button" onClick={() => set({ income: n, unknown: UNK(a, 'income', false) })}>{t}</button>
-          ))}
-          <button type="button" onClick={() => { set({ income: 3000, unknown: UNK(a, 'income', true) }); next() }}>정말 모르겠어요</button>
-        </div>
-      </>
-    ),
-    valid: (a) => !Number.isNaN(a.income),
-  },
-  {
-    id: 'livesApart',
-    title: '부모님과 따로 살고 계신가요?',
-    why: <>부모님과 주소가 같으면 못 받는 월세 지원이 있어요. 실제로 따로 살아도 <b>주민등록상 주소</b>가 같으면 같은 집으로 봐요. 주민등록등본을 보면 알 수 있어요.</>,
-    show: (a) => a.marital === 'single',
-    body: (a, set, next) => (
-      <Choice<string> value={a.unknown?.includes('livesApart') ? 'unk' : String(a.livesApart)} onPick={(v) => { set({ livesApart: v !== 'false', unknown: UNK(a, 'livesApart', v === 'unk') }); next() }} opts={[
-        { v: 'true', t: '네, 주소가 따로예요' }, { v: 'false', t: '아니요, 같은 주소예요', d: '부모님 집에 같이 있어요' },
-        { v: 'unk', t: '잘 모르겠어요', d: '따로 살지만 주소를 안 옮겼을 수 있어요. 따로라고 보고 계산한 뒤 확인하실 수 있게 알려드려요' },
-      ]} />
-    ),
-  },
-  {
-    id: 'ownsHome',
-    title: <>내 이름으로 된 집이 있나요?</>,
-    why: <>대부분 <Term id="nohome" /> 사람만 받을 수 있어요. 부모님 집, 지금 세 들어 사는 집은 내 집이 아니에요. 결혼했다면 <b>배우자 이름의 집</b>도 포함해요.</>,
-    body: (a, set, next) => (
-      <Choice<string> value={a.unknown?.includes('ownsHome') ? 'unk' : String(a.ownsHome)} onPick={(v) => { set({ ownsHome: v === 'true', unknown: UNK(a, 'ownsHome', v === 'unk') }); next() }} opts={[
-        { v: 'false', t: '없어요 (무주택)', d: '부모님 집에 살거나 전세·월세로 살고 있어요' }, { v: 'true', t: '있어요', d: '나 또는 배우자 이름으로 된 집·분양권이 있어요' },
-        { v: 'unk', t: '잘 모르겠어요', d: '상속·공동명의 등이 헷갈려요. 없다고 보고 계산한 뒤 확인하실 수 있게 알려드려요' },
-      ]} />
-    ),
-  },
-  {
-    id: 'hasLoan',
-    title: '지금 이용 중인 전세대출이 있나요?',
-    why: <>이미 전세대출(<Term id="buteemok" />·중기청년 전세대출·청년주택드림 등)이 있으면 세종 <Term id="interest" />을 못 받아요. 둘이 겹치면 안 되거든요. 월세만 살고 있다면 &quot;없어요&quot;예요.</>,
-    body: (a, set, next) => (
-      <Choice<string> value={a.unknown?.includes('hasLoan') ? 'unk' : String(a.hasLoan)} onPick={(v) => { set({ hasLoan: v === 'true', unknown: UNK(a, 'hasLoan', v === 'unk') }); next() }} opts={[
-        { v: 'false', t: '없어요' }, { v: 'true', t: '있어요' }, { v: 'unk', t: '잘 모르겠어요', d: '없다고 보고 계산한 뒤, 결과에서 다시 확인하실 수 있게 알려드려요' },
-      ]} />
-    ),
-  },
-  {
-    id: 'usedBefore',
-    title: '세종시 이자지원이나 임대료 지원을 받은 적 있나요?',
-    why: <>이 두 가지는 <Term id="lifeonce" />이에요. 한 번 받았으면 다시 못 받아요.</>,
-    body: (a, set, next) => (
-      <Choice<string> value={a.unknown?.includes('usedBefore') ? 'unk' : String(a.usedBefore)} onPick={(v) => { set({ usedBefore: v === 'true', unknown: UNK(a, 'usedBefore', v === 'unk') }); next() }} opts={[
-        { v: 'false', t: '받은 적 없어요' }, { v: 'true', t: '받은 적 있어요' }, { v: 'unk', t: '잘 모르겠어요' },
-      ]} />
-    ),
-  },
-  {
-    id: 'aware',
-    title: '이 중에 이미 알고 있던 지원이 있나요?',
-    why: <>세종 청년 조사에서도 지원이 있는 줄 몰라서 못 받은 경우가 많아요. 몰랐다고 해서 이상한 게 아니에요. 아는 것만 골라 주시면, 결과에서 <b>몰랐던 지원을 따로 짚어</b> 드릴게요.</>,
-    body: (a, set) => {
-      const sel = a.aware ?? []
-      const toggle = (id: string) => {
-        if (id === 'none') return set({ aware: sel.includes('none') ? [] : ['none'] })
-        const base = sel.filter((x) => x !== 'none')
-        set({ aware: base.includes(id) ? base.filter((x) => x !== id) : [...base, id] })
-      }
-      const opts: [string, string, string][] = [
-        ['sejongRent', '세종시 청년 월세(임대료) 지원', '매달 월세를 도와주는 세종시 사업'],
-        ['sejongInterest', '세종시 전세대출 이자지원', '전세대출 이자 일부를 세종시가 내줘요'],
-        ['molitRent', '국토교통부 청년월세 지원', '전국 청년 월세 지원, 복지로에서 신청'],
-        ['buteemok', '버팀목 전세대출', '낮은 금리 전세자금 대출 (청년·신혼)'],
-        ['none', '하나도 몰랐어요', '괜찮아요, 결과에서 하나씩 알려드릴게요'],
-      ]
-      return (
-        <div className="choices" role="group">
-          {opts.map(([id, t, d], i) => (
-            <button key={id} type="button" className="choice" aria-pressed={sel.includes(id)} onClick={() => toggle(id)}>
-              <span className="k">{String.fromCharCode(65 + i)}</span>
-              <span><b>{t}</b><small>{d}</small></span>
-              <span className="tick" aria-hidden="true">{sel.includes(id) ? '✓' : ''}</span>
-            </button>
-          ))}
-          <p className="hint">여러 개 고를 수 있어요.</p>
-        </div>
-      )
-    },
-    valid: (a) => (a.aware?.length ?? 0) > 0,
-  },
-  {
-    id: 'deal',
-    title: '어떤 방식으로 집을 구하고 계세요?',
-    why: <>전세인지 월세인지에 따라 받을 수 있는 지원이 완전히 달라요. 헷갈리면 아래 설명을 보세요.</>,
-    body: (a, set, next) => (
-      <Choice<Deal | 'unk'> value={a.unknown?.includes('deal') ? 'unk' : a.deal} onPick={(v) => { const d: Deal = v === 'unk' ? 'wolse' : v; set({ deal: d, unknown: UNK(a, 'deal', v === 'unk'), ...(d === 'jeonse' ? { rent: 0, deposit: 12000 } : { rent: a.rent || 50, deposit: a.deposit > 10000 ? 1000 : a.deposit }) }); next() }} opts={[
-        { v: 'jeonse', t: '전세', d: '큰 보증금만 맡기고 월세는 없어요' },
-        { v: 'banjeonse', t: '반전세', d: '보증금이 꽤 크고 월세도 조금 내요' },
-        { v: 'wolse', t: '월세 (보증부 월세)', d: '보증금은 작게, 매달 월세를 내요' },
-        { v: 'unk', t: '아직 잘 모르겠어요', d: '계약서에 매달 내는 돈(차임·월세)이 있으면 월세, 없으면 전세예요. 월세라고 보고 계산한 뒤 알려드려요' },
-      ]} />
-    ),
-  },
-  {
-    id: 'money',
-    title: (a: Answers) => (a.deal === 'jeonse' ? '전세금(보증금)은 얼마 정도인가요?' : '보증금과 월세는 얼마 정도인가요?'),
-    why: <><Term id="deposit" />과 월세가 정해진 금액을 넘으면 지원이 안 돼요. 아직 정해지지 않았다면 대략 생각하는 금액을 넣어요. 관리비·공과금은 빼고 월세만 적어요.</>,
-    body: (a, set) => (
-      <>
-        <p className="label" style={{ marginBottom: 6 }}>보증금</p>
-        <NumberField value={a.deposit} onChange={(n) => set({ deposit: n })} unit="만원" presets={a.deal === 'jeonse' ? [8000, 12000, 15000, 20000] : [500, 1000, 3000, 5000]}
-          hint={`1만원 단위예요. 지금 ${Number.isNaN(a.deposit) ? 0 : (a.deposit / 10000).toFixed(1)}억원이에요.`} />
-        {a.deal !== 'jeonse' && (
-          <>
-            <p className="label" style={{ margin: '18px 0 6px' }}>월세 (매달)</p>
-            <NumberField value={a.rent} onChange={(n) => set({ rent: n })} unit="만원 / 월" presets={[30, 40, 50, 60, 70]} />
-          </>
-        )}
-        <div className="preset" style={{ marginTop: 18 }}>
-          <button type="button" onClick={() => set({ unknown: UNK(a, 'money', !a.unknown?.includes('money')) })} aria-pressed={!!a.unknown?.includes('money')}>
-            {a.unknown?.includes('money') ? '✓ ' : ''}아직 정해지지 않아 대략 넣었어요
+  if (q.kind === 'multi') {
+    const sel = Array.isArray(v) ? v : []
+    const opts = withUnk(q)
+    const toggle = (o: SOpt) => {
+      const excl = o.v === UNK || EXCLUSIVE.test(o.t)
+      if (sel.includes(o.v)) return set(sel.filter((x) => x !== o.v))
+      if (excl) return set([o.v])
+      const base = sel.filter((x) => x !== UNK && !EXCLUSIVE.test(opts.find((p) => p.v === x)?.t ?? ''))
+      set(q.max && base.length >= q.max ? [...base.slice(1), o.v] : [...base, o.v])
+    }
+    return (
+      <div className="choices" role="group">
+        {opts.map((o, i) => (
+          <button key={o.v} type="button" className="choice" aria-pressed={sel.includes(o.v)} onClick={() => toggle(o)}>
+            <span className="k">{String.fromCharCode(65 + (i % 26))}</span>
+            <span><b>{o.t}</b>{o.d && <small>{o.d}</small>}</span>
+            <span className="tick" aria-hidden="true">{sel.includes(o.v) ? '✓' : ''}</span>
           </button>
-        </div>
-      </>
-    ),
-    valid: (a) => !Number.isNaN(a.deposit) && a.deposit >= 0 && (a.deal === 'jeonse' || !Number.isNaN(a.rent)),
-  },
-  {
-    id: 'houseType',
-    title: '구하시는 집은 어떤 종류인가요?',
-    why: <>원룸·고시원처럼 방을 쪼개 쓰는 <Term id="multihouse" />은 지원에서 빠지는 경우가 많아요. 계약서의 "건축물 용도"를 보면 알 수 있어요.</>,
-    body: (a, set, next) => (
-      <Choice<string> value={a.unknown?.includes('houseType') ? 'unk' : a.houseType} onPick={(v) => { set({ houseType: v === 'multi' ? 'multi' : ('normal' as HouseType), unknown: UNK(a, 'houseType', v === 'unk') }); next() }} opts={[
-        { v: 'normal', t: '아파트·빌라·오피스텔', d: '독립된 한 가구가 쓰는 집' },
-        { v: 'multi', t: '원룸·고시원 (다중주택)', d: '건물 한 채를 여러 방으로 나눈 곳' },
-        { v: 'unk', t: '아직 모르겠어요' },
-      ]} />
-    ),
-  },
-  {
-    id: 'stage',
-    title: '지금 집 계약은 어디까지 진행됐나요?',
-    why: <>이 질문이 가장 중요해요. 같은 지원도 <b>계약 어느 시점이냐</b>에 따라 받을 수도, 못 받을 수도 있어요. <Term id="jan" />을 치르기 전과 후가 특히 달라요.</>,
-    body: (a, set, next) => (
-      <Choice<Stage> value={a.stage} onPick={(v) => { set({ stage: v }); next() }} opts={[
-        { v: 'explore', t: '아직 집을 보러 다녀요', d: '계약 전' },
-        { v: 'contract', t: '계약했어요 (잔금 전)', d: '가계약·본계약 후 잔금은 아직' },
-        { v: 'paid', t: '잔금까지 냈어요', d: '아직 이사는 안 했을 수도 있어요' },
-        { v: 'movedin', t: '이미 이사했어요 (전입 완료)' },
-      ]} />
-    ),
-  },
-]
+        ))}
+        <p className="hint" style={{ marginTop: 12 }}>{q.max ? `최대 ${q.max}개까지 고를 수 있어요.` : '여러 개 고를 수 있어요.'}</p>
+      </div>
+    )
+  }
 
-const LABELS: Record<string, string> = { age: '나에 대해', residence: '나에 대해', marital: '나에 대해', income: '소득', livesApart: '나에 대해', ownsHome: '지원 이력', hasLoan: '지원 이력', usedBefore: '지원 이력', aware: '지원 이력', deal: '구하는 집', money: '구하는 집', houseType: '구하는 집', stage: '진행 단계' }
+  if (q.kind === 'rank') {
+    const sel = Array.isArray(v) ? v : []
+    const toggle = (x: string) => set((p) => {
+      const cur = Array.isArray(p) ? p : []
+      return cur.includes(x) ? cur.filter((y) => y !== x) : cur.length >= (q.max ?? 3) ? cur : [...cur, x]
+    })
+    return (
+      <div className="choices" role="group">
+        {(q.opts ?? []).map((o) => {
+          const r = sel.indexOf(o.v)
+          return (
+            <button key={o.v} type="button" className="choice" aria-pressed={r >= 0} onClick={() => toggle(o.v)}>
+              <span className="k">{r >= 0 ? `${r + 1}순위` : ''}</span>
+              <span><b>{o.t}</b></span>
+              <span className="tick" aria-hidden="true">{r >= 0 ? r + 1 : ''}</span>
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
+
+  if (q.kind === 'age') {
+    const age = Number(typeof v === 'string' ? v : 26)
+    return (
+      <div className="stepper">
+        <button type="button" aria-label="한 살 줄이기" onClick={() => set(String(Math.max(15, age - 1)))}>−</button>
+        <output aria-live="polite">{age}<small>세</small></output>
+        <button type="button" aria-label="한 살 늘리기" onClick={() => set(String(Math.min(60, age + 1)))}>＋</button>
+      </div>
+    )
+  }
+
+  if (q.kind === 'numbers') {
+    const isUnk = v === UNK
+    const val = v && typeof v === 'object' && !Array.isArray(v) ? v : {}
+    return (
+      <>
+        {q.note && <p className="hint" style={{ marginBottom: 14 }}>{q.note}</p>}
+        {!isUnk && (q.fields ?? []).map((f) => {
+          const raw = val[f.k]
+          const n = raw === undefined || raw === '' ? NaN : Number(raw)
+          return (
+            <div key={f.k} style={{ marginBottom: 22 }}>
+              <p className="label" style={{ marginBottom: 6 }}>{f.label}</p>
+              <NumberField compact={(q.fields?.length ?? 1) > 1} value={n} unit={f.unit} presets={f.presets ?? [0]} max={f.max}
+                onChange={(x) => set((p) => ({ ...(p && typeof p === 'object' && !Array.isArray(p) ? p : {}), [f.k]: Number.isNaN(x) ? '' : x }))} />
+            </div>
+          )
+        })}
+        {q.unk && (
+          <div className="preset" style={{ marginTop: 8 }}>
+            <button type="button" aria-pressed={isUnk} onClick={() => { set(isUnk ? undefined : UNK); if (!isUnk) next() }}>
+              {isUnk ? '✓ ' : ''}정확히 모르겠어요
+            </button>
+          </div>
+        )}
+      </>
+    )
+  }
+
+  if (q.kind === 'matrix') {
+    const val = v && typeof v === 'object' && !Array.isArray(v) ? v : {}
+    return (
+      <div className="mx" role="group">
+        {(q.rows ?? []).map((r, ri) => (
+          <div key={r.k} className="mx-row">
+            <p><span className="k">{String(ri + 1).padStart(2, '0')}</span>{r.t}</p>
+            <div className="mx-cols">
+              {(q.cols ?? []).map((c) => (
+                <button key={c.v} type="button" aria-pressed={val[r.k] === c.v} onClick={() => set((p) => ({ ...(p && typeof p === 'object' && !Array.isArray(p) ? p : {}), [r.k]: c.v }))}>{c.t}</button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <>
+      {q.note && <p className="hint" style={{ marginBottom: 12 }}>{q.note}</p>}
+      <textarea className="mx-text" rows={6} maxLength={500} value={typeof v === 'string' ? v : ''} onChange={(e) => set(e.target.value)} aria-label="자유롭게 적기" />
+      <p className="hint">{(typeof v === 'string' ? v : '').length} / 500자</p>
+    </>
+  )
+}
+
+const answered = (q: Q, v: Val | undefined): boolean => {
+  if (q.kind === 'text' || q.kind === 'age') return true
+  if (v === undefined) return false
+  if (q.kind === 'single') return typeof v === 'string'
+  if (q.kind === 'multi') return Array.isArray(v) && v.length > 0
+  if (q.kind === 'rank') return Array.isArray(v) && v.length === (q.max ?? 3)
+  if (q.kind === 'numbers') return v === UNK || (typeof v === 'object' && !Array.isArray(v) && (q.fields ?? []).every((f) => v[f.k] !== undefined && v[f.k] !== ''))
+  if (q.kind === 'matrix') return typeof v === 'object' && !Array.isArray(v) && (q.rows ?? []).every((r) => (v as Record<string, unknown>)[r.k] !== undefined)
+  return true
+}
+
+const loadDraft = (): { sv: Survey; i: number } => {
+  try {
+    const d = JSON.parse(sessionStorage.getItem(DRAFT) ?? 'null')
+    if (d && typeof d === 'object' && d.sv) return { sv: d.sv, i: Number(d.i) || 0 }
+  } catch { /* noop */ }
+  return { sv: {}, i: 0 }
+}
 
 export function DiagnoseFlow({ onClose }: { onClose: () => void }) {
-  const { answers, setAnswers } = useStore()
+  const { setAnswers } = useStore()
   const nav = useNavigate()
-  const [a, setA] = useState<Answers>({ ...DEFAULT_ANSWERS, unknown: [] })
-  const [i, setI] = useState(0)
+  const [draft] = useState(loadDraft)
+  const [sv, setSv] = useState<Survey>(draft.sv)
+  const [i, setI] = useState(draft.i)
   const [dir, setDir] = useState(1)
-  void answers
 
-  const visible = STEPS.filter((s) => !s.show || s.show(a))
+  const visible = visibleQuestions(sv)
   const idx = Math.min(i, visible.length - 1)
-  const step = visible[idx]
-  const set = (p: Partial<Answers>) => setA((prev) => ({ ...prev, ...p }))
-  const finish = (final: Answers) => { setAnswers(final); onClose(); nav('/result') }
+  const q = visible[idx]
+  const set = (v: Val | undefined | ((prev: Val | undefined) => Val | undefined)) =>
+    setSv((prev) => ({ ...prev, [q.id]: typeof v === 'function' ? v(prev[q.id]) : v }))
+  const finish = () => {
+    try { sessionStorage.removeItem(DRAFT) } catch { /* noop */ }
+    setAnswers(deriveAnswers(sv)); onClose(); nav('/result')
+  }
   const go = (n: number) => { setDir(n > 0 ? 1 : -1); setI((x) => Math.max(0, x + n)) }
   const isLast = idx === visible.length - 1
-  const ok = step.valid ? step.valid(a) : true
-  const next = () => { if (isLast) finish(a); else go(1) }
+  const ok = answered(q, sv[q.id])
+  const next = () => { if (isLast) finish(); else go(1) }
   // 선택형 질문은 바로 넘어가므로, 상태 반영 후 이동하도록 setTimeout 사용
   const autoNext = () => setTimeout(() => (isLast ? undefined : go(1)), 180)
-  const title = typeof step.title === 'function' ? step.title(a) : step.title
 
+  useEffect(() => {
+    try { sessionStorage.setItem(DRAFT, JSON.stringify({ sv, i: idx })) } catch { /* noop */ }
+  }, [sv, idx])
+
+  const secNo = SECTIONS.indexOf(q.sec as (typeof SECTIONS)[number]) + 1
   const hues: [string, string][] = [['var(--blush)', 'var(--aqua)'], ['var(--mint)', 'var(--peri)'], ['var(--aqua)', 'var(--blush)'], ['var(--peri)', 'var(--mint)'], ['var(--blush)', 'var(--mint)'], ['var(--tint)', 'var(--aqua)']]
-  const [h1, h2] = hues[idx % hues.length]
+  const [h1, h2] = hues[(secNo - 1) % hues.length]
+  const minutes = Math.max(1, Math.ceil((visible.length - idx) * 0.18))
+  const tag = q.id.startsWith('N') ? '청정 세종 추가 질문' : q.id.startsWith('S') && q.id.length === 2 ? `조사 ${q.id}` : `조사 ${q.id}`
 
   return (
     <div className="diag-flow" style={{ ['--hc1' as string]: h1, ['--hc2' as string]: h2 }}>
       <div>
         <div className="diag-top">
-          <span className="label">질문 {String(idx + 1).padStart(2, '0')} / {String(visible.length).padStart(2, '0')} · {LABELS[step.id]}</span>
-          <span className="label">약 {Math.max(1, Math.ceil((visible.length - idx) * 0.3))}분 남았어요</span>
+          <span className="label">질문 {String(idx + 1).padStart(2, '0')} / {String(visible.length).padStart(2, '0')} · {secNo}/{SECTIONS.length} {q.sec}</span>
+          <span className="label">약 {minutes}분 남았어요</span>
         </div>
         <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={visible.length} aria-valuenow={idx + 1}><i style={{ width: `${((idx + 1) / visible.length) * 100}%` }} /></div>
-          <section key={step.id} className="diag-grid step-in" aria-live="polite" style={{ ['--dir' as string]: dir }}>
-            <div className="diag-side">
-              <span className="diag-no" aria-hidden="true">{String(idx + 1).padStart(2, '0')}</span>
-              <h1>{title}</h1>
-              <div className="why"><b>여쭤보는 이유</b>{step.why}</div>
+        <section key={q.id} className="diag-grid step-in" aria-live="polite" style={{ ['--dir' as string]: dir }}>
+          <div className="diag-side">
+            <span className="diag-no" aria-hidden="true">{String(idx + 1).padStart(2, '0')}</span>
+            <span className="label" style={{ display: 'block', marginBottom: 6 }}>{tag}</span>
+            <h1>{q.title}</h1>
+            <div className="why">
+              <b>여쭤보는 이유</b>
+              {q.why ?? <>세종시 청년 주거실태조사에 나오는 질문이에요. {q.unk ? '잘 모르면 "잘 모르겠어요"를 눌러도 괜찮아요.' : '정확하지 않아도 떠오르는 대로 골라 주세요.'}</>}
             </div>
-            <div className="diag-main">
-              {step.body(a, set, () => { if (!isLast) autoNext() })}
-              <div className="nav-row">
-                <button className="back" type="button" onClick={() => go(-1)} style={{ visibility: idx === 0 ? 'hidden' : 'visible' }}>← 이전</button>
-                <Btn onClick={next} disabled={!ok}>{isLast ? '결과 보기' : '다음'}</Btn>
-              </div>
+          </div>
+          <div className="diag-main">
+            <QBody q={q} sv={sv} set={set} next={() => { if (!isLast) autoNext() }} />
+            <div className="nav-row">
+              <button className="back" type="button" onClick={() => go(-1)} style={{ visibility: idx === 0 ? 'hidden' : 'visible' }}>← 이전</button>
+              <Btn onClick={next} disabled={!ok}>{isLast ? '결과 보기' : '다음'}</Btn>
             </div>
-          </section>
-        <p className="hint" style={{ marginTop: 36 }}>입력한 내용은 서버로 보내지 않고 이 기기에만 저장돼요.</p>
+          </div>
+        </section>
+        <p className="hint" style={{ marginTop: 36 }}>입력한 내용은 서버로 보내지 않고 이 기기에만 저장돼요. 질문은 세종시 청년 주거실태 및 정책수요조사(2026)를 따랐어요.</p>
       </div>
     </div>
   )

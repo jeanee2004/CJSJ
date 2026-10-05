@@ -23,6 +23,7 @@ export interface Answers {
   houseType: HouseType
   stage: Stage
   aware?: string[] // 이미 알고 있던 제도 id (하나도 몰랐으면 ['none'])
+  survey?: Record<string, unknown> // 세종시 조사 문항 응답 원본 (결과 요약용)
   unknown?: string[] // "모름"이라고 답한 항목 (결과에서 다시 확인하도록 안내)
 }
 
