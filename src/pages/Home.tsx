@@ -12,7 +12,7 @@ import { DataSection } from '../components/Charts'
 import { useStore } from '../store'
 
 /* ───────── 첫 화면: 영상 히어로 ─────────
-   · 세션 첫 방문에만 자동 재생: 영상 1(스마트폰) → 영상 0(대학생·결혼) → 영상 2 (각각 1초간 서서히 섞이며 이어짐) → 마지막 장면에서 정지
+   · 세션 첫 방문에만 자동 재생: 영상 1(스마트폰) → 영상 0(대학생·결혼) → 영상 2 → Looking for House (각각 1초간 서서히 섞이며 이어짐) → 마지막 장면에서 정지
    · 재방문·모션 줄이기: 정지 장면만 보여주고 "영상 재생" 버튼을 누르면 처음부터 재생
    · 영상·이어 붙이는 지점은 data/hero.ts 에서 바꾼다 */
 const HERO_KEY = 'cjsj.heroPlayed'
@@ -22,6 +22,7 @@ function HeroVideo() {
   const v0 = useRef<HTMLVideoElement>(null)
   const va = useRef<HTMLVideoElement>(null)
   const vb = useRef<HTMLVideoElement>(null)
+  const vc = useRef<HTMLVideoElement>(null)
   const seq = useRef<HeroSequence | null>(null)
   const resume = useRef(false)
   const [firstRun] = useState(() => {
@@ -37,9 +38,9 @@ function HeroVideo() {
   const [blocked, setBlocked] = useState(false)
 
   useEffect(() => {
-    const z = v0.current, a = va.current, b = vb.current
-    if (!z || !a || !b) return
-    const s = new HeroSequence([a, z, b], [HERO.clip1, HERO.clip0, HERO.clip2], HERO.fade)
+    const z = v0.current, a = va.current, b = vb.current, c = vc.current
+    if (!z || !a || !b || !c) return
+    const s = new HeroSequence([a, z, b, c], [HERO.clip1, HERO.clip0, HERO.clip2, HERO.clip3], HERO.fade)
     seq.current = s
     const id = setInterval(() => s.tick(), 60)
     // 첫 방문: 로딩 막이 걷힌 뒤(약 2.1초) + 첫 영상이 재생 가능해지면 처음부터 재생.
@@ -54,7 +55,7 @@ function HeroVideo() {
         if (onReady) a.removeEventListener('canplay', onReady)
         onReady = undefined
         s.start()
-        timers.push(setTimeout(() => { if (a.paused && z.paused && b.paused) setBlocked(true) }, 1500))
+        timers.push(setTimeout(() => { if (a.paused && z.paused && b.paused && c.paused) setBlocked(true) }, 1500))
       }
       timers.push(setTimeout(() => {
         if (a.readyState >= 3) return go()
@@ -90,14 +91,15 @@ function HeroVideo() {
   const mark = () => { try { sessionStorage.setItem(HERO_KEY, '1') } catch { /* noop */ } }
   const onPlay = () => { setPlaying(true); setStarted(true); mark() }
   // 영상 중 하나라도 재생 중이면 재생 중
-  const onPause = () => setPlaying([v0, va, vb].some((r) => !(r.current?.paused ?? true)))
+  const onPause = () => setPlaying([v0, va, vb, vc].some((r) => !(r.current?.paused ?? true)))
 
   return (
     <section className="vhero" aria-labelledby="vh-title">
       <div className="vhero-media" aria-hidden="true">
         <video ref={v0} className="vhero-video" src={HERO.clip0.src} muted playsInline preload="auto" onPlay={onPlay} onPause={onPause} />
         <video ref={va} className={`vhero-video${autoplay ? ' on' : ''}`} src={HERO.clip1.src} muted playsInline preload="auto" onPlay={onPlay} onPause={onPause} />
-        <video ref={vb} className={`vhero-video${autoplay ? '' : ' on'}`} src={`${HERO.clip2.src}#t=${autoplay ? HERO.clip2.start : HERO.still}`} muted playsInline preload="auto" onPlay={onPlay} onPause={onPause} />
+        <video ref={vb} className="vhero-video" src={`${HERO.clip2.src}#t=${HERO.clip2.start}`} muted playsInline preload="auto" onPlay={onPlay} onPause={onPause} />
+        <video ref={vc} className={`vhero-video${autoplay ? '' : ' on'}`} src={`${HERO.clip3.src}#t=${autoplay ? HERO.clip3.start : HERO.still}`} muted playsInline preload="auto" onPlay={onPlay} onPause={onPause} />
       </div>
       <div className="vhero-scrim" aria-hidden="true" />
       <div className="wrap vhero-inner">

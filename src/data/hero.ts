@@ -7,8 +7,10 @@ export const HERO = {
   clip1: { src: '/intro.mp4', start: 0, end: 6.6 },
   /** start 를 2.9초로 잡은 이유: 0~2.7초 사이에 영상 속 글자(“시무룩한”)가 들어 있다. */
   clip2: { src: '/intro2.mp4', start: 2.9, end: 9.9 as number | null },
+  /** 맨 뒤 영상(Looking for House): 영상 2 의 끝에서 서서히 이어져 마지막 장면에서 멈춘다. */
+  clip3: { src: '/intro3.mp4', start: 0, end: null as number | null },
   /** 두 영상이 서로 섞이는 시간(초) */
   fade: 1,
-  /** 재방문(자동재생 안 함)·모션 줄이기일 때 보여줄 정지 장면: 마지막 영상(clip2)의 이 시각(초) */
+  /** 재방문(자동재생 안 함)·모션 줄이기일 때 보여줄 정지 장면: 마지막 영상(clip3)의 이 시각(초) */
   still: 9.5,
 }
