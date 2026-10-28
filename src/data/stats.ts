@@ -41,17 +41,20 @@ export const INCOME_META: ChartMeta = {
   note: '8,500만원은 청정 세종이 만든 예시 가구(P4)예요. 실제 통계가 아니에요.',
 }
 
-// PRD 인용 — 이번 조사에서 원문 확인 못함
+// 실거래가 API 폴백값. 화면은 /api/trades 로 최신 달을 불러오고, 실패하면 이 값을 보여준다.
+// PRD 인용값(매매 580 vs 전세 150)은 2026-10-28 국토부 실거래가 API로 확인해 보니 맞지 않아 실측값으로 바꿨다.
+// 매매는 해제(cdealType=O) 23건을 뺀 387건(신고 410건), 전세는 월세 0원인 계약만 센 값.
+export const SALE_FALLBACK_YM = '202605'
 export const SALE_VS_JEONSE = [
-  { name: '매매', value: 580 },
-  { name: '전세', value: 150 },
+  { name: '매매', value: 387 },
+  { name: '전세', value: 610 },
 ]
 export const SALE_META: ChartMeta = {
-  title: '세종 아파트 전세 거래는 매매의 4분의 1이에요',
-  takeaway: '전세 집을 구하기 어려워 월세를 택하는 청년이 많아요.',
-  sourceIds: ['prd'],
-  verified: 'unverified',
-  note: '2026년 5월 아파트 거래 건수 (PRD 인용). 국토부 실거래가 원문으로 재확인이 필요해요.',
+  title: '세종 아파트는 전세 거래가 매매보다 많아요',
+  takeaway: '같은 달에 신고된 아파트 매매(해제 제외)와 전세(월세 0원) 계약 건수예요.',
+  sourceIds: ['molit_rtms'],
+  verified: 'official',
+  note: '2026년 5월 계약분, 2026.10.28 조회 기준이에요.',
 }
 
 // value는 순유출 크기(명). 화면에서 '−'를 붙여 순유출로 표시한다.

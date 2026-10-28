@@ -1,17 +1,19 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Bar, BarChart, Cell, LabelList, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { EXAMPLE_COUPLE, HOUSING_META, HOUSING_TYPE, INCOME_LIMITS, INCOME_META, OUTFLOW, OUTFLOW_META, SALE_META, SALE_VS_JEONSE, YOUTH_KPIS } from '../data/stats'
+import { EXAMPLE_COUPLE, HOUSING_META, HOUSING_TYPE, INCOME_LIMITS, INCOME_META, OUTFLOW, OUTFLOW_META, SALE_FALLBACK_YM, SALE_META, SALE_VS_JEONSE, YOUTH_KPIS } from '../data/stats'
 import type { ChartMeta } from '../data/stats'
 import { CountUp, Reveal, SourceBlock, VBadge } from '../ui'
+import { monthsAgo, useApi, ymLabel } from '../lib/api'
+import type { TradesRes } from '../lib/api'
 
 // 다크 배경용 팔레트. 색만으로 구분하지 않도록 값 라벨·범례·표를 함께 둔다.
 const C = { lime: '#f0a9bf', mint: '#8cf0cf', aqua: '#7ccbff', peri: '#a3afff', coral: '#ff7a59', grey: '#7b8296', text: '#fff8fa' }
 const DIM = 0.28
 
-function Frame({ meta, children, table, legend }: { meta: ChartMeta; children: ReactNode; table: { k: string; v: string }[]; legend?: string }) {
+function Frame({ meta, children, table, legend, busy }: { meta: ChartMeta; children: ReactNode; table: { k: string; v: string }[]; legend?: string; busy?: boolean }) {
   return (
-    <div className="chart-card">
+    <div className="chart-card" aria-busy={busy || undefined}>
       <VBadge v={meta.verified} />
       <h3>{meta.title}</h3>
       <p className="take">{meta.takeaway}</p>
@@ -19,6 +21,7 @@ function Frame({ meta, children, table, legend }: { meta: ChartMeta; children: R
         {children}
       </div>
       {legend && <p className="chart-note">{legend}</p>}
+      {busy && <p className="chart-note">최신 데이터를 불러오는 중이에요…</p>}
       {meta.note && <p className="chart-note">※ {meta.note}</p>}
       <details className="table-alt">
         <summary>표로 보기</summary>
@@ -29,12 +32,42 @@ function Frame({ meta, children, table, legend }: { meta: ChartMeta; children: R
   )
 }
 
+/**
+ * 세종 아파트 매매 vs 전세. /api/trades 로 2개월 전(신고 기한 30일이 지난 가장 최근 달)을 불러오고,
+ * 실패하면 stats.ts 폴백값을 보여준다.
+ */
+function useSaleVsJeonse(): { data: { name: string; value: number }[]; meta: ChartMeta; state: 'loading' | 'ok' | 'error' } {
+  const ym = monthsAgo(2)
+  const sale = useApi<TradesRes>(`/api/trades?type=apt-trade&dealYmd=${ym}&summary=1`)
+  const rent = useApi<TradesRes>(`/api/trades?type=apt-rent&dealYmd=${ym}&summary=1`)
+  if (sale.state === 'ok' && rent.state === 'ok') {
+    const s = sale.data.summary.sale, j = rent.data.summary.jeonse
+    const ratio = s > 0 ? j / s : 0
+    const title = s === 0 && j === 0 ? '세종 아파트 매매·전세 거래가 아직 없어요'
+      : ratio >= 1.1 ? `세종 아파트는 전세 거래가 매매의 ${ratio.toFixed(1)}배예요`
+      : ratio <= 0.9 ? `세종 아파트는 매매 거래가 전세보다 많아요`
+      : '세종 아파트 매매와 전세 거래가 비슷해요'
+    return {
+      state: 'ok',
+      data: [{ name: '매매', value: s }, { name: '전세', value: j }],
+      meta: { ...SALE_META, title, note: `국토부 실거래가, ${ymLabel(ym)} 계약 기준 (${new Date(sale.data.fetchedAt).toLocaleDateString('ko-KR')} 조회). 매매는 해제 ${sale.data.summary.saleCancelled}건 제외, 전세는 월세 0원 계약만 셌어요. 신고 기한이 남아 있어 조금 늘어날 수 있어요.` },
+    }
+  }
+  const failed = sale.state === 'error' || rent.state === 'error'
+  return {
+    state: failed ? 'error' : 'loading',
+    data: SALE_VS_JEONSE,
+    meta: { ...SALE_META, note: `${failed ? '최신 데이터를 불러오지 못했습니다. ' : ''}국토부 실거래가, ${ymLabel(SALE_FALLBACK_YM)} 계약 기준 (2026.10.28 조회) 값이에요.` },
+  }
+}
+
 const tipStyle = { background: '#f3efe7', color: '#0b1220', border: 0, borderRadius: 12, fontSize: 13, fontWeight: 600 }
 
 export function DataSection() {
   const [pie, setPie] = useState<number | null>(null)
   const [bar, setBar] = useState<number | null>(null)
   const PIE = [C.lime, C.mint, C.aqua, C.grey]
+  const live = useSaleVsJeonse()
 
   return (
     <>
@@ -88,9 +121,9 @@ export function DataSection() {
         </Reveal>
 
         <Reveal>
-          <Frame meta={SALE_META} table={SALE_VS_JEONSE.map((s) => ({ k: s.name, v: `${s.value}건` }))}>
+          <Frame meta={live.meta} busy={live.state === 'loading'} table={live.data.map((s) => ({ k: s.name, v: `${s.value.toLocaleString()}건` }))}>
             <ResponsiveContainer>
-              <BarChart data={SALE_VS_JEONSE} margin={{ top: 24 }}>
+              <BarChart data={live.data} margin={{ top: 24 }}>
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: C.text, fontSize: 13 }} />
                 <YAxis hide />
                 <Tooltip cursor={false} contentStyle={tipStyle} formatter={(v) => `${v}건`} />

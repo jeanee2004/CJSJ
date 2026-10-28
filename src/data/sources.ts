@@ -77,6 +77,20 @@ export const SOURCES: Record<string, Source> = {
     asOf: '2025.12.30',
     verified: 'secondary',
   },
+  molit_rtms: {
+    id: 'molit_rtms',
+    name: '국토교통부 실거래가 공개시스템 (공공데이터포털 아파트 매매·전월세 API)',
+    url: 'https://rt.molit.go.kr',
+    asOf: '매월 갱신',
+    verified: 'official',
+  },
+  myhome_notice: {
+    id: 'myhome_notice',
+    name: '마이홈포털 공공주택 모집공고 (공공데이터포털 API)',
+    url: 'https://www.myhome.go.kr',
+    asOf: '6시간마다 갱신',
+    verified: 'official',
+  },
   prd: {
     id: 'prd',
     name: '청정 세종 PRD v0.2 데스크 리서치 (원문 재확인 필요)',
