@@ -868,3 +868,15 @@ input[type='text'], input[type='number'], input:not([type]), textarea { cursor: 
 .sum > div { border-top: 1.5px solid var(--ink); padding-top: 12px; }
 .sum b.num { display: block; font-family: var(--f-num); font-size: clamp(40px, 5vw, 60px); line-height: 1.05; letter-spacing: -0.05em; }
 .sum small { display: block; font-size: 14px; color: var(--mute); margin-top: 4px; }
+
+/* 공공 API 연동 (마이홈·혜택·주소 확인) */
+.addr-check { margin-top: 28px; padding-top: 20px; border-top: 1px dashed var(--line); }
+.live { margin-top: 64px; }
+.live h2 { font-family: var(--f-kr); font-weight: 800; font-size: clamp(24px, 3vw, 36px); letter-spacing: -0.02em; margin: 6px 0 16px; }
+.live-cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+.live-card { padding: 22px 24px; background: var(--white); border-radius: 4px 24px 24px 24px; }
+.live-card h3 { font-family: var(--f-kr); font-weight: 800; font-size: 19px; line-height: 1.3; margin: 6px 0 8px; }
+.live-list { display: grid; gap: 14px; }
+.live-list li { padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.live-list a { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(128, 128, 128, 0.5); }
+.live .src { display: block; }

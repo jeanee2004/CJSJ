@@ -5,6 +5,7 @@ import { SECTIONS } from '../data/survey'
 import type { Opt as SOpt, Q, Survey, Val } from '../data/survey'
 import { deriveAnswers, visibleQuestions } from '../lib/survey'
 import { Btn } from '../ui'
+import { AddressCheck } from '../components/AddressCheck'
 import { useStore } from '../store'
 
 interface Opt<T> { v: T; t: string; d?: string }
@@ -237,6 +238,8 @@ export function DiagnoseFlow({ onClose }: { onClose: () => void }) {
           </div>
           <div className="diag-main">
             <QBody q={q} sv={sv} set={set} next={() => { if (!isLast) autoNext() }} />
+            {/* 지원 자격은 새로 구하는 집 기준이라 N3 에서 확인하고, 판정 결과로 N3 답을 채운다 */}
+            {q.id === 'N3' && <AddressCheck onResult={(multi) => set(multi ? 'multi' : 'normal')} />}
             <div className="nav-row">
               <button className="back" type="button" onClick={() => go(-1)} style={{ visibility: idx === 0 ? 'hidden' : 'visible' }}>← 이전</button>
               <Btn onClick={next} disabled={!ok}>{isLast ? '결과 보기' : '다음'}</Btn>
