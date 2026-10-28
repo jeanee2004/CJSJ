@@ -10,6 +10,9 @@ import type { PolicyInfo } from '../data/policies'
 import { TERMS } from '../data/terms'
 import { DataSection } from '../components/Charts'
 import { useStore } from '../store'
+import { todayKst, useApi } from '../lib/api'
+import type { BenefitsRes } from '../lib/api'
+import { isStaleCaution, scheduleFor, scheduleText, stripDates } from '../lib/live'
 
 /* ───────── 첫 화면: 영상 히어로 ─────────
    · 세션 첫 방문에만 자동 재생: 영상 1(스마트폰) → 영상 0(대학생·결혼) → 영상 2 → Looking for House (각각 1초간 서서히 섞이며 이어짐) → 마지막 장면에서 정지
@@ -226,7 +229,7 @@ function How() {
 }
 
 /* ───────── 제도 인덱스: 호버=채움 스윕+형제 흐림, 클릭=패널 펼침 ───────── */
-function IdxItem({ p, i, open, onToggle }: { p: PolicyInfo; i: number; open: boolean; onToggle: () => void }) {
+function IdxItem({ p, i, open, onToggle, live }: { p: PolicyInfo; i: number; open: boolean; onToggle: () => void; live?: string }) {
   const pid = useId()
   return (
     <li className={`idx-item ${open ? 'open' : ''}`}>
@@ -243,11 +246,11 @@ function IdxItem({ p, i, open, onToggle }: { p: PolicyInfo; i: number; open: boo
             <dl className="facts">
               <div><dt>지원 내용</dt><dd className="amount">{p.money}</dd></div>
               <div><dt>지원 대상</dt><dd>{p.who}</dd></div>
-              <div><dt>신청 방법</dt><dd>{p.how}</dd></div>
+              <div><dt>신청 방법</dt><dd>{live ? stripDates(p.how) : p.how}{live && <><br /><b>최신 접수 일정</b> · {live}</>}</dd></div>
             </dl>
             <div>
               <div className="tags" style={{ marginBottom: 14 }}>{p.type.map((t) => <span className="tag" key={t}>{t}</span>)}</div>
-              {p.caution && <div className="note">⚠ {p.caution}</div>}
+              {p.caution && !(live && isStaleCaution(p.id, p.caution)) && <div className="note">⚠ {p.caution}</div>}
               <div className="apply"><Btn href={p.apply.url} external variant="light" size="sm">{`${p.apply.name.split(' ')[0]}에서 신청하기`}</Btn></div>
               <SourceBlock ids={p.sourceIds} />
             </div>
@@ -264,6 +267,13 @@ function Policies() {
   const [open, setOpen] = useState<string | null>(null)
   const list = POLICIES.filter((p) => f === '전체' || p.type.includes(f))
   const count = (x: string) => POLICIES.filter((p) => x === '전체' || p.type.includes(x as never)).length
+  // 접수 일정은 온통청년을 먼저 쓴다. 못 불러오면 기존 "신청 방법" 문구만 보인다
+  const benefits = useApi<BenefitsRes>('/api/benefits')
+  const live = (id: PolicyInfo['id']) => {
+    if (benefits.state !== 'ok') return undefined
+    const s = scheduleFor(id, benefits.data.items)
+    return s ? scheduleText(s, todayKst()) || undefined : undefined
+  }
   return (
     <section className="sec cream2" id="policies" aria-labelledby="pol-t">
       <div className="wrap">
@@ -284,7 +294,7 @@ function Policies() {
         </LayoutGroup>
         <ul className="idx">
           {list.map((p, i) => (
-            <IdxItem key={p.id} p={p} i={i} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} />
+            <IdxItem key={p.id} p={p} i={i} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} live={live(p.id)} />
           ))}
         </ul>
         <p className="disclaimer">

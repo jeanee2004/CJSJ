@@ -8,6 +8,10 @@ import { POLICIES, RULES } from '../data/policies'
 import { Btn, CountUp, Lines, SourceBlock, Term, VBadge } from '../ui'
 import { useStore } from '../store'
 import { Footer } from './Home'
+import { ExtraBenefits, PublicRentals } from '../components/LiveCards'
+import { todayKst, useApi } from '../lib/api'
+import type { BenefitsRes } from '../lib/api'
+import { applySchedules } from '../lib/live'
 import { Navigate } from 'react-router-dom'
 
 const LABEL: Record<Status, { t: string; g: string }> = {
@@ -39,7 +43,10 @@ export default function Result() {
   const { answers: a, hasSaved, user, openModal, persisted, openLogin } = useStore()
   const [f, setF] = useState<'all' | Status>('all')
   const [bank, setBank] = useState(4.5)
-  const verdicts = useMemo(() => evaluate(a), [a])
+  // 자격 판정은 evaluate 그대로, 접수 일정만 공공 API(온통청년 우선)로 덧붙인다. 불러오지 못하면 기존 판정을 쓴다
+  const benefits = useApi<BenefitsRes>('/api/benefits')
+  const items = benefits.state === 'ok' ? benefits.data.items : null
+  const verdicts = useMemo(() => (items ? applySchedules(evaluate(a), items, todayKst()) : evaluate(a)), [a, items])
   const warns = useMemo(() => warnings(a), [a])
   const cost = useMemo(() => compareCost(a, bank), [a, bank])
   if (!hasSaved) return <Navigate to="/" replace />
@@ -131,6 +138,7 @@ export default function Result() {
             </div>
           </LayoutGroup>
 
+          {benefits.state === 'error' && <p className="hint" style={{ marginTop: 14 }}>최신 데이터를 불러오지 못했습니다. 접수 일정은 각 제도 안내 페이지에서 한 번 더 확인해 주세요.</p>}
           <div className="verdicts">
             {shown.map((v) => {
               const p = POLICIES.find((x) => x.id === v.id)!
@@ -181,6 +189,9 @@ export default function Result() {
               </p>
             </section>
           )}
+
+          <PublicRentals answers={a} />
+          <ExtraBenefits load={benefits} />
 
           <p className="disclaimer">
             결과는 <b>참고용</b>이에요. 최종 판단은 각 기관에서 해요. 공고 기준일은 항목마다 표시해 두었어요. 입력하신 정보는 이 기기에만 저장되고 서버로 보내지 않았어요.
