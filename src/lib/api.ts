@@ -22,6 +22,10 @@ export interface MyhomeRes { source: string; fetchedAt: string; items: Notice[] 
 export interface Benefit {
   source: 'gov24' | 'bokjiro' | 'youthcenter'; id: string; name: string; summary: string; org: string; apply: string; url: string
   begin?: string; end?: string; deadline?: string
+  /** 나이 기준, 출처별 (온통청년이 먼저) */
+  ages?: { min: number; max: number; source: Benefit['source'] }[]
+  /** 소득·재산 등 원문 조건 (판정에 쓰지 않음) */
+  conditions?: string
 }
 export interface BenefitsRes { source: string; fetchedAt: string; items: Benefit[] }
 

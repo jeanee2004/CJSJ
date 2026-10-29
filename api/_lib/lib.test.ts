@@ -142,3 +142,18 @@ describe('R-ONE 정규화', () => {
     expect(parseRone('<html>')).toEqual({ ok: false, code: 'UPSTREAM_ERROR' })
   })
 })
+
+it('나이 기준: 온통청년 필드와 정부24 지원조건, 합칠 때 둘 다 남긴다 (2026-10-29 실제 응답 모양)', async () => {
+  const { gov24Ages } = await import('./benefits.js')
+  const y = fromYouthCenter({ plcyNo: '1', plcyNm: '청년월세 지원', sprvsnInstCdNm: '세종특별자치시', sprtTrgtAgeLmtYn: 'N', sprtTrgtMinAge: '19', sprtTrgtMaxAge: '39', earnEtcCn: '기준중위소득 청년가구 60% 이하' })!
+  expect(y.ages).toEqual([{ min: 19, max: 39, source: 'youthcenter' }])
+  expect(y.conditions).toBe('기준중위소득 청년가구 60% 이하')
+  // 나이 제한 없음(Y)은 0/0 으로 온다
+  expect(fromYouthCenter({ plcyNo: '2', plcyNm: '전세보증금반환보증 보증료 지원', sprvsnInstCdNm: '세종특별자치시', sprtTrgtAgeLmtYn: 'Y', sprtTrgtMinAge: '0', sprtTrgtMaxAge: '0' })!.ages).toBeUndefined()
+  expect(gov24Ages({ JA0110: 19, JA0111: 34 })).toEqual([{ min: 19, max: 34, source: 'gov24' }])
+  expect(gov24Ages({ JA0110: null, JA0111: null })).toEqual([])
+  const g = fromGov24({ 서비스명: '청년월세 지원', 서비스ID: '3', 지원대상: '부모와 별도 거주하는 무주택 청년' })!
+  g.ages = gov24Ages({ JA0110: 19, JA0111: 34 })
+  const [m] = dedupe([y, g])
+  expect(m.ages?.map((x) => `${x.source}:${x.max}`)).toEqual(['youthcenter:39', 'gov24:34'])
+})

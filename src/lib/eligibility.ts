@@ -248,32 +248,39 @@ export function warnings(a: Answers): Warning[] {
 }
 
 // 택1 총비용 비교 (Should S1) — 예시 계산
+/** 버팀목 금리를 어디에 둘지: 범위 하단 / 소득으로 추정 / 범위 상단 */
+export type RateBasis = 'min' | 'est' | 'max'
+export interface CostBasis { rate: RateBasis; years: number }
+export const DEFAULT_BASIS: CostBasis = { rate: 'est', years: 6 }
+
 export interface CostCompare {
   loan: number
+  years: number
   buteemokRate: number
-  buteemok6y: number
+  buteemokPaid: number // 기간 동안 버팀목으로 낼 이자
   interestSelf: number
-  interest6y: number
+  interestPaid: number // 기간 동안 세종 이자지원을 받고도 낼 이자
   better: 'buteemok' | 'interest' | 'same'
   loanInterest: number
   loanButeemok: number
 }
-export function compareCost(a: Answers, bankRate: number): CostCompare | null {
+export function compareCost(a: Answers, bankRate: number, basis: CostBasis = DEFAULT_BASIS): CostCompare | null {
   if (a.deal !== 'jeonse') return null
   const isNew = a.marital !== 'single'
   const b = isNew ? RULES.newlywedButeemok : RULES.youthButeemok
   const maxB = isNew ? RULES.newlywedButeemok.maxLoanNonCapital : RULES.youthButeemok.maxLoan
   const loanButeemok = Math.min(a.deposit * b.ratio, maxB)
   const loanInterest = Math.min(a.deposit * RULES.sejongInterest.loanRatio, RULES.sejongInterest.maxLoan)
-  // 소득 구간별 금리를 단순화: 소득이 낮을수록 하단, 높을수록 상단으로 선형 보간
+  // 소득으로 추정: 소득이 낮을수록 하단, 높을수록 상단으로 선형 보간
   const cap = isNew ? RULES.newlywedButeemok.income : RULES.youthButeemok.income
-  const t = Math.min(1, Math.max(0, a.income / cap))
+  const t = basis.rate === 'min' ? 0 : basis.rate === 'max' ? 1 : Math.min(1, Math.max(0, a.income / cap))
   const buteemokRate = +(b.rateMin + (b.rateMax - b.rateMin) * t).toFixed(2)
-  const buteemok6y = Math.round(loanButeemok * (buteemokRate / 100) * 6)
+  const y = basis.years
+  const buteemokPaid = Math.round(loanButeemok * (buteemokRate / 100) * y)
   const selfRate = Math.max(0, bankRate - RULES.sejongInterest.maxSupportRate)
-  const interest6y = Math.round(loanInterest * (selfRate / 100) * 6)
-  const better = Math.abs(buteemok6y - interest6y) < 10 ? 'same' : buteemok6y < interest6y ? 'buteemok' : 'interest'
-  return { loan: loanButeemok, buteemokRate, buteemok6y, interestSelf: +selfRate.toFixed(2), interest6y, better, loanInterest, loanButeemok }
+  const interestPaid = Math.round(loanInterest * (selfRate / 100) * y)
+  const better = Math.abs(buteemokPaid - interestPaid) < 10 ? 'same' : buteemokPaid < interestPaid ? 'buteemok' : 'interest'
+  return { loan: loanButeemok, years: y, buteemokRate, buteemokPaid, interestSelf: +selfRate.toFixed(2), interestPaid, better, loanInterest, loanButeemok }
 }
 
 // 진입비용: 월세 몇 개월치? (Should S3)

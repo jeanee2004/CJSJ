@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { LayoutGroup, motion } from 'framer-motion'
-import { compareCost, evaluate, warnings } from '../lib/eligibility'
+import { DEFAULT_BASIS, compareCost, evaluate, warnings } from '../lib/eligibility'
 import { summarize } from '../lib/survey'
 import type { Survey } from '../data/survey'
-import type { Status } from '../lib/eligibility'
+import type { CostBasis, Status } from '../lib/eligibility'
 import { POLICIES, RULES } from '../data/policies'
 import { Btn, CountUp, Lines, SourceBlock, Term, VBadge } from '../ui'
 import { useStore } from '../store'
@@ -12,6 +12,8 @@ import { ExtraBenefits, PublicRentals } from '../components/LiveCards'
 import { todayKst, useApi } from '../lib/api'
 import type { BenefitsRes } from '../lib/api'
 import { applySchedules } from '../lib/live'
+import { flagAgeConflicts, rank } from '../lib/recommend'
+import { Recommendations } from '../components/Recommend'
 import { Navigate } from 'react-router-dom'
 
 const LABEL: Record<Status, { t: string; g: string }> = {
@@ -45,9 +47,13 @@ export default function Result() {
   // 자격 판정은 evaluate 그대로, 접수 일정만 공공 API(온통청년 우선)로 덧붙인다. 불러오지 못하면 기존 판정을 쓴다
   const benefits = useApi<BenefitsRes>('/api/benefits')
   const items = benefits.state === 'ok' ? benefits.data.items : null
-  const verdicts = useMemo(() => (items ? applySchedules(evaluate(a), items, todayKst()) : evaluate(a)), [a, items])
+  // 나이 기준이 출처마다 다르면 우리 기준(RULES)으로 판정하고 "확인 필요"만 붙인다
+  const verdicts = useMemo(() => (items ? flagAgeConflicts(applySchedules(evaluate(a), items, todayKst()), items, a) : evaluate(a)), [a, items])
   const warns = useMemo(() => warnings(a), [a])
-  const cost = useMemo(() => compareCost(a, bank), [a, bank])
+  // 금액 비교 기준(기간·버팀목 금리)은 추천 순서와 아래 이자 비교가 함께 쓴다
+  const [basis, setBasis] = useState<CostBasis>(DEFAULT_BASIS)
+  const cost = useMemo(() => compareCost(a, bank, basis), [a, bank, basis])
+  const recs = useMemo(() => rank({ verdicts, items, answers: a, today: todayKst(), bank, basis }), [verdicts, items, a, bank, basis])
   if (!hasSaved) return <Navigate to="/" replace />
 
   const count = (s: Status) => verdicts.filter((v) => v.status === s).length
@@ -126,6 +132,8 @@ export default function Result() {
             </div>
           )}
 
+          <Recommendations recs={recs} basis={basis} onBasis={setBasis} apiState={benefits.state} />
+
           <LayoutGroup>
             <div className="filters" role="group" aria-label="결과 필터" style={{ marginTop: 40, marginBottom: 0 }}>
               {FILTERS.map((x) => (
@@ -163,8 +171,8 @@ export default function Result() {
           {cost && pickOne && (
             <section className="cmp-wrap" aria-labelledby="cmp-t">
               <span className="label" style={{ color: 'rgba(243,239,231,.6)' }}>둘 중 하나 · 예시 계산</span>
-              <h2 id="cmp-t">둘 중 하나만 받을 수 있어요.<br /><span className="em">6년 동안 낼 이자</span>를 비교해 볼게요</h2>
-              <p style={{ color: 'rgba(243,239,231,.75)', maxWidth: 620 }}><Term id="pickone" />이라서 6년 동안 내가 내게 될 이자를 비교해 봤어요. 시중 은행 금리는 사람마다 달라서 직접 움직여 보실 수 있게 해 두었어요.</p>
+              <h2 id="cmp-t">둘 중 하나만 받을 수 있어요.<br /><span className="em">{cost.years}년 동안 낼 이자</span>를 비교해 볼게요</h2>
+              <p style={{ color: 'rgba(243,239,231,.75)', maxWidth: 620 }}><Term id="pickone" />이라서 {cost.years}년 동안 내가 내게 될 이자를 비교해 봤어요. 시중 은행 금리는 사람마다 달라서 직접 움직여 보실 수 있게 해 두었어요. 기간과 버팀목 금리 기준은 위 "먼저 할 일"에서 바꿀 수 있어요.</p>
               <div style={{ margin: '22px 0 6px' }}>
                 <label htmlFor="bank"><b>시중 은행 대출금리(가정): <span className="num" style={{ fontSize: 22 }}>{bank.toFixed(1)}%</span></b></label>
                 <input id="bank" type="range" min={3} max={6} step={0.1} value={bank} onChange={(e) => setBank(Number(e.target.value))} />
@@ -172,25 +180,25 @@ export default function Result() {
               <div className="compare">
                 <div className={`cmp ${cost.better === 'buteemok' ? 'win' : ''}`}>
                   <span className="label" style={{ color: 'inherit', opacity: 0.7 }}>버팀목 (나라)</span>
-                  <b className="big num">{cost.buteemok6y.toLocaleString()}<small style={{ fontSize: '0.3em', letterSpacing: 0 }}>만원</small></b>
-                  <p>대출 {Math.round(cost.loanButeemok).toLocaleString()}만원 × 연 {cost.buteemokRate}% × 6년</p>
+                  <b className="big num">{cost.buteemokPaid.toLocaleString()}<small style={{ fontSize: '0.3em', letterSpacing: 0 }}>만원</small></b>
+                  <p>대출 {Math.round(cost.loanButeemok).toLocaleString()}만원 × 연 {cost.buteemokRate}% × {cost.years}년</p>
                   {cost.better === 'buteemok' && <p><b>✓ 이쪽이 부담이 더 적어요</b></p>}
                 </div>
                 <div className={`cmp ${cost.better === 'interest' ? 'win' : ''}`}>
                   <span className="label" style={{ color: 'inherit', opacity: 0.7 }}>세종 이자지원</span>
-                  <b className="big num">{cost.interest6y.toLocaleString()}<small style={{ fontSize: '0.3em', letterSpacing: 0 }}>만원</small></b>
-                  <p>대출 {Math.round(cost.loanInterest).toLocaleString()}만원 × 내가 내는 이자 {cost.interestSelf}% × 6년</p>
+                  <b className="big num">{cost.interestPaid.toLocaleString()}<small style={{ fontSize: '0.3em', letterSpacing: 0 }}>만원</small></b>
+                  <p>대출 {Math.round(cost.loanInterest).toLocaleString()}만원 × 내가 내는 이자 {cost.interestSelf}% × {cost.years}년</p>
                   {cost.better === 'interest' && <p><b>✓ 이쪽이 부담이 더 적어요</b></p>}
                 </div>
               </div>
               <p className="chart-note">
-                ※ 예시 계산이에요. 버팀목 금리는 소득에 따라 연 {a.marital === 'single' ? `${RULES.youthButeemok.rateMin}~${RULES.youthButeemok.rateMax}` : `${RULES.newlywedButeemok.rateMin}~${RULES.newlywedButeemok.rateMax}`}% 범위에서 추정했고, 세종 이자지원은 은행금리에서 최대 {RULES.sejongInterest.maxSupportRate}%p를 빼서 계산했어요. 이자지원은 보증료 같은 부대비용을 따로 내야 하고 대출 가능 금액도 달라서 실제와 차이가 나요. 신청 전 은행에서 확인하세요. <VBadge v="secondary" />
+                ※ 예시 계산이에요. 버팀목 금리는 소득에 따라 연 {a.marital === 'single' ? `${RULES.youthButeemok.rateMin}~${RULES.youthButeemok.rateMax}` : `${RULES.newlywedButeemok.rateMin}~${RULES.newlywedButeemok.rateMax}`}% 범위에서 {basis.rate === 'min' ? '하단으로' : basis.rate === 'max' ? '상단으로' : '소득으로 추정해'} 계산했고, 세종 이자지원은 은행금리에서 최대 {RULES.sejongInterest.maxSupportRate}%p를 빼서 계산했어요. 이자지원은 보증료 같은 부대비용을 따로 내야 하고 대출 가능 금액도 달라서 실제와 차이가 나요. 신청 전 은행에서 확인하세요. <VBadge v="secondary" />
               </p>
             </section>
           )}
 
           <PublicRentals answers={a} />
-          <ExtraBenefits load={benefits} />
+          <ExtraBenefits load={benefits} answers={a} />
 
           <p className="disclaimer">
             결과는 <b>참고용</b>이에요. 최종 판단은 각 기관에서 해요. 공고 기준일은 항목마다 표시해 두었어요. 입력하신 정보는 이 기기에만 저장되고 서버로 보내지 않았어요.

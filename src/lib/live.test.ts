@@ -66,9 +66,9 @@ describe('접수 일정', () => {
 })
 
 describe('공공임대 공고 맞춤', () => {
-  const single = A({ age: 28, marital: 'single', survey: { Q8: '3' } })
-  const couple = A({ age: 31, marital: 'newlywed', survey: { Q8: '2' } })
-  const parent = A({ age: 35, marital: 'newlywed', survey: { Q8: '1' } })
+  const single = A({ age: 28, marital: 'single', survey: { Q4: '1' } })
+  const couple = A({ age: 31, marital: 'newlywed', survey: { Q4: '5' } })
+  const parent = A({ age: 35, marital: 'newlywed', survey: { Q4: '6' } })
   it('미혼 청년에게는 청년 공고만', () => {
     expect(fitsNotice(N('2026년 청년 전세임대 1순위 입주자 수시모집'), single)).toBe(true)
     expect(fitsNotice(N('2026년 신혼·신생아 전세임대 I 입주자 수시모집 공고'), single)).toBe(false)

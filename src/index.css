@@ -880,6 +880,13 @@ input[type='text'], input[type='number'], input:not([type]), textarea { cursor: 
 .live-list li { padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 .live-list a { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(128, 128, 128, 0.5); }
 .live .src { display: block; }
+.rec-basis { display: grid; gap: 10px; margin: 6px 0 18px; }
+.rec-basis-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.rec-basis-row > b { font-size: 14px; min-width: 84px; }
+.rec-basis-row .fchip { padding: 7px 14px; font-size: 14px; }
+.rec-list { list-style: none; padding: 0; counter-reset: none; }
+.rec-list .status { margin-bottom: 4px; }
+.rec-why { margin: 10px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 15px; color: var(--ink-2); }
 
 /* ───────── 홈: 실시간 정보 확인 · 끝없이 도는 3D 카드 ───────── */
 .live-sec { overflow: hidden; }

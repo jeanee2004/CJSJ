@@ -14,6 +14,18 @@ export interface Benefit {
   end?: string
   /** 정부24 신청기한 문구 (예: "상시신청", "금년 접수 마감") */
   deadline?: string
+  /** 나이 기준. 출처마다 따로 모은다 (온통청년이 먼저). 출처끼리 어긋날 수 있어 판정 쪽에서 고른다 */
+  ages?: AgeRange[]
+  /** 소득·재산 등 원문 조건. 구조화돼 있지 않아 판정에 쓰지 않고 보여 주기만 한다 */
+  conditions?: string
+}
+export interface AgeRange { min: number; max: number; source: Benefit['source'] }
+
+const age = (min: unknown, max: unknown, source: Benefit['source']): AgeRange[] => {
+  const lo = Number(min) || 0
+  const hi = Number(max) || 0
+  if (!lo && !hi) return []
+  return [{ min: lo, max: hi || 120, source }]
 }
 
 // "주거지"처럼 집과 무관하게 쓰이는 말은 걸리지 않게 낱말 단위로 본다
@@ -27,8 +39,12 @@ export function fromGov24(r: Record<string, unknown>): Benefit | null {
   const name = g('서비스명')
   const text = `${name} ${g('서비스목적요약')} ${g('지원대상')}`
   if (!name || ADMIN.test(name) || !HOUSING.test(text) || !PEOPLE.test(text)) return null
-  return { source: 'gov24', id: g('서비스ID'), name, summary: g('서비스목적요약'), org: [g('소관기관명'), g('부서명')].filter(Boolean).join(' '), apply: g('신청기한'), url: g('상세조회URL'), deadline: g('신청기한') || undefined }
+  return { source: 'gov24', id: g('서비스ID'), name, summary: g('서비스목적요약'), org: [g('소관기관명'), g('부서명')].filter(Boolean).join(' '), apply: g('신청기한'), url: g('상세조회URL'), deadline: g('신청기한') || undefined, conditions: g('지원대상') || g('선정기준') || undefined }
 }
+
+/** 정부24 supportConditions 한 줄 → 나이 기준. JA0110/JA0111 이 나이 하한·상한 (2026-10-29 확인).
+ *  나머지 JA 코드(무주택 등)는 코드표를 대조하기 전이라 쓰지 않는다 */
+export const gov24Ages = (r: Record<string, unknown>): AgeRange[] => age(r.JA0110, r.JA0111, 'gov24')
 
 export function fromBokjiro(r: Record<string, string>): Benefit | null {
   const text = `${r.servNm ?? ''} ${r.servDgst ?? ''} ${r.intrsThemaNmArray ?? ''}`
@@ -42,7 +58,10 @@ export function fromYouthCenter(r: Record<string, unknown>): Benefit | null {
   if (!/세종/.test(g('sprvsnInstCdNm')) || !g('plcyNm')) return null
   const url = [g('aplyUrlAddr'), g('refUrlAddr1')].find((u) => /^https?:\/\//.test(u)) ?? ''
   const period = parsePeriod(g('aplyYmd'))
-  return { source: 'youthcenter', id: g('plcyNo'), name: g('plcyNm'), summary: g('plcyExplnCn').replace(/^[○ㅇ\s]+/, ''), org: g('sprvsnInstCdNm'), apply: g('aplyYmd') ? `신청 ${g('aplyYmd')}` : '', url, ...period }
+  // sprtTrgtAgeLmtYn 이 N 이면 나이 제한이 있다 (Y 면 0/0 으로 온다, 2026-10-29 확인)
+  const ages = g('sprtTrgtAgeLmtYn') === 'N' ? age(g('sprtTrgtMinAge'), g('sprtTrgtMaxAge'), 'youthcenter') : []
+  const conditions = [g('earnEtcCn'), g('addAplyQlfcCndCn')].filter(Boolean).join(' / ') || undefined
+  return { source: 'youthcenter', id: g('plcyNo'), name: g('plcyNm'), summary: g('plcyExplnCn').replace(/^[○ㅇ\s]+/, ''), org: g('sprvsnInstCdNm'), apply: g('aplyYmd') ? `신청 ${g('aplyYmd')}` : '', url, ...period, ...(ages.length ? { ages } : {}), conditions }
 }
 
 /** "20260601 ~ 20260630" → { begin, end }. 기간이 여러 개면 가장 늦게 끝나는 것 */
@@ -60,7 +79,9 @@ export function dedupe(list: Benefit[]): Benefit[] {
     const prev = by.get(k)
     if (!prev) { by.set(k, { ...b }); continue }
     // 먼저 온 출처(온통청년)를 남기고, 비어 있는 칸만 뒤 출처로 채운다
-    for (const f of ['summary', 'url', 'begin', 'end', 'deadline'] as const) if (!prev[f] && b[f]) prev[f] = b[f]
+    for (const f of ['summary', 'url', 'begin', 'end', 'deadline', 'conditions'] as const) if (!prev[f] && b[f]) prev[f] = b[f]
+    // 나이는 출처별로 모두 남겨 어긋나는지 볼 수 있게 한다
+    if (b.ages?.length) prev.ages = [...(prev.ages ?? []), ...b.ages]
   }
   return [...by.values()]
 }

@@ -3,7 +3,7 @@
 // 한 출처가 실패해도 나머지로 응답하고, 출처별 상태를 같이 돌려준다.
 import { json, logUpstream, readKey, serverConfigError } from './_lib/http.js'
 import type { UpstreamCode } from './_lib/http.js'
-import { dedupe, fromBokjiro, fromGov24, fromYouthCenter } from './_lib/benefits.js'
+import { dedupe, fromBokjiro, fromGov24, fromYouthCenter, gov24Ages } from './_lib/benefits.js'
 import type { Benefit } from './_lib/benefits.js'
 import { fetchUpstream } from './_lib/upstream.js'
 import { blocks, tag } from './_lib/xml.js'
@@ -18,8 +18,18 @@ async function gov24(key: string): Promise<[Benefit[], Status]> {
   if (!r.ok) { logUpstream('benefits/gov24', r.code, r.detail); return [[], r.code] }
   try {
     const data = (JSON.parse(r.text) as { data?: Record<string, unknown>[] }).data ?? []
-    return [data.map(fromGov24).filter((b): b is Benefit => !!b), 'ok']
+    const list = data.map(fromGov24).filter((b): b is Benefit => !!b)
+    await Promise.all(list.map(async (b) => { const ages = await gov24Conditions(key, b.id); if (ages.length) b.ages = ages }))
+    return [list, 'ok']
   } catch { return [[], 'UPSTREAM_ERROR'] }
+}
+
+// 서비스마다 지원조건(나이 등)을 한 줄씩 준다. 실패해도 목록은 그대로 내보낸다
+async function gov24Conditions(key: string, id: string) {
+  if (!id) return []
+  const r = await fetchUpstream(`https://api.odcloud.kr/api/gov24/v3/supportConditions?page=1&perPage=1&returnType=JSON&${enc('cond[서비스ID::EQ]')}=${enc(id)}`, key)
+  if (!r.ok) { logUpstream('benefits/gov24-cond', r.code, r.detail); return [] }
+  try { return gov24Ages((JSON.parse(r.text) as { data?: Record<string, unknown>[] }).data?.[0] ?? {}) } catch { return [] }
 }
 
 async function bokjiro(key: string): Promise<[Benefit[], Status]> {

@@ -176,3 +176,12 @@
 - 실제 호출 검증:
   `LIVE=1 node --env-file=.env.local node_modules/vitest/vitest.mjs run api/_lib/live.test.ts --silent=false`
 - 단위 테스트: `npm test` (live 테스트는 `LIVE` 가 없으면 건너뛴다).
+
+
+## 정부24 지원조건 (supportConditions) — 2026-10-29 확인
+
+- `GET https://api.odcloud.kr/api/gov24/v3/supportConditions?page=1&perPage=1&returnType=JSON&cond[서비스ID::EQ]=<서비스ID>` (같은 `DATA_GO_KR_KEY`, `serviceKey` 파라미터)
+- 세종 주거 7건 모두 200. `JA0110`/`JA0111` = 나이 하한·상한 (예: 보증료 지원 19~120, 이자지원 null). 나머지 `JAxxxx` 는 `"Y"`/null 플래그이며 **코드 뜻은 미확인**이라 쓰지 않는다.
+- `/api/benefits` 가 정부24 항목마다 한 번씩 불러 `ages` 에 넣는다. 실패하면 `ages` 만 빠진다.
+- 온통청년 나이: `sprtTrgtAgeLmtYn=N` 이면 `sprtTrgtMinAge`/`sprtTrgtMaxAge` 사용, `Y` 면 0/0 (제한 없음). 소득은 세종 주거 6건 모두 `earnCndSeCd=0043003`(기타)·금액 0 이라 `earnEtcCn` 글로만 있다 → `conditions`.
+- 어긋나는 값: 청년월세 지원 온통청년 필드 19~39 vs 본문·정부24·RULES 19~34.
