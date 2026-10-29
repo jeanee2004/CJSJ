@@ -110,9 +110,10 @@ const TRADE_KINDS = [
 
 interface CardProps { tag: string; title: string; busy?: boolean; children: ReactNode; foot?: ReactNode }
 function Card({ tag, title, busy, children, foot }: CardProps) {
+  const tone = /매매/.test(title) ? 'sale' : tag.startsWith('실거래가') ? 'rent' : tag.startsWith('건축') ? 'hub' : tag.startsWith('마이홈') ? 'home' : tag.startsWith('한국') ? 'rone' : 'gov'
   return (
-    <article className="l3d" aria-busy={busy || undefined}>
-      <span className="label">{tag}</span>
+    <article className={`l3d t-${tone}`} aria-busy={busy || undefined}>
+      <span className="l3d-tag">{tag}</span>
       <h3>{title}</h3>
       <div className="l3d-body">{children}</div>
       {foot && <div className="l3d-foot">{foot}</div>}
@@ -125,7 +126,7 @@ const stamp = (iso: string) => `${new Date(iso).toLocaleDateString('ko-KR')} 기
 
 function TradeCard({ type, name, portal, ym }: { type: string; name: string; portal: string; ym: string }) {
   const r = useApi<TradesRes>(`/api/trades?type=${type}&dealYmd=${ym}&summary=1`)
-  const link = <Btn href={portal} external size="sm" variant="line">국토부 실거래가 공개시스템</Btn>
+  const link = <a className="l3d-link" href={portal} target="_blank" rel="noreferrer noopener">국토부 실거래가 공개시스템 ↗</a>
   return (
     <Card tag={`실거래가 · ${ymLabel(ym)} 계약`} title={name} busy={r.state === 'loading'} foot={link}>
       {r.state === 'loading' && <p className="hint">불러오는 중이에요…</p>}
@@ -134,7 +135,7 @@ function TradeCard({ type, name, portal, ym }: { type: string; name: string; por
         <>
           <Big n={r.data.summary.total.toLocaleString('ko-KR')} unit="건 신고" />
           <p className="hint">전세 {r.data.summary.jeonse.toLocaleString('ko-KR')}건 · 월세 {r.data.summary.monthly.toLocaleString('ko-KR')}건</p>
-          <p className="l3d-src"><VBadge v="official" /> {stamp(r.data.fetchedAt)}</p>
+          <p className="l3d-src"><i className="pulse" aria-hidden="true" />공공데이터 · {stamp(r.data.fetchedAt)}</p>
         </>
       )}
     </Card>
@@ -156,14 +157,14 @@ export function LiveBoard() {
   const mine = (src: string) => (benefits.state === 'ok' ? benefits.data.items.filter((b) => (b.seen ?? [b.source]).includes(src as Benefit['source'])) : [])
   const by = (src: string) => mine(src).length
   const benefitCard = (src: 'gov24' | 'bokjiro' | 'youthcenter', title: string, href: string) => (
-    <Card key={src} tag="세종 청년·신혼 혜택" title={title} busy={benefits.state === 'loading'} foot={<Btn href={href} external size="sm" variant="line">{`${title} 바로가기`}</Btn>}>
+    <Card key={src} tag="세종 청년·신혼 혜택" title={title} busy={benefits.state === 'loading'} foot={<a className="l3d-link" href={href} target="_blank" rel="noreferrer noopener">{`${title} 바로가기`} ↗</a>}>
       {benefits.state === 'loading' && <p className="hint">불러오는 중이에요…</p>}
       {benefits.state === 'error' && <Stale what={`${title} 혜택`} href={href} label={title} />}
       {benefits.state === 'ok' && (
         <>
           {by(src) > 0 ? <Big n={by(src)} unit="개 제도" /> : null}
           <p className="hint">{mine(src)[0]?.name ?? `지금 ${SRC_NAME[src]}에 올라온 세종 청년 주거 혜택이 없어요. 바로가기에서 직접 확인해 보세요.`}</p>
-          <p className="l3d-src"><VBadge v="official" /> {stamp(benefits.data.fetchedAt)}</p>
+          <p className="l3d-src"><i className="pulse" aria-hidden="true" />공공데이터 · {stamp(benefits.data.fetchedAt)}</p>
         </>
       )}
     </Card>
@@ -171,14 +172,14 @@ export function LiveBoard() {
 
   const cards: ReactNode[] = [
     ...TRADE_KINDS.map((k) => <TradeCard key={k.type} {...k} ym={ym} />),
-    <Card key="sale" tag={`실거래가 · ${ymLabel(ym)} 계약`} title="아파트 매매" busy={sale.state === 'loading'} foot={<Btn href="https://rt.molit.go.kr" external size="sm" variant="line">국토부 실거래가 공개시스템</Btn>}>
+    <Card key="sale" tag={`실거래가 · ${ymLabel(ym)} 계약`} title="아파트 매매" busy={sale.state === 'loading'} foot={<a className="l3d-link" href="https://rt.molit.go.kr" target="_blank" rel="noreferrer noopener">국토부 실거래가 공개시스템 ↗</a>}>
       {sale.state === 'loading' && <p className="hint">불러오는 중이에요…</p>}
       {sale.state === 'error' && <Stale what="세종 아파트 매매 실거래가" href="https://rt.molit.go.kr" label="실거래가 공개시스템" />}
       {sale.state === 'ok' && (
         <>
           <Big n={sale.data.summary.sale.toLocaleString('ko-KR')} unit="건 매매" />
           <p className="hint">해제 신고 {sale.data.summary.saleCancelled.toLocaleString('ko-KR')}건은 뺐어요</p>
-          <p className="l3d-src"><VBadge v="official" /> {stamp(sale.data.fetchedAt)}</p>
+          <p className="l3d-src"><i className="pulse" aria-hidden="true" />공공데이터 · {stamp(sale.data.fetchedAt)}</p>
         </>
       )}
     </Card>,
@@ -186,21 +187,21 @@ export function LiveBoard() {
       <Big n="1" unit="분이면 확인" />
       <p className="hint">구하려는 집 주소를 넣으면 건축물대장에서 다중주택인지 알려드려요. 아래 입력창으로 바로 이어져요.</p>
     </Card>,
-    <Card key="myhome" tag="마이홈 · 공공임대" title="모집공고" busy={myhome.state === 'loading'} foot={<Btn href="https://www.myhome.go.kr" external size="sm" variant="line">마이홈포털</Btn>}>
+    <Card key="myhome" tag="마이홈 · 공공임대" title="모집공고" busy={myhome.state === 'loading'} foot={<a className="l3d-link" href="https://www.myhome.go.kr" target="_blank" rel="noreferrer noopener">마이홈포털 ↗</a>}>
       {myhome.state === 'loading' && <p className="hint">불러오는 중이에요…</p>}
       {myhome.state === 'error' && <Stale what="세종 공공임대 모집공고" href="https://www.myhome.go.kr" label="마이홈포털" />}
       {myhome.state === 'ok' && (
         <>
           <Big n={open.length} unit="건 접수 중" />
           <p className="hint">{open[0] ? `${open[0].title} · ~${ymdLabel(open[0].end)}` : '지금 접수 중인 세종 공고가 없어요'}</p>
-          <p className="l3d-src"><VBadge v="official" /> {stamp(myhome.data.fetchedAt)}</p>
+          <p className="l3d-src"><i className="pulse" aria-hidden="true" />공공데이터 · {stamp(myhome.data.fetchedAt)}</p>
         </>
       )}
     </Card>,
     benefitCard('gov24', '행정안전부 공공서비스(정부24)', 'https://www.gov.kr/portal/rcvfvrSvc/main'),
     benefitCard('bokjiro', '복지로', 'https://www.bokjiro.go.kr'),
     benefitCard('youthcenter', '온통청년', 'https://www.youthcenter.go.kr'),
-    <Card key="rone" tag="한국부동산원 · 전세가격 동향" title="세종 전세가격" busy={rone.state === 'loading'} foot={<Btn href="https://www.reb.or.kr/r-one" external size="sm" variant="line">부동산통계 R-ONE</Btn>}>
+    <Card key="rone" tag="한국부동산원 · 전세가격 동향" title="세종 전세가격" busy={rone.state === 'loading'} foot={<a className="l3d-link" href="https://www.reb.or.kr/r-one" target="_blank" rel="noreferrer noopener">부동산통계 R-ONE ↗</a>}>
       {rone.state === 'loading' && <p className="hint">불러오는 중이에요…</p>}
       {rone.state === 'error' && <Stale what="세종 전세가격 동향" href="https://www.reb.or.kr/r-one" label="부동산통계 R-ONE" />}
       {rone.state === 'ok' && (
@@ -210,7 +211,7 @@ export function LiveBoard() {
             : <Big n="-" unit="" />}
           {roneIdx && <p className="hint">{ymLabel(roneIdx.latest.ym)} 전세지수 {roneIdx.latest.value.toFixed(1)}{roneIdx.mom !== null ? ` · 전월 ${roneIdx.mom > 0 ? '+' : ''}${roneIdx.mom.toFixed(1)}%` : ''}</p>}
           {rone.data.avgPrice && <p className="hint">전세 평균 {rone.data.avgPrice.latest.value.toLocaleString('ko-KR')}만원/㎡</p>}
-          <p className="l3d-src"><VBadge v="official" /> {stamp(rone.data.fetchedAt)}</p>
+          <p className="l3d-src"><i className="pulse" aria-hidden="true" />공공데이터 · {stamp(rone.data.fetchedAt)}</p>
         </>
       )}
     </Card>,

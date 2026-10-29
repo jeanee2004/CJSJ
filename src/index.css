@@ -1120,3 +1120,94 @@ input[type='text'], input[type='number'], input:not([type]), textarea { cursor: 
 .gpanel .gl-row::before { display: none; }
 .gpanel .gl-row h3 { font-size: 17px; margin-bottom: 4px; }
 .gpanel .gl-row p { font-size: 15px; color: var(--ink-2); }
+
+/* ════════ v13: 2026 — Cloud Dancer(팬톤 올해의 색) 바탕 + 잉크 + 라임 한 가지 포인트, Pretendard ════════ */
+:root { --cd: #f0eee9; --cd-2: #e7e4dd; --lime: #d7ff5e; --f-pre: 'Pretendard Variable', Pretendard, 'Apple SD Gothic Neo', sans-serif; }
+#intro, #live, #policies { font-family: var(--f-pre); }
+#intro .display, #live .display, #policies .display, #intro .lead, #live .sec-head p, #policies .sec-head p { font-family: var(--f-pre); }
+#live .display, #policies .display { font-weight: 800; letter-spacing: -0.045em; } #live .display .l, #policies .display .l { font-weight: 500; letter-spacing: -0.04em; }
+/* 공통 버튼: 잉크 알약 + 라임 원 */
+.btn:not(.light):not(.line) { background: var(--ink); color: #fff; }
+.btn:not(.light):not(.line)::after { background: var(--lime); }
+.btn:not(.light):not(.line) .dot { color: var(--ink); background: var(--lime); }
+.btn:not(.light):not(.line):hover { color: var(--ink); }
+#policies .btn.light { background: var(--ink); color: #fff; box-shadow: none; } #policies .btn.light::after { background: var(--lime); } #policies .btn.light .dot { background: var(--lime); color: var(--ink); } #policies .btn.light:hover { color: var(--ink); }
+
+/* ── 내 집으로 가는 길: 큼직한 에디토리얼 제목 + 스티커 ── */
+#intro .display { font-weight: 800; letter-spacing: -0.055em; line-height: 1.02; font-size: clamp(40px, 8.4vw, 124px); }
+#intro .display .l { font-weight: 300; letter-spacing: -0.05em; }
+#intro .display .em { color: var(--ink); background: linear-gradient(transparent 60%, var(--lime) 60% 92%, transparent 92%); padding: 0 0.06em; }
+#intro .lead { color: var(--ink); font-weight: 500; opacity: 0.82; }
+#intro .label { font-family: var(--f-pre); font-weight: 700; font-size: 13px; letter-spacing: 0.02em; background: rgba(255, 255, 255, 0.7); padding: 6px 14px; border-radius: 999px; }
+.sticker { padding: 10px 18px; border-radius: 999px; background: #fff; color: var(--ink); font: 800 clamp(13px, 1.2vw, 16px) var(--f-pre); letter-spacing: -0.02em; box-shadow: 0 10px 24px -8px rgba(29, 39, 69, 0.35); white-space: nowrap; }
+.sticker.st1 { left: 30%; top: 24%; transform: rotate(-7deg); background: var(--lime); }
+.sticker.st2 { right: 22%; top: 30%; transform: rotate(6deg); }
+.sticker.st3 { right: 14%; bottom: 40%; transform: rotate(-4deg); background: var(--ink); color: #fff; }
+@media (max-width: 899px) { .sticker.st1 { left: 5%; top: 20%; } .sticker.st2 { right: 4%; top: 17%; } .sticker.st3 { display: none; } }
+.scene > .sticker { transform: translate3d(calc(var(--px, 0) * var(--d, 10) * 1px), calc(var(--py, 0) * var(--d, 10) * 1px), 0) rotate(var(--r, 0deg)); }
+.sticker.st1 { --r: -7deg; } .sticker.st2 { --r: 6deg; } .sticker.st3 { --r: -4deg; }
+
+/* ── 실시간 정보: 티켓 카드 + 좌우 화살표 ── */
+.lc { position: relative; }
+.lc-view { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; overscroll-behavior-x: contain; padding-top: 28px; }
+.lc-view::-webkit-scrollbar { display: none; }
+.lc-track { animation: none; }
+.lc-arrow { position: absolute; top: calc(50% - 22px); z-index: 4; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; background: var(--lime); color: var(--ink); box-shadow: 0 10px 26px -6px rgba(0, 0, 0, 0.5); transition: transform 0.25s var(--ease), background 0.2s; }
+.lc-arrow.prev { left: clamp(6px, 2.2vw, 36px); } .lc-arrow.next { right: clamp(6px, 2.2vw, 36px); }
+.lc-arrow:hover { transform: scale(1.1); background: #fff; } .lc-arrow:active { transform: scale(0.94); }
+.lc-arrow svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 640px) { .lc-arrow { width: 44px; height: 44px; } .lc-arrow svg { width: 20px; height: 20px; } }
+.l3d { --tone: #7b8bff; position: relative; overflow: hidden; min-height: 320px; padding: 24px 24px 0; border: 0; border-radius: 30px; background: var(--cd); color: var(--ink);
+  box-shadow: 0 2px 0 #fff inset, 0 24px 40px -14px rgba(0, 0, 0, 0.55); }
+.l3d.t-rent { --tone: #7b8bff; } .l3d.t-sale { --tone: #ff8a5b; } .l3d.t-hub { --tone: #b58cff; } .l3d.t-home { --tone: #3fdcb4; } .l3d.t-gov { --tone: #ff74a8; } .l3d.t-rone { --tone: #ffd84d; }
+.l3d::before { content: ''; position: absolute; right: -34px; top: -34px; left: auto; bottom: auto; width: 118px; height: 118px; border-radius: 50%; background: var(--tone); opacity: 1; }
+.l3d::after { content: ''; position: absolute; right: 16px; top: 16px; width: 26px; height: 26px; border-radius: 50%; background: rgba(255, 255, 255, 0.55); }
+.l3d-tag { position: relative; z-index: 1; display: inline-block; padding: 6px 12px; border-radius: 999px; background: var(--ink); color: #fff; font: 700 12px var(--f-pre); letter-spacing: -0.01em; max-width: calc(100% - 60px); }
+.l3d h3 { position: relative; z-index: 1; font: 800 22px/1.25 var(--f-pre); letter-spacing: -0.04em; margin: 14px 0 8px; }
+.l3d-body { position: relative; z-index: 1; }
+.l3d-big b { font: 800 64px/1 var(--f-num); letter-spacing: -0.06em; } .l3d-big span { font: 700 16px var(--f-pre); color: var(--ink); }
+.l3d .hint, .l3d p { color: var(--ink-2); font-family: var(--f-pre); font-weight: 500; font-size: 14.5px; }
+/* 티켓 절취선 + 양쪽 홈 */
+.l3d-foot { position: relative; margin: 18px -24px 0; padding: 16px 24px 18px; border-top: 2px dashed rgba(29, 39, 69, 0.22); display: grid; gap: 8px; transform: none; }
+.l3d-foot::before, .l3d-foot::after { content: ''; position: absolute; top: -12px; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); }
+.l3d-foot::before { left: -11px; } .l3d-foot::after { right: -11px; }
+.l3d-src { order: 2; margin: 0; display: flex; align-items: center; gap: 7px; font: 600 12px var(--f-pre); color: var(--ink-2); }
+.pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #12c481; box-shadow: 0 0 0 0 rgba(18, 196, 129, 0.6); animation: pulse 1.8s infinite; }
+@keyframes pulse { 70% { box-shadow: 0 0 0 9px rgba(18, 196, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(18, 196, 129, 0); } }
+.l3d-link, .btn-s { font: 800 14px var(--f-pre); color: var(--ink); letter-spacing: -0.02em; text-decoration: none; }
+.l3d-link { display: inline-flex; width: fit-content; padding-bottom: 2px; background: linear-gradient(var(--lime), var(--lime)) 0 100% / 100% 7px no-repeat; transition: background-size 0.25s var(--ease); }
+.l3d-link:hover { background-size: 100% 100%; }
+.btn-s { padding: 10px 18px; border-radius: 999px; background: var(--ink); color: #fff; } .btn-s:hover { background: var(--ink); color: var(--lime); }
+.l3d .strip { background: rgba(255, 255, 255, 0.7); border: 0; border-radius: 16px; color: var(--ink); box-shadow: none; }
+.lc-pause { background: rgba(255, 255, 255, 0.12); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); font-family: var(--f-pre); }
+@media (prefers-reduced-motion: reduce) { .lc-arrow, .pulse { display: none; } .lc-view { overflow: visible; } }
+
+/* ── 지원 제도: Cloud Dancer 바탕 위 흰 카드, 라임 화살표 ── */
+#policies { background: var(--cd); }
+#policies .sec-head p { color: var(--ink-2); font-weight: 500; }
+.filters .fchip { font: 700 15px var(--f-pre); letter-spacing: -0.02em; background: #fff; color: var(--ink); box-shadow: 0 0 0 1px rgba(29, 39, 69, 0.12); padding: 11px 20px; }
+.filters .fchip:hover { box-shadow: 0 0 0 1.5px var(--ink); }
+.filters .fchip[aria-pressed='true'] { color: #fff; box-shadow: none; } .filters .fchip[aria-pressed='true'] sup { color: var(--lime); }
+.filters .fchip .bg { background: var(--ink); }
+.idx { border-top: 0; display: grid; gap: 14px; }
+.idx-item, .idx-item:hover, .idx-item.open { background: #fff; color: var(--ink); border: 1px solid rgba(29, 39, 69, 0.08); border-radius: 30px; box-shadow: 0 1px 0 rgba(29, 39, 69, 0.04), 0 18px 34px -22px rgba(29, 39, 69, 0.35); backdrop-filter: none; -webkit-backdrop-filter: none; transform: none; }
+.idx-item::before { display: none; }
+.idx-item:hover { border-color: var(--ink); } .idx-item.open { border-color: var(--ink); box-shadow: 0 24px 44px -22px rgba(29, 39, 69, 0.5); }
+.idx:hover .idx-item:not(:hover):not(.open) { opacity: 1; }
+.idx-head, .idx-item:hover .idx-head, .idx-item.open .idx-head { padding: 22px 22px 22px 20px; gap: 4px 18px; }
+@media (max-width: 899px) { .idx-head, .idx-item:hover .idx-head, .idx-item.open .idx-head { grid-template-columns: 52px 1fr 52px; } }
+@media (min-width: 900px) { .idx-head, .idx-item:hover .idx-head, .idx-item.open .idx-head { grid-template-columns: 52px 1.3fr 1fr 52px; } .idx-body { grid-template-columns: 52px 1.3fr 1fr; } }
+.idx-no { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--lime); font: 800 20px var(--f-num); letter-spacing: -0.04em; }
+.idx-item:hover .idx-no, .idx-item.open .idx-no { color: var(--lime); }
+.idx-name { font: 800 clamp(20px, 2.3vw, 30px)/1.2 var(--f-pre); letter-spacing: -0.045em; }
+.idx-sum { font: 500 15px var(--f-pre); color: var(--ink-2); opacity: 1; letter-spacing: -0.02em; }
+.idx-arrow, .idx-item:hover .idx-arrow, .idx-item.open .idx-arrow { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: var(--lime); color: var(--ink); font-size: 22px; font-weight: 800; transition: transform 0.35s var(--ease); }
+.idx-item:hover .idx-arrow { transform: rotate(-45deg); } .idx-item.open .idx-arrow { transform: rotate(-135deg); }
+.idx-body { padding: 4px 24px 30px; }
+.facts dt { font: 800 12px var(--f-pre); letter-spacing: 0.04em; color: var(--ink-2); text-transform: none; }
+.facts dd { font: 500 16.5px/1.6 var(--f-pre); letter-spacing: -0.02em; color: var(--ink); }
+.facts dd.amount { font: 800 clamp(20px, 2.2vw, 28px)/1.3 var(--f-pre); letter-spacing: -0.045em; display: inline; background: linear-gradient(transparent 62%, var(--lime) 62% 94%, transparent 94%); }
+.idx-body .tag { background: var(--cd); color: var(--ink); font: 700 13px var(--f-pre); border-radius: 999px; padding: 5px 12px; }
+.idx-body .note { background: #fff7d6; border-left: 0; border-radius: 16px; color: var(--ink); font-family: var(--f-pre); font-weight: 600; }
+.pol-live { background: var(--cd); border: 0; border-radius: 18px; padding: 14px 18px; font-family: var(--f-pre); color: var(--ink); }
+.pol-live .pl-badge { border: 0; background: var(--ink); color: #fff; font-weight: 700; } .pol-live .pl-badge.open, .pol-live .pl-badge.always { background: var(--lime); color: var(--ink); }

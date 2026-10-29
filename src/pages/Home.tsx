@@ -165,6 +165,9 @@ function Intro() {
         <div className="arch a2"><img src="/photos/sejong-lake.jpg" alt="" loading="lazy" decoding="async" style={{ objectPosition: '62% 50%' }} /></div>
         <div className="arch a3"><img src="/photos/sejong-skyline.jpg" alt="" loading="lazy" decoding="async" style={{ objectPosition: '50% 55%' }} /></div>
         <div className="stairs" /><div className="orb" />
+        <span className="sticker st1" style={{ ["--d" as string]: 30 }}>전세 · 월세 한 번에</span>
+        <span className="sticker st2" style={{ ["--d" as string]: 24 }}>숫자는 실시간 ●</span>
+        <span className="sticker st3" style={{ ["--d" as string]: 36 }}>쉬운 말로 ✦</span>
       </div>
       <div className="grain" aria-hidden="true" />
       <div className="wrap hero-inner">
