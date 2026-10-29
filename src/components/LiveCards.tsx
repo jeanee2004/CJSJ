@@ -5,6 +5,7 @@ import type { BenefitsRes, Load, MyhomeRes, RoneRes, TradesRes } from '../lib/ap
 import { LiveCarousel } from './LiveCarousel'
 import type { Answers } from '../lib/eligibility'
 import { coveredByVerdicts, fitsNotice } from '../lib/live'
+import { matchBenefit } from '../lib/recommend'
 import { Btn, VBadge, reduced } from '../ui'
 
 const SRC_NAME = { gov24: '정부24', bokjiro: '복지로', youthcenter: '온통청년' } as const
@@ -58,27 +59,40 @@ export function PublicRentals({ answers }: { answers: Answers }) {
   )
 }
 
-/** 결과 화면 하단: 추가로 확인해볼 혜택 (정부24·복지로·온통청년). 위 진단 카드에 있는 제도는 뺀다 */
-export function ExtraBenefits({ load: r }: { load: Load<BenefitsRes> }) {
-  const items = r.state === 'ok' ? r.data.items.filter((b) => !coveredByVerdicts(b)) : []
+/** 결과 화면 하단: 추가로 확인해볼 혜택 (정부24·복지로·온통청년). 위 진단 카드에 있는 제도는 빼고, 나이·무주택으로 맞지 않는 것은 접는다 */
+export function ExtraBenefits({ load: r, answers }: { load: Load<BenefitsRes>; answers: Answers }) {
+  const [all, setAll] = useState(false)
+  const matches = r.state === 'ok' ? r.data.items.filter((b) => !coveredByVerdicts(b)).map((b) => matchBenefit(b, answers)) : []
+  const fit = matches.filter((m) => m.status !== 'no')
+  const items = all ? matches : fit
+  const hidden = matches.length - fit.length
   return (
     <section className="live" aria-labelledby="live-benefit" aria-busy={r.state === 'loading' || undefined}>
       <span className="label">정부24 · 복지로 · 온통청년</span>
       <h2 id="live-benefit">추가로 확인해볼 혜택</h2>
-      <p className="hint" style={{ marginBottom: 12 }}>위 진단에 넣지 않은 제도도 있어요. 조건은 각 안내 페이지에서 직접 확인하세요.</p>
+      <p className="hint" style={{ marginBottom: 12 }}>위 진단에 넣지 않은 제도도 있어요. 나이와 무주택 여부만 확인했고, 소득 등 나머지 조건은 각 안내 페이지에서 직접 확인하세요.</p>
       {r.state === 'loading' && <p className="hint">혜택 목록을 불러오는 중이에요…</p>}
       {r.state === 'error' && <Stale what="세종 청년·신혼 혜택" href="https://www.gov.kr/portal/rcvfvrSvc/main" label="정부24 혜택 찾기" />}
-      {r.state === 'ok' && items.length === 0 && <p className="hint">위 진단에 없는 세종 청년·신혼 주거 혜택은 지금 없어요.</p>}
+      {r.state === 'ok' && matches.length === 0 && <p className="hint">위 진단에 없는 세종 청년·신혼 주거 혜택은 지금 없어요.</p>}
+      {r.state === 'ok' && matches.length > 0 && fit.length === 0 && !all && <p className="hint">위 진단에 없는 혜택 {matches.length}건은 응답하신 나이·주택 상황과 맞지 않아 보여요.</p>}
       {items.length > 0 && (
         <ul className="live-list">
-          {items.map((b) => (
+          {items.map(({ benefit: b, status, reasons }) => (
             <li key={`${b.source}-${b.id}`}>
               {b.url ? <a href={b.url} target="_blank" rel="noreferrer noopener"><b>{b.name}</b></a> : <b>{b.name}</b>}
               <span className="label" style={{ marginLeft: 8 }}>{SRC_NAME[b.source]}{b.apply && ` · ${b.apply}`}</span>
+              <span className={`status ${status}`} style={{ marginLeft: 8, padding: '3px 10px', fontSize: 12 }}>{status === 'no' ? '✕ 조건이 맞지 않아요' : '△ 확인해 보면 좋아요'}</span>
               {b.summary && <p className="hint">{b.summary}</p>}
+              {reasons.map((x, i) => <p key={i} className="hint">{x}</p>)}
             </li>
           ))}
         </ul>
+      )}
+      {hidden > 0 && (
+        <p className="hint" style={{ marginTop: 12 }}>
+          {all ? '조건이 맞지 않는 혜택까지 보여 주고 있어요. ' : `나이·주택 상황과 맞지 않는 혜택 ${hidden}건은 접어 두었어요. `}
+          <button type="button" className="term" onClick={() => setAll((x) => !x)}>{all ? '맞는 혜택만 보기' : '모두 보기'}</button>
+        </p>
       )}
       {r.state === 'ok' && <p className="src"><span><VBadge v="official" /> {r.data.source} · {new Date(r.data.fetchedAt).toLocaleDateString('ko-KR')} 기준</span></p>}
     </section>
