@@ -77,7 +77,8 @@ export function applySchedules(vs: Verdict[], items: Benefit[], today: string): 
 /** 마이홈 공고 이름으로 대상을 가늠해 맞지 않는 공고를 숨긴다. 이름에 대상이 없으면 보여준다. */
 export function fitsNotice(n: Notice, a: Answers): boolean {
   const t = n.title
-  const kids = a.survey?.Q8 === '1'
+  // 설문 Q4 "자녀가 있는 가구" (2026-10-29 구글폼 문항으로 바뀜)
+  const kids = a.survey?.Q4 === '6'
   const couple = a.marital !== 'single'
   const youth = a.age >= 19 && a.age <= 39
   const want: boolean[] = []
