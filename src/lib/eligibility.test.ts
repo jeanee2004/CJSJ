@@ -73,4 +73,14 @@ describe('규칙', () => {
     expect(c).not.toBeNull()
     expect(c!.loanInterest).toBe(9000)
   })
+
+  it('택1 비교 기준: 금리 하단·상단과 기간을 고를 수 있다', () => {
+    const a = { ...DEFAULT_ANSWERS, deal: 'jeonse' as const, deposit: 10000, income: 3000 }
+    const lo = compareCost(a, 4.5, { rate: 'min', years: 2 })!
+    const hi = compareCost(a, 4.5, { rate: 'max', years: 2 })!
+    expect(lo.buteemokRate).toBe(2.0)
+    expect(hi.buteemokRate).toBe(3.1)
+    expect(lo.buteemokPaid).toBe(Math.round(8000 * 0.02 * 2))
+    expect(compareCost(a, 4.5)!.years).toBe(6)
+  })
 })
