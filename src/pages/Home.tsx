@@ -11,9 +11,10 @@ import { LiveBoard } from '../components/LiveCards'
 import { AddressCheck } from '../components/AddressCheck'
 import { useStore } from '../store'
 import { todayKst, useApi } from '../lib/api'
-import type { BenefitsRes } from '../lib/api'
-import type { LiveRow } from '../lib/live'
-import { isStaleCaution, liveRows, scheduleFor, scheduleText, stripDates } from '../lib/live'
+import type { Benefit, BenefitsRes } from '../lib/api'
+import { ymdLabel } from '../lib/api'
+import type { LiveRow, Official } from '../lib/live'
+import { isStaleCaution, liveRows, officialFor, officialOf, otherPolicies, phaseOf, scheduleFor, scheduleText, stripDates } from '../lib/live'
 
 /* ───────── 첫 화면: 영상 히어로 ─────────
    · 세션 첫 방문에만 자동 재생: 영상 1(스마트폰) → 영상 0(대학생·결혼) → 영상 2 → Looking for House (각각 1초간 서서히 섞이며 이어짐) → 마지막 장면에서 정지
@@ -232,8 +233,42 @@ function How() {
   )
 }
 
-/* ───────── 제도 인덱스: 호버=채움 스윕+형제 흐림, 클릭=패널 펼침 ───────── */
-function IdxItem({ p, i, open, onToggle, live, rows }: { p: PolicyInfo; i: number; open: boolean; onToggle: () => void; live?: string; rows?: LiveRow[] }) {
+/* ───────── 제도 인덱스: 호버=채움 스윕+형제 흐림, 클릭=패널 펼침 ─────────
+   공공 API(정부24·온통청년·복지로)에 공식 원문이 있으면 그것을 먼저 보여 주고,
+   언론 보도로 정리한 요약은 "참고"로 접어 둔다. 원문이 없으면(버팀목 등) 기존 정리 그대로 */
+
+/** 공식 원문 출처 줄: 출처 · 원문 수정일 · 원문 링크 */
+function OfficialRefs({ o }: { o: Official }) {
+  return (
+    <div className="src off-src">
+      {o.refs.map((r, k) => (
+        <div key={k}>
+          <VBadge v="official" />
+          {r.url ? <a href={r.url} target="_blank" rel="noreferrer noopener">{r.source} · {r.name}</a> : <span>{r.source} · {r.name}</span>}
+          {r.updated && <span className="label" style={{ marginLeft: 8 }}>원문 수정 {ymdLabel(r.updated)}</span>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function LiveBox({ rows, fallback }: { rows: LiveRow[]; fallback?: { name: string; url: string } }) {
+  return (
+    <div className="pol-live">
+      <b>실시간 공고</b>
+      {rows.length === 0 ? (
+        <p>연결된 공공 API에 이 제도의 최신 공고가 없어요.{fallback && <> 공식 사이트에서 확인하세요 · <a href={fallback.url} target="_blank" rel="noopener noreferrer">{fallback.name}</a></>}</p>
+      ) : rows.map((r, k) => (
+        <p key={k}>
+          <span className={`pl-badge ${r.phase}`}>{r.label}</span> {r.name} <small>({r.source})</small><br />
+          {r.text}{r.url && <> <a href={r.url} target="_blank" rel="noopener noreferrer">신청 링크</a></>}
+        </p>
+      ))}
+    </div>
+  )
+}
+
+function IdxItem({ p, i, open, onToggle, live, rows, off }: { p: PolicyInfo; i: number; open: boolean; onToggle: () => void; live?: string; rows?: LiveRow[]; off?: Official | null }) {
   const pid = useId()
   return (
     <li className={`idx-item ${open ? 'open' : ''}`}>
@@ -247,29 +282,89 @@ function IdxItem({ p, i, open, onToggle, live, rows }: { p: PolicyInfo; i: numbe
         <div inert={!open}>
           <div className="idx-body">
             <span className="spacer" />
-            <dl className="facts">
-              <div><dt>지원 내용</dt><dd className="amount">{p.money}</dd></div>
-              <div><dt>지원 대상</dt><dd>{p.who}</dd></div>
-              <div><dt>신청 방법</dt><dd>{live ? stripDates(p.how) : p.how}{live && <><br /><b>최신 접수 일정</b> · {live}</>}</dd></div>
-            </dl>
+            {off ? (
+              <dl className="facts off">
+                <div><dt>지원 내용 · 공식</dt><dd className="off-text">{off.support ?? p.money}</dd></div>
+                {off.target && <div><dt>지원 대상 · 공식</dt><dd className="off-text">{off.target}</dd></div>}
+                <div><dt>신청 방법</dt><dd className="off-text">{off.how ?? stripDates(p.how)}{live && <><br /><b>최신 접수 일정</b> · {live}</>}</dd></div>
+                {off.contact && <div><dt>문의</dt><dd>{off.contact}</dd></div>}
+              </dl>
+            ) : (
+              <dl className="facts">
+                <div><dt>지원 내용</dt><dd className="amount">{p.money}</dd></div>
+                <div><dt>지원 대상</dt><dd>{p.who}</dd></div>
+                <div><dt>신청 방법</dt><dd>{live ? stripDates(p.how) : p.how}{live && <><br /><b>최신 접수 일정</b> · {live}</>}</dd></div>
+              </dl>
+            )}
             <div>
               <div className="tags" style={{ marginBottom: 14 }}>{p.type.map((t) => <span className="tag" key={t}>{t}</span>)}</div>
               {p.caution && !(live && isStaleCaution(p.id, p.caution)) && <div className="note">⚠ {p.caution}</div>}
               <div className="apply"><Btn href={p.apply.url} external variant="light" size="sm">{`${p.apply.name.split(' ')[0]}에서 신청하기`}</Btn></div>
-              {rows && (
-                <div className="pol-live">
-                  <b>실시간 공고</b>
-                  {rows.length === 0 ? (
-                    <p>연결된 공공 API에 이 제도의 최신 공고가 없어요. 공식 사이트에서 확인하세요 · <a href={p.apply.url} target="_blank" rel="noopener noreferrer">{p.apply.name}</a></p>
-                  ) : rows.map((r, k) => (
-                    <p key={k}>
-                      <span className={`pl-badge ${r.phase}`}>{r.label}</span> {r.name} <small>({r.source})</small><br />
-                      {r.text}{r.url && <> <a href={r.url} target="_blank" rel="noopener noreferrer">신청 링크</a></>}
-                    </p>
-                  ))}
-                </div>
+              {rows && <LiveBox rows={rows} fallback={p.apply} />}
+              {off ? (
+                <>
+                  <OfficialRefs o={off} />
+                  <details className="pol-ref">
+                    <summary>참고: 언론 보도로 정리한 요약</summary>
+                    <dl className="facts">
+                      <div><dt>지원 내용</dt><dd>{p.money}</dd></div>
+                      <div><dt>지원 대상</dt><dd>{p.who}</dd></div>
+                      <div><dt>신청 방법</dt><dd>{stripDates(p.how)}</dd></div>
+                    </dl>
+                    <SourceBlock ids={p.sourceIds} />
+                  </details>
+                </>
+              ) : (
+                <>
+                  {rows && <p className="hint" style={{ marginTop: 10 }}>공공 API(정부24·온통청년·복지로)에 이 제도의 원문이 없어 공식 안내·보도로 정리한 내용을 보여 드려요.</p>}
+                  <SourceBlock ids={p.sourceIds} />
+                </>
               )}
-              <SourceBlock ids={p.sourceIds} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </li>
+  )
+}
+
+// 공공 API 정책 이름으로 필터 칩을 가늠한다
+const typesOf = (name: string): string[] => [
+  /전세|보증/.test(name) && '전세', /월세|임대료/.test(name) && '월세', /신혼/.test(name) && '신혼', /청년|대학생/.test(name) && '청년',
+].filter(Boolean) as string[]
+
+/** 다섯 가지 밖에서 공공 API 에만 있는 세종 주거 정책 */
+function ApiIdxItem({ b, i, open, onToggle, today }: { b: Benefit; i: number; open: boolean; onToggle: () => void; today: string }) {
+  const pid = useId()
+  const off = officialOf([b])
+  const phase = phaseOf(b, today)
+  const sched = scheduleText(b, today)
+  const url = off?.refs.find((r) => r.url)?.url ?? (/^https?:\/\//.test(b.url) ? b.url : undefined)
+  return (
+    <li className={`idx-item api ${open ? 'open' : ''}`}>
+      <button className="idx-head" type="button" aria-expanded={open} aria-controls={pid} onClick={onToggle}>
+        <span className="idx-no">{String(i + 1).padStart(2, '0')}</span>
+        <span className="idx-name">{b.name}</span>
+        <span className="idx-sum">{b.summary || off?.support?.split('\n')[0]}</span>
+        <span className="idx-arrow" aria-hidden="true">→</span>
+      </button>
+      <div className="idx-panel" id={pid} role="region" aria-label={`${b.name} 자세히`}>
+        <div inert={!open}>
+          <div className="idx-body">
+            <span className="spacer" />
+            <dl className="facts off">
+              {off?.support && <div><dt>지원 내용 · 공식</dt><dd className="off-text">{off.support}</dd></div>}
+              {off?.target && <div><dt>지원 대상 · 공식</dt><dd className="off-text">{off.target}</dd></div>}
+              <div><dt>신청 방법</dt><dd className="off-text">{off?.how ?? b.apply ?? '원문에서 확인하세요'}{sched && <><br /><b>접수 일정</b> · {sched}</>}</dd></div>
+              {off?.contact && <div><dt>문의</dt><dd>{off.contact}</dd></div>}
+            </dl>
+            <div>
+              <div className="tags" style={{ marginBottom: 14 }}>
+                {typesOf(b.name).map((t) => <span className="tag" key={t}>{t}</span>)}
+                {phase !== 'unknown' && <span className="tag">{{ open: '접수 중', upcoming: '접수 예정', closed: '다음 공고 대기', always: '상시 접수' }[phase]}</span>}
+              </div>
+              {url && <div className="apply"><Btn href={url} external variant="light" size="sm">원문·신청 페이지</Btn></div>}
+              {off && <OfficialRefs o={off} />}
             </div>
           </div>
         </div>
@@ -283,13 +378,17 @@ function Policies() {
   const [f, setF] = useState<(typeof FILTERS)[number]>('전체')
   const [open, setOpen] = useState<string | null>(null)
   const list = POLICIES.filter((p) => f === '전체' || p.type.includes(f))
-  const count = (x: string) => POLICIES.filter((p) => x === '전체' || p.type.includes(x as never)).length
   // 접수 일정은 온통청년을 먼저 쓴다. 못 불러오면 기존 "신청 방법" 문구만 보인다
   const benefits = useApi<BenefitsRes>('/api/benefits')
+  const items = benefits.state === 'ok' ? benefits.data.items : null
+  const today = todayKst()
+  const others = items ? otherPolicies(items) : []
+  const extra = others.filter((b) => f === '전체' || typesOf(b.name).includes(f))
+  const count = (x: string) => POLICIES.filter((p) => x === '전체' || p.type.includes(x as never)).length + others.filter((b) => x === '전체' || typesOf(b.name).includes(x)).length
   const live = (id: PolicyInfo['id']) => {
-    if (benefits.state !== 'ok') return undefined
-    const s = scheduleFor(id, benefits.data.items)
-    return s ? scheduleText(s, todayKst()) || undefined : undefined
+    if (!items) return undefined
+    const s = scheduleFor(id, items)
+    return s ? scheduleText(s, today) || undefined : undefined
   }
   return (
     <section className="sec cream2" id="policies" aria-labelledby="pol-t">
@@ -309,13 +408,26 @@ function Policies() {
             ))}
           </div>
         </LayoutGroup>
+        {benefits.state === 'loading' && <p className="hint" aria-live="polite">공공 API에서 세종시 공식 정책 원문을 불러오는 중이에요…</p>}
+        {benefits.state === 'error' && <p className="hint">최신 데이터를 불러오지 못했습니다. 아래는 공식 안내·언론 보도로 정리한 내용이에요.</p>}
         <ul className="idx">
           {list.map((p, i) => (
-            <IdxItem key={p.id} p={p} i={i} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} live={live(p.id)} rows={benefits.state === 'ok' ? liveRows(p.id, benefits.data.items, todayKst()) : undefined} />
+            <IdxItem key={p.id} p={p} i={i} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} live={live(p.id)} rows={items ? liveRows(p.id, items, today) : undefined} off={items ? officialFor(p.id, items) : undefined} />
           ))}
         </ul>
+        {extra.length > 0 && (
+          <>
+            <h3 className="idx-more-t">공공 API에서 찾은 세종 주거 정책 <span className="num">{extra.length}</span></h3>
+            <p className="hint" style={{ marginBottom: 8 }}>정부24·온통청년·복지로에 세종시가 올린 청년·신혼 주거 정책 중 위 다섯 가지에 없는 것이에요. 조건은 원문에서 확인하세요.</p>
+            <ul className="idx">
+              {extra.map((b, i) => (
+                <ApiIdxItem key={`${b.source}-${b.id}`} b={b} i={list.length + i} open={open === `api-${b.source}-${b.id}`} onToggle={() => setOpen(open === `api-${b.source}-${b.id}` ? null : `api-${b.source}-${b.id}`)} today={today} />
+              ))}
+            </ul>
+          </>
+        )}
         <p className="disclaimer">
-          참고용 안내예요. 최종 자격은 각 기관에서 판단해요. 공고는 자주 바뀌니, 신청하기 전에 원문을 꼭 한 번 확인해 주세요. 세종 이자지원의 신혼 합산 소득(8,000만원)은 언론 보도 2건이 일치하지만 시청 최신 공고 원문은 확인하지 못했어요 <VBadge v="secondary" />
+          참고용 안내예요. 최종 자격은 각 기관에서 판단해요. <VBadge v="official" /> 표시는 공공 API(정부24·온통청년·복지로)로 받은 세종시 공식 원문이고{benefits.state === 'ok' && ` (${new Date(benefits.data.fetchedAt).toLocaleDateString('ko-KR')} 조회)`}, 원문이 없는 버팀목 대출은 주택도시기금 안내와 보도로 정리했어요. 공고는 자주 바뀌니 신청 전에 원문을 꼭 확인해 주세요.
         </p>
       </div>
     </section>

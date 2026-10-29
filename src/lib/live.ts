@@ -4,7 +4,7 @@
 // - 추가 혜택: 위 진단 카드에 이미 있는 제도는 뺌
 import type { PolicyId } from '../data/policies'
 import type { Answers, Verdict } from './eligibility'
-import type { Benefit, Notice } from './api'
+import type { Benefit, BenefitDetail, Notice } from './api'
 import { ymdLabel } from './api'
 
 /** 공공 API 의 제도 이름 → 진단 카드 id (2026-10-28 실제 응답 이름 기준) */
@@ -101,3 +101,29 @@ export function fitsNotice(n: Notice, a: Answers): boolean {
 
 /** 진단 카드에 이미 있는 제도인지 */
 export const coveredByVerdicts = (b: Benefit) => policyOf(b.name) !== undefined
+
+/* ───────── 제도 카드: 공식 원문 ───────── */
+
+export interface Official {
+  support?: string; target?: string; how?: string; contact?: string
+  /** 화면에 밝힐 출처 (원문 링크·수정일) */
+  refs: { source: string; name: string; url?: string; updated?: string }[]
+}
+// 원문이 가장 자세한 순서: 정부24(시청이 직접 올림) → 온통청년 → 복지로
+const RANK = { gov24: 0, youthcenter: 1, bokjiro: 2 } as const
+
+/** 공공 API 원문을 칸마다 가장 자세한 출처에서 골라 하나로 만든다. 원문이 없으면 null */
+export function officialOf(list: Benefit[]): Official | null {
+  const ds: BenefitDetail[] = list.flatMap((b) => b.details ?? []).sort((x, y) => RANK[x.source] - RANK[y.source])
+  if (!ds.length) return null
+  const pick = (k: 'support' | 'target' | 'how' | 'contact') => ds.find((d) => d[k])?.[k]
+  const refs = ds.filter((d, i) => ds.findIndex((x) => x.source === d.source && x.name === d.name) === i)
+    .map((d) => ({ source: SRC[d.source], name: d.name, url: d.url && /^https?:\/\//.test(d.url) ? d.url : undefined, updated: d.updated }))
+  return { support: pick('support'), target: pick('target'), how: pick('how'), contact: pick('contact'), refs }
+}
+
+/** 진단 제도 카드에 붙일 공식 원문 */
+export const officialFor = (id: PolicyId, items: Benefit[]) => officialOf(items.filter((b) => policyOf(b.name) === id))
+
+/** 다섯 가지 지원 밖에서 공공 API 에만 있는 세종 주거 정책 */
+export const otherPolicies = (items: Benefit[]) => items.filter((b) => !coveredByVerdicts(b))

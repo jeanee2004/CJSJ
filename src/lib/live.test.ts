@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_ANSWERS, evaluate } from './eligibility'
 import type { Answers } from './eligibility'
 import type { Benefit, Notice } from './api'
-import { liveRows, applySchedules, coveredByVerdicts, fitsNotice, phaseOf, policyOf, scheduleFor } from './live'
+import { liveRows, officialFor, otherPolicies, applySchedules, coveredByVerdicts, fitsNotice, phaseOf, policyOf, scheduleFor } from './live'
 
 const B = (x: Partial<Benefit>): Benefit => ({ source: 'gov24', id: '1', name: '', summary: '', org: '', apply: '', url: '', ...x })
 // 2026-10-28 /api/benefits 실제 응답에서 일정 관련 항목만 옮김
@@ -103,5 +103,24 @@ describe('제도 카드 실시간 공고', () => {
     const r = liveRows('sejongRent', [B({ name: '청년 주거임대료 지원사업', url: 'https://x.kr' })], '20261029')
     expect(r[0]).toMatchObject({ phase: 'unknown', url: 'https://x.kr' })
     expect(r[0].text).toBeTruthy()
+  })
+})
+
+describe('제도 카드 공식 원문', () => {
+  const items: Benefit[] = [
+    B({ source: 'youthcenter', name: '청년 주택임차보증금 이자 지원', details: [{ source: 'youthcenter', name: '청년 주택임차보증금 이자 지원', support: '최대 4.1% 대출이자 지원', how: '사업공고 및 신청접수', url: 'https://www.sejong.go.kr', updated: '20261002' }] }),
+    B({ source: 'gov24', name: '세종 전세보증금반환보증 보증료 지원', details: [{ source: 'gov24', name: '세종 전세보증금반환보증 보증료 지원', support: '보증료 최대 40만원' }] }),
+  ]
+  it('칸마다 가장 자세한 출처(정부24 → 온통청년 → 복지로)에서 고르고 출처를 남긴다', () => {
+    const merged = [B({ ...items[0], details: [...items[0].details!, { source: 'gov24', name: '세종시 청년 주택임차보증금 이자지원', support: '대출한도 1억원 내 (市 4.1% 부담)', contact: '044-300-6033' }] })]
+    const o = officialFor('sejongInterest', merged)!
+    expect(o.support).toBe('대출한도 1억원 내 (市 4.1% 부담)')
+    expect(o.how).toBe('사업공고 및 신청접수')
+    expect(o.contact).toBe('044-300-6033')
+    expect(o.refs.map((r) => r.source)).toEqual(['정부24', '온통청년'])
+  })
+  it('원문이 없으면 null, 다섯 가지 밖의 정책은 따로 모은다', () => {
+    expect(officialFor('youthButeemok', items)).toBeNull()
+    expect(otherPolicies(items).map((b) => b.name)).toEqual(['세종 전세보증금반환보증 보증료 지원'])
   })
 })
