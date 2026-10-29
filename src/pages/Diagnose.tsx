@@ -45,7 +45,7 @@ function NumberField({ value, onChange, unit, presets, hint, max, compact }: { v
 
 const UNK = 'unk'
 const EXCLUSIVE = /^(해당 없음|없음|겪은 적 없음|아무것도 안 함|받고 있는 지원 없음|찾아본 적 없음)/
-const DRAFT = 'cjsj.draft'
+const DRAFT = 'cjsj.draft.v2'
 const withUnk = (q: Q): SOpt[] => [...(q.opts ?? []), ...(q.unk ? [{ v: UNK, t: '잘 모르겠어요', d: '괜찮아요. 결과에서 어떻게 확인하는지 알려드릴게요' }] : [])]
 
 function QBody({ q, sv, set, next }: { q: Q; sv: Survey; set: (v: Val | undefined | ((prev: Val | undefined) => Val | undefined)) => void; next: () => void }) {
@@ -216,7 +216,7 @@ export function DiagnoseFlow({ onClose }: { onClose: () => void }) {
   const hues: [string, string][] = [['var(--blush)', 'var(--aqua)'], ['var(--mint)', 'var(--peri)'], ['var(--aqua)', 'var(--blush)'], ['var(--peri)', 'var(--mint)'], ['var(--blush)', 'var(--mint)'], ['var(--tint)', 'var(--aqua)']]
   const [h1, h2] = hues[(secNo - 1) % hues.length]
   const minutes = Math.max(1, Math.ceil((visible.length - idx) * 0.18))
-  const tag = q.id.startsWith('N') ? '청정 세종 추가 질문' : q.id.startsWith('S') && q.id.length === 2 ? `조사 ${q.id}` : `조사 ${q.id}`
+  const tag = q.id.startsWith('N') ? '맞춤 지원 확인용 추가 질문' : `설문 ${q.id}`
 
   return (
     <div className="diag-flow" style={{ ['--hc1' as string]: h1, ['--hc2' as string]: h2 }}>
@@ -233,7 +233,7 @@ export function DiagnoseFlow({ onClose }: { onClose: () => void }) {
             <h1>{q.title}</h1>
             <div className="why">
               <b>여쭤보는 이유</b>
-              {q.why ?? <>세종시 청년 주거실태조사에 나오는 질문이에요. {q.unk ? '잘 모르면 "잘 모르겠어요"를 눌러도 괜찮아요.' : '정확하지 않아도 떠오르는 대로 골라 주세요.'}</>}
+              {q.why ?? <>청년 주거 경험 설문에 나오는 질문이에요. {q.unk ? '잘 모르면 "잘 모르겠어요"를 눌러도 괜찮아요.' : '정확하지 않아도 떠오르는 대로 골라 주세요.'}</>}
             </div>
           </div>
           <div className="diag-main">
@@ -246,7 +246,7 @@ export function DiagnoseFlow({ onClose }: { onClose: () => void }) {
             </div>
           </div>
         </section>
-        <p className="hint" style={{ marginTop: 36 }}>입력한 내용은 서버로 보내지 않고 이 기기에만 저장돼요. 질문은 세종시 청년 주거실태 및 정책수요조사(2026)를 따랐어요.</p>
+        <p className="hint" style={{ marginTop: 36 }}>입력한 내용은 서버로 보내지 않고 이 기기에만 저장돼요. 질문은 「청정(靑定) 세종 · 청년 주거 경험 설문」과 같아요.</p>
       </div>
     </div>
   )

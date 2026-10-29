@@ -6,6 +6,7 @@ import { GET as trades } from '../trades.js'
 import { POST as building } from '../building.js'
 import { GET as myhome } from '../myhome.js'
 import { GET as benefits } from '../benefits.js'
+import { GET as rone } from '../rone.js'
 
 // oxlint-disable-next-line typescript/no-explicit-any -- 검증 출력용
 const read = (r: Response) => r.json() as Promise<any>
@@ -56,5 +57,11 @@ live('실제 호출', () => {
     const j = await read(await benefits())
     console.log('benefits', j.status, j.items?.length, j.items?.map((b: { source: string; name: string }) => `${b.source}:${b.name}`))
     expect(j.items.length).toBeGreaterThan(0)
+  }, T)
+
+  it('R-ONE 세종 전세 동향', async () => {
+    const j = await read(await rone())
+    console.log('rone', j.error ?? { idx: j.index?.latest, mom: j.index?.mom, yoy: j.index?.yoy, price: j.avgPrice?.latest, n: j.index?.series.length })
+    expect(j.index.series.length).toBeGreaterThan(1)
   }, T)
 })

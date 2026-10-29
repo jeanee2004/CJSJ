@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { judgeMultiHouse, parseLot } from './building.js'
 import { dedupe, fromBokjiro, fromGov24, fromYouthCenter } from './benefits.js'
+import { parseRone, summarizeSeries } from './rone.js'
 import { mask } from './http.js'
 import { cacheSecondsFor, monthsAgo, normalizeTrade, summarize } from './trades.js'
 import { gatewayError } from './upstream.js'
@@ -111,4 +112,33 @@ it('온통청년 접수 기간을 읽고, 합칠 때 온통청년을 남기며 �
   const g = fromGov24({ 서비스명: '세종시 청년 주택임차보증금 이자지원', 서비스ID: '2', 신청기한: '금년 접수 마감', 상세조회URL: 'https://plus.gov.kr/x' })!
   const [m] = dedupe([y, g])
   expect(m).toMatchObject({ source: 'youthcenter', begin: '20260301', end: '20260331', deadline: '금년 접수 마감' })
+})
+
+describe('R-ONE 정규화', () => {
+  // 2026-10-29 실제 응답에서 잘라낸 형태
+  const ok = (rows: object[]) => JSON.stringify({ SttsApiTblData: [{ head: [{ list_total_count: rows.length }, { RESULT: { CODE: 'INFO-000', MESSAGE: 'ok' } }] }, { row: rows }] })
+  const row = (ym: string, v: number) => ({ STATBL_ID: 'A_2024_00182', WRTTIME_IDTFR_ID: ym, CLS_ID: 500014, CLS_NM: '세종', DTA_VAL: v, UI_NM: '지수' })
+
+  it('행을 월 오름차순 값 목록으로 바꾼다', () => {
+    const p = parseRone(ok([row('202608', 98.37), row('202607', 100), row('202508', 92.8)]))
+    expect(p).toMatchObject({ ok: true, unit: '지수' })
+    if (p.ok) expect(p.points.map((x) => x.ym)).toEqual(['202508', '202607', '202608'])
+  })
+  it('전월·전년 대비와 최근 n개월을 계산한다', () => {
+    const pts = [{ ym: '202508', value: 92.8 }, { ym: '202607', value: 100 }, { ym: '202608', value: 98.3725 }]
+    const s = summarizeSeries(pts, '지수', 2)!
+    expect(s.latest).toEqual({ ym: '202608', value: 98.37 })
+    expect(s.mom).toBe(-1.63)
+    expect(s.yoy).toBe(6.0)
+    expect(s.series).toHaveLength(2)
+    expect(summarizeSeries([{ ym: '202608', value: 1 }], '지수')).toMatchObject({ mom: null, yoy: null })
+    expect(summarizeSeries([], '지수')).toBeNull()
+  })
+  it('오류 봉투를 코드로 바꾼다', () => {
+    const e = (c: string) => JSON.stringify({ RESULT: { CODE: c, MESSAGE: 'x' } })
+    expect(parseRone(e('INFO-200'))).toEqual({ ok: false, code: 'NO_DATA' })
+    expect(parseRone(e('ERROR-290'))).toEqual({ ok: false, code: 'KEY_NOT_REGISTERED' })
+    expect(parseRone(e('ERROR-336'))).toEqual({ ok: false, code: 'QUOTA_EXCEEDED' })
+    expect(parseRone('<html>')).toEqual({ ok: false, code: 'UPSTREAM_ERROR' })
+  })
 })

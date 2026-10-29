@@ -132,10 +132,41 @@
 - **공공임대 공고**: 공고 이름으로 대상을 가늠해(다자녀=자녀 있음, 신혼·신생아=부부 또는 자녀, 청년=19~39세 미혼) 맞지 않는 공고는 접고 "모두 보기"로 펼친다. 마이홈 응답에 자격 필드가 없어 이름 기준이다.
 - **추가 혜택**: 진단 카드에 있는 제도(위 세 가지)는 목록에서 뺀다. 쉐어하우스처럼 출처마다 이름이 다른 같은 제도는 아직 두 줄로 나온다.
 
-## 5. R-ONE (한국부동산원)
+## 5. R-ONE (한국부동산원) → `GET /api/rone`
 
-- `https://www.reb.or.kr/r-one/openapi/SttsApiTbl.do?KEY&Type=json&pIndex&pSize` ✅ 정상 응답(통계표 목록 738개, `RESULT.CODE=INFO-000`).
-- 화면에서 어떤 통계(예: 세종 아파트 전세가격지수)를 쓸지 정해지지 않아 **함수는 만들지 않았다**.
+키 `RONE_KEY`(R-ONE 자체 발급, 공공데이터포털 키와 별개). 응답은 항상 HTTP 200이고 성공/오류는 본문 `RESULT.CODE` 로 구분한다.
+
+- 통계표 목록: `https://www.reb.or.kr/r-one/openapi/SttsApiTbl.do?KEY&Type=json&pIndex&pSize` ✅ (738개). `STATBL_ID` 로 `STATBL_NM`·`DTACYCLE_CD`(MM 월)·`RPSTUI_NM`(기준시점) 확인.
+- 분류 목록: `SttsApiTblItm.do?KEY&Type=json&STATBL_ID=…` ✅ — 세종은 `ITM_ID=500014`(`CLS_ID` 로 쓰임).
+- 자료: `SttsApiTblData.do?KEY&Type=json&STATBL_ID&DTACYCLE_CD=MM&CLS_ID=500014&START_WRTTIME=YYYYMM&END_WRTTIME=YYYYMM&pIndex&pSize` ✅
+  - `START_WRTTIME`/`END_WRTTIME` 이 기간 필터다. (`START_WRTTIME_IDTFR_ID` 등 비슷한 이름은 **무시됨**.) `WRTTIME_IDTFR_ID=YYYYMM` 로 한 달만 받을 수도 있다.
+  - 응답: `{"SttsApiTblData":[{"head":[{list_total_count},{RESULT:{CODE,MESSAGE}}]},{"row":[…]}]}`. 행 필드: `STATBL_ID, DTACYCLE_CD, WRTTIME_IDTFR_ID(YYYYMM), CLS_ID, CLS_NM, ITM_ID, ITM_NM, DTA_VAL(숫자), UI_NM(단위), CLS_FULLNM, WRTTIME_DESC`.
+  - 오류: `ERROR-290` 인증키 무효(= `KEY_NOT_REGISTERED`로 매핑, 잘못된 키로 확인), `INFO-200` 자료 없음(발표 전 달). `ERROR-300`·`ERROR-336/337`(한도)은 R-ONE 안내 기준 **추정**, 재현 안 함.
+- 사용한 통계표 (둘 다 아파트, 월간, 세종 `CLS_ID=500014`)
+
+| STATBL_ID | 이름 | 단위 |
+|---|---|---|
+| `A_2024_00182` | (월) 지역별 전세지수_아파트 | 지수, 기준시점 **2026.06.=100** |
+| `A_2024_00192` | (월) 지역별 전세 평균가격_아파트 | 만원/㎡ |
+
+- 통계표 메타의 `DATA_END_YY` 는 2024로 멈춰 있지만 실제 자료는 **2026.08까지** 나온다(메타를 믿지 말 것). 2026-10-29 기준 최신 발표월은 2026.08, 09·10월은 `INFO-200`.
+- 확인 결과 (세종 전세지수): 2025.08 92.8 → 2026.06 100.0 → 2026.08 **98.37** (전월 대비 -1.59%, 전년 동월 대비 +6.03%). 평균가격 2026.08 289.6만원/㎡. 중위가격(`A_2024_00193`)도 같은 형태로 응답(2026.08 280.4)하나 쓰지 않는다.
+- `/api/rone` 은 두 통계표를 병렬 호출해 `{ source, fetchedAt, region, index, avgPrice }` 를 돌려준다. 각각 `{ unit, latest:{ym,value}, mom(%), yoy(%), series:[최근 12개월] }`. 한쪽만 실패하면 그 칸이 `null`, 둘 다 실패하면 502. 최신 발표월은 호출 때마다 달라지므로 `latest.ym` 을 그대로 표기할 것.
+- 캐시: 모두 성공 시 `s-maxage=86400`, 일부 실패 시 600.
+- 한도: **미확인**.
+
+## 6. 화면별 데이터 11종 대응표
+
+| 영역 | 경로 |
+|---|---|
+| 아파트·오피스텔·연립다세대·단독다가구 전월세 | `GET /api/trades?type=apt-rent｜offi-rent｜rh-rent｜sh-rent&dealYmd=YYYYMM` |
+| 아파트 매매 상세 | `GET /api/trades?type=apt-trade&dealYmd=YYYYMM` (`summary=1` 없으면 `items`) |
+| 건축HUB 건축물대장 | `POST /api/building` |
+| 마이홈 모집공고 | `GET /api/myhome` |
+| 정부24·복지로·온통청년 | `GET /api/benefits` (`items[].source` 로 구분) |
+| R-ONE 세종 전세 동향 | `GET /api/rone` |
+
+2026-10-29 `LIVE=1` 로 위 전부 재호출해 정상 응답 확인(매매 424/410/373, 전세 640/610/691, 건축물대장 3곳 판정, 마이홈 4건, 혜택 8건, R-ONE).
 
 ---
 

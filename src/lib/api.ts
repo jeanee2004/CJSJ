@@ -25,6 +25,34 @@ export interface Benefit {
 }
 export interface BenefitsRes { source: string; fetchedAt: string; items: Benefit[] }
 
+export interface RonePoint { ym: string; value: number }
+export interface RoneSeries {
+  unit: string
+  latest: RonePoint
+  /** 직전 달 대비 변화율(%) */
+  mom: number | null
+  /** 12개월 전 대비 변화율(%) */
+  yoy: number | null
+  /** 오래된 순, 최대 12개월 */
+  series: RonePoint[]
+}
+/** GET /api/rone — 한 지표만 실패하면 그 칸이 null */
+export interface RoneRes {
+  source: string; fetchedAt: string; region: '세종'
+  /** 전세지수, 기준시점 2026.06.=100 */
+  index: RoneSeries | null
+  /** 전세 평균가격, 만원/㎡ */
+  avgPrice: RoneSeries | null
+}
+
+export type TradeType = 'apt-rent' | 'apt-trade' | 'rh-rent' | 'sh-rent' | 'offi-rent'
+export interface TradeItem {
+  kind: '매매' | '전세' | '월세'; deposit: number; monthlyRent: number; area: number | null; buildYear: number | null
+  dong: string; jibun: string; name: string; floor: number | null; contractDate: string; contractType: string; cancelled: boolean
+}
+/** GET /api/trades?type=…&dealYmd=… (summary=1 이면 items 없음) */
+export interface TradesDetailRes extends TradesRes { lawdCd: string; type: TradeType; items?: TradeItem[] }
+
 export class ApiError extends Error {
   code: string
   constructor(code: string, message: string) { super(message); this.code = code }

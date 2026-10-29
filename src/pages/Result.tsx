@@ -30,10 +30,9 @@ const UNKNOWN_TXT: Record<string, string> = {
   houseType: '구하는 집이 다중주택(원룸·고시원)인지',
 }
 const BARRIER_TIP: Record<string, string> = {
-  '2': '절차가 복잡하다고 하신 분이 많아요. 아래 카드의 "다음에 할 일"에 순서대로 적어 두었어요.',
-  '3': '서류 준비가 부담스럽다면 정부24·홈택스에서 온라인으로 뗄 수 있는 것부터 챙겨 보세요.',
-  '4': '신청 방법·시기는 아래 카드의 "신청하기" 버튼과 접수 일정에서 확인할 수 있어요.',
-  '6': '지원 금액이 적더라도 월세 지원과 이자 지원을 비교해 더 큰 쪽을 고를 수 있어요.',
+  '2': '절차와 서류가 부담된다면 아래 카드의 "다음에 할 일"에 순서대로 적어 두었어요. 정부24·홈택스에서 온라인으로 뗄 수 있는 서류부터 챙겨 보세요.',
+  '3': '접수 시기와 계약 순서가 맞지 않았다면 아래 카드의 접수 일정과 "신청하기" 버튼에서 언제 신청해야 하는지 확인하세요.',
+  '5': '지원 금액이 적더라도 월세 지원과 이자 지원을 비교해 더 큰 쪽을 고를 수 있어요.',
 }
 const FILTERS: { id: 'all' | Status; t: string }[] = [
   { id: 'all', t: '전체' }, { id: 'ok', t: '✓ 신청할 수 있어요' }, { id: 'maybe', t: '△ 확인해 보면 좋아요' }, { id: 'no', t: '✕ 지금은 어려워요' },
@@ -102,15 +101,15 @@ export default function Result() {
           ))}
           {sum && (
             <section className="strip" style={{ display: 'block', marginTop: 24 }} aria-label="내 응답 요약">
-              <b>세종시 조사에 답해 주신 내용으로 정리했어요</b>
+              <b>설문에 답해 주신 내용으로 정리했어요</b>
               <div className="sum">
                 <div><b className="num">{sum.known}/{sum.total}</b><small>알고 있거나 써 본 주거정책 (몰랐다면 아래 카드에서 하나씩 알려드릴게요)</small></div>
-                {sum.housingCost !== undefined && <div><b className="num">{sum.housingCost.toLocaleString()}<span style={{ fontSize: '0.4em' }}>만원</span></b><small>매달 나가는 집 돈 (월세+관리비+대출상환){sum.ratio !== undefined ? ` · 소득의 약 ${sum.ratio}%` : ''}</small></div>}
+                {sum.housingCost !== undefined && <div><b className="num">{sum.housingCost.toLocaleString()}<span style={{ fontSize: '0.4em' }}>만원</span></b><small>매달 나가는 집 돈 (월세+관리비){sum.ratio !== undefined ? ` · 소득의 약 ${sum.ratio}%` : ''}</small></div>}
                 {sum.burden && <div><b className="num" style={{ fontSize: 28 }}>{sum.burden}</b><small>소득 대비 주거비 부담</small></div>}
                 {sum.topPolicy && <div><b className="num" style={{ fontSize: 28 }}>{sum.topPolicy}</b><small>가장 먼저 필요하다고 고른 정책</small></div>}
               </div>
               {sum.barrierCode && BARRIER_TIP[sum.barrierCode] && <p style={{ marginTop: 14 }}><b>신청을 망설인 이유 · {sum.barrier}</b> {BARRIER_TIP[sum.barrierCode]}</p>}
-              {sum.channels.length > 0 && <p style={{ marginTop: 10 }}>소식은 <b>{sum.channels.join(', ')}</b>으로 받고 싶다고 하셨어요. 접수 일정은 세종시 공고가 올라오는 곳에서 가장 먼저 확인할 수 있어요.</p>}
+              {sum.channels.length > 0 && <p style={{ marginTop: 10 }}>정보는 주로 <b>{sum.channels.join(', ')}</b>에서 얻으셨군요. 접수 일정은 세종시 공고가 올라오는 곳에서 가장 먼저 확인할 수 있어요.</p>}
             </section>
           )}
 

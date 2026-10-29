@@ -2,36 +2,44 @@ import { describe, expect, it } from 'vitest'
 import { QUESTIONS } from '../data/survey'
 import { deriveAnswers, summarize, visibleQuestions } from './survey'
 
-describe('세종시 조사 문항 → 판정 답변', () => {
+describe('청년 주거 경험 설문 → 판정 답변', () => {
   it('문항 id 가 중복되지 않는다', () => {
     const ids = QUESTIONS.map((q) => q.id)
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  it('임차가구가 아니면 임대차(Q19~24)를 건너뛴다', () => {
-    const ids = visibleQuestions({ Q18: '1' }).map((q) => q.id)
-    expect(ids).not.toContain('Q22')
-    expect(visibleQuestions({ Q18: '3' }).map((q) => q.id)).toContain('Q22')
+  it('폼 24문항 + 새로 구하는 집 4문항(총 28), 건너뛰는 문항은 없다', () => {
+    expect(QUESTIONS.length).toBe(28)
+    expect(visibleQuestions({}).length).toBe(QUESTIONS.length)
   })
 
-  it('월 소득×12, 모르면 확인 필요로 표시', () => {
-    expect(deriveAnswers({ Q1: '27', Q7: '1', Q9: { self: 250, house: 250, spend: 150 } }).income).toBe(3000)
-    expect(deriveAnswers({ Q9: 'unk' }).unknown).toContain('income')
+  it('연령대·거주 형태·가구 형태를 판정 값으로 바꾼다', () => {
+    const a = deriveAnswers({ Q1: '3', Q2: '2', Q4: '5' })
+    expect(a.age).toBe(32)
+    expect(a.residence).toBe('liveOnly')
+    expect(a.marital).toBe('newlywed')
+    expect(deriveAnswers({ Q2: '3' }).residence).toBe('outside')
   })
 
-  it('부모와 동거면 주소 분리 아님, 무주택·전세대출·이용 이력 추출', () => {
-    const a = deriveAnswers({ 'Q3-1': '2', Q18: '1', Q21: '3', Q34: { '1': '3', '9': '1' } })
+  it('월 소득 구간 대표값×12, 모르면 확인 필요로 표시', () => {
+    expect(deriveAnswers({ Q5: '2' }).income).toBe(3000)
+    expect(deriveAnswers({ Q5: 'unk' }).unknown).toContain('income')
+  })
+
+  it('부모와 동거면 주소 분리 아님, 자가는 유주택, 제도 이용 이력 추출', () => {
+    const a = deriveAnswers({ Q4: '2', Q7: '1', Q13: { '1': '4', '3': '2', '4': '4', '2': '1' } })
     expect(a.livesApart).toBe(false)
     expect(a.ownsHome).toBe(true)
     expect(a.hasLoan).toBe(true)
     expect(a.usedBefore).toBe(true)
-    expect(a.aware).toEqual(['sejongRent', 'molitRent'])
+    expect(a.aware).toEqual(['sejongRent', 'molitRent', 'buteemok'])
   })
 
-  it('요약: 월 주거비와 소득 대비 비율', () => {
-    const s = summarize({ Q9: { self: 200, house: 200, spend: 100 }, Q22: { deposit: 1000, rent: 40, fee: 5, loan: 15 }, Q34: { '1': '1', '2': '2', '3': '3' } })
-    expect(s.housingCost).toBe(60)
-    expect(s.ratio).toBe(30)
+  it('요약: 월 주거비와 소득 대비 비율, 아는 제도 수', () => {
+    const s = summarize({ Q5: '2', 'Q8-2': '4', Q13: { '1': '1', '2': '2', '3': '4' } } as never)
+    expect(s.housingCost).toBe(35)
+    expect(s.ratio).toBe(14)
     expect(s.known).toBe(2)
+    expect(s.used).toBe(1)
   })
 })

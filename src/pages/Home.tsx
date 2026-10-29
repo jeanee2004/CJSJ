@@ -9,6 +9,8 @@ import { POLICIES } from '../data/policies'
 import type { PolicyInfo } from '../data/policies'
 import { TERMS } from '../data/terms'
 import { DataSection } from '../components/Charts'
+import { LiveBoard } from '../components/LiveCards'
+import { AddressCheck } from '../components/AddressCheck'
 import { useStore } from '../store'
 import { todayKst, useApi } from '../lib/api'
 import type { BenefitsRes } from '../lib/api'
@@ -311,15 +313,16 @@ function Glossary() {
   const [q, setQ] = useState('')
   const { hits, suggestions } = useMemo(() => rank(SEARCH_ITEMS, q), [q])
   const byId = (id: string) => TERMS.find((t) => t.id === id)!
-  const list = hits.map(byId)
+  const [more, setMore] = useState(false)
   const typed = q.trim().length > 0
+  // 보조 블록: 검색어가 없으면 처음 6개만 보이고 "더 보기"로 펼친다
+  const list = (typed || more ? hits : hits.slice(0, 6)).map(byId)
   return (
-    <section className="sec" id="glossary" aria-labelledby="gl-t">
+    <section className="sec gloss-slim" id="glossary" aria-labelledby="gl-t">
       <div className="wrap">
         <div className="sec-head">
-          <div className="eyebrow"><i>04</i><span className="label">쉬운 용어</span></div>
-          <p>지원 제도에서 자주 나오는 말을 한 문장으로 풀어 두었어요. 검색해 보셔도 좋고, 천천히 훑어보셔도 좋아요. 글자가 조금 틀려도, 초성(ㅂㅈㄱ)만 입력해도 찾아 드려요.</p>
-          <Lines id="gl-t" className="display" lines={[<span className="l" key="1">낯선 말은</span>, <span key="2">여기서 <span className="em">쉽게</span> 찾아보세요</span>]} />
+          <h2 id="gl-t" className="gl-title">낯선 말은 여기서 쉽게 찾아보세요</h2>
+          <p>자주 나오는 말을 한 문장으로 풀어 두었어요. 초성(ㅂㅈㄱ)만 입력해도 찾아 드려요.</p>
         </div>
         <label className="sr-only" htmlFor="gq">용어 검색</label>
         <input id="gq" className="gloss-search" placeholder="예: 보증금, 전세, 잔금, ㅂㅈㄱ" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" />
@@ -355,6 +358,30 @@ function Glossary() {
               <div><p>{t.easy}</p>{t.example && <p className="ex">예) {t.example}</p>}</div>
             </div>
           ))}
+        </div>
+        {!typed && hits.length > 6 && (
+          <button type="button" className="btn-s" style={{ marginTop: 16 }} aria-expanded={more} onClick={() => setMore((m) => !m)}>{more ? '접기' : `용어 ${hits.length - 6}개 더 보기`}</button>
+        )}
+      </div>
+    </section>
+  )
+}
+
+/* ───────── 실시간 정보 확인: 공공 API 11개 영역을 끝없이 도는 3D 카드로 ───────── */
+function Live() {
+  return (
+    <section className="sec live-sec" id="live" aria-labelledby="live-t">
+      <div className="wrap">
+        <div className="sec-head">
+          <div className="eyebrow"><i>01</i><span className="label">실시간 정보 확인</span></div>
+          <p>국토교통부 실거래가, 건축HUB, 마이홈, 정부24·복지로·온통청년, 한국부동산원의 공공데이터를 지금 바로 불러와 보여드려요. 카드에 마우스를 올리면 멈춰요.</p>
+          <Lines id="live-t" className="display" lines={[<span className="l" key="1">세종의 집 소식,</span>, <span key="2">지금 <span className="em">실시간</span>으로</span>]} />
+        </div>
+      </div>
+      <LiveBoard />
+      <div className="wrap">
+        <div className="live-addr" id="addr-check" tabIndex={-1}>
+          <AddressCheck />
         </div>
       </div>
     </section>
@@ -413,6 +440,7 @@ export default function Home() {
       <Marquee />
       <Intro />
       <How />
+      <Live />
       <Policies />
       <section className="sec dark" id="data" aria-labelledby="data-t">
         <div className="wrap">
