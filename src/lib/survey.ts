@@ -27,7 +27,10 @@ export function deriveAnswers(s: Survey): Answers {
   const unknown = new Set<string>()
   const a: Answers = { ...DEFAULT_ANSWERS }
 
-  a.age = AGE_MID[num(str(s, 'Q1'), 0) - 1] ?? DEFAULT_ANSWERS.age
+  const band = num(str(s, 'Q1'), 0)
+  a.age = AGE_MID[band - 1] ?? DEFAULT_ANSWERS.age
+  // 30~34, 35~39 는 만 34세 상한이 걸리는 구간이라 대표값으로는 가를 수 없다
+  if (band === 3 || band === 4) unknown.add('age')
   a.residence = ({ '1': 'both', '2': 'liveOnly', '3': 'outside', '4': 'outside' } as Record<string, Residence>)[str(s, 'Q2') ?? '1'] ?? 'both'
 
   const hh = str(s, 'Q4')

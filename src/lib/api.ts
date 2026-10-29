@@ -26,6 +26,8 @@ export interface Benefit {
   ages?: { min: number; max: number; source: Benefit['source'] }[]
   /** 소득·재산 등 원문 조건 (판정에 쓰지 않음) */
   conditions?: string
+  /** 합쳐지기 전에 올라와 있던 출처들 */
+  seen?: Benefit['source'][]
 }
 export interface BenefitsRes { source: string; fetchedAt: string; items: Benefit[] }
 

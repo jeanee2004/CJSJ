@@ -14,7 +14,8 @@ import { AddressCheck } from '../components/AddressCheck'
 import { useStore } from '../store'
 import { todayKst, useApi } from '../lib/api'
 import type { BenefitsRes } from '../lib/api'
-import { isStaleCaution, scheduleFor, scheduleText, stripDates } from '../lib/live'
+import type { LiveRow } from '../lib/live'
+import { isStaleCaution, liveRows, scheduleFor, scheduleText, stripDates } from '../lib/live'
 
 /* ───────── 첫 화면: 영상 히어로 ─────────
    · 세션 첫 방문에만 자동 재생: 영상 1(스마트폰) → 영상 0(대학생·결혼) → 영상 2 → Looking for House (각각 1초간 서서히 섞이며 이어짐) → 마지막 장면에서 정지
@@ -231,7 +232,7 @@ function How() {
 }
 
 /* ───────── 제도 인덱스: 호버=채움 스윕+형제 흐림, 클릭=패널 펼침 ───────── */
-function IdxItem({ p, i, open, onToggle, live }: { p: PolicyInfo; i: number; open: boolean; onToggle: () => void; live?: string }) {
+function IdxItem({ p, i, open, onToggle, live, rows }: { p: PolicyInfo; i: number; open: boolean; onToggle: () => void; live?: string; rows?: LiveRow[] }) {
   const pid = useId()
   return (
     <li className={`idx-item ${open ? 'open' : ''}`}>
@@ -254,6 +255,19 @@ function IdxItem({ p, i, open, onToggle, live }: { p: PolicyInfo; i: number; ope
               <div className="tags" style={{ marginBottom: 14 }}>{p.type.map((t) => <span className="tag" key={t}>{t}</span>)}</div>
               {p.caution && !(live && isStaleCaution(p.id, p.caution)) && <div className="note">⚠ {p.caution}</div>}
               <div className="apply"><Btn href={p.apply.url} external variant="light" size="sm">{`${p.apply.name.split(' ')[0]}에서 신청하기`}</Btn></div>
+              {rows && (
+                <div className="pol-live">
+                  <b>실시간 공고</b>
+                  {rows.length === 0 ? (
+                    <p>연결된 공공 API에 이 제도의 최신 공고가 없어요. 공식 사이트에서 확인하세요 · <a href={p.apply.url} target="_blank" rel="noopener noreferrer">{p.apply.name}</a></p>
+                  ) : rows.map((r, k) => (
+                    <p key={k}>
+                      <span className={`pl-badge ${r.phase}`}>{r.label}</span> {r.name} <small>({r.source})</small><br />
+                      {r.text}{r.url && <> <a href={r.url} target="_blank" rel="noopener noreferrer">신청 링크</a></>}
+                    </p>
+                  ))}
+                </div>
+              )}
               <SourceBlock ids={p.sourceIds} />
             </div>
           </div>
@@ -296,7 +310,7 @@ function Policies() {
         </LayoutGroup>
         <ul className="idx">
           {list.map((p, i) => (
-            <IdxItem key={p.id} p={p} i={i} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} live={live(p.id)} />
+            <IdxItem key={p.id} p={p} i={i} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} live={live(p.id)} rows={benefits.state === 'ok' ? liveRows(p.id, benefits.data.items, todayKst()) : undefined} />
           ))}
         </ul>
         <p className="disclaimer">

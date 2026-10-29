@@ -47,6 +47,16 @@ export function scheduleText(s: Schedule, today: string): string {
   }
 }
 
+export interface LiveRow { name: string; source: string; phase: Phase; label: string; text: string; url?: string }
+/** 제도 카드를 펼쳤을 때 보여줄 실시간 공고 목록. 마감은 "다음 공고 대기"로 표시한다 */
+export function liveRows(id: PolicyId, items: Benefit[], today: string): LiveRow[] {
+  return items.filter((b) => policyOf(b.name) === id).map((b) => {
+    const phase = phaseOf(b, today)
+    const label = { open: '접수 중', upcoming: '접수 예정', closed: '다음 공고 대기', always: '상시 접수', unknown: '일정 확인 필요' }[phase]
+    return { name: b.name, source: SRC[b.source], phase, label, text: scheduleText(b, today) || '접수 일정은 원문에서 확인해 주세요.', url: /^https?:\/\//.test(b.url) ? b.url : undefined }
+  })
+}
+
 // eligibility.ts 안의 하드코딩된 접수 일정 문장. 공공 API 날짜가 있으면 이 문장은 뺀다.
 const STALE: Partial<Record<PolicyId, RegExp>> = {
   sejongRent: /사흘|3월 3~5일|보통 2~3월/,

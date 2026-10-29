@@ -18,6 +18,8 @@ export interface Benefit {
   ages?: AgeRange[]
   /** 소득·재산 등 원문 조건. 구조화돼 있지 않아 판정에 쓰지 않고 보여 주기만 한다 */
   conditions?: string
+  /** 합쳐지기 전에 이 제도가 올라와 있던 출처들 (dedupe 가 채운다) */
+  seen?: Benefit['source'][]
 }
 export interface AgeRange { min: number; max: number; source: Benefit['source'] }
 
@@ -77,7 +79,8 @@ export function dedupe(list: Benefit[]): Benefit[] {
   for (const b of list) {
     const k = norm(b.name)
     const prev = by.get(k)
-    if (!prev) { by.set(k, { ...b }); continue }
+    if (!prev) { by.set(k, { ...b, seen: [b.source] }); continue }
+    if (!prev.seen?.includes(b.source)) prev.seen = [...(prev.seen ?? []), b.source]
     // 먼저 온 출처(온통청년)를 남기고, 비어 있는 칸만 뒤 출처로 채운다
     for (const f of ['summary', 'url', 'begin', 'end', 'deadline', 'conditions'] as const) if (!prev[f] && b[f]) prev[f] = b[f]
     // 나이는 출처별로 모두 남겨 어긋나는지 볼 수 있게 한다

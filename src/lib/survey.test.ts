@@ -21,6 +21,12 @@ describe('청년 주거 경험 설문 → 판정 답변', () => {
     expect(deriveAnswers({ Q2: '3' }).residence).toBe('outside')
   })
 
+  it('만 34세 상한에 걸치는 30대 연령대는 나이를 확인 항목에 넣는다', () => {
+    expect(deriveAnswers({ Q1: '3' }).unknown).toContain('age')
+    expect(deriveAnswers({ Q1: '4' }).unknown).toContain('age')
+    expect(deriveAnswers({ Q1: '2' }).unknown).not.toContain('age')
+  })
+
   it('월 소득 구간 대표값×12, 모르면 확인 필요로 표시', () => {
     expect(deriveAnswers({ Q5: '2' }).income).toBe(3000)
     expect(deriveAnswers({ Q5: 'unk' }).unknown).toContain('income')

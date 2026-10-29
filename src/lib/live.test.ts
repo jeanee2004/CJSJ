@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_ANSWERS, evaluate } from './eligibility'
 import type { Answers } from './eligibility'
 import type { Benefit, Notice } from './api'
-import { applySchedules, coveredByVerdicts, fitsNotice, phaseOf, policyOf, scheduleFor } from './live'
+import { liveRows, applySchedules, coveredByVerdicts, fitsNotice, phaseOf, policyOf, scheduleFor } from './live'
 
 const B = (x: Partial<Benefit>): Benefit => ({ source: 'gov24', id: '1', name: '', summary: '', org: '', apply: '', url: '', ...x })
 // 2026-10-28 /api/benefits 실제 응답에서 일정 관련 항목만 옮김
@@ -90,4 +90,18 @@ it('정적 문구 끝의 날짜 괄호만 지운다', async () => {
   expect(stripDates('기금e든든 / 취급 은행')).toBe('기금e든든 / 취급 은행')
   expect(isStaleCaution('sejongRent', '1년에 사흘만 접수해요. 놓치면 다음 해를 기다려야 해서')).toBe(true)
   expect(isStaleCaution('molitRent', '세종시 임대료 지원과 같은 기간에는 둘 중 하나만 받을 수 있어요.')).toBe(false)
+})
+
+describe('제도 카드 실시간 공고', () => {
+  it('마감은 다음 공고 대기, 일치 없으면 빈 목록', () => {
+    const r = liveRows('sejongInterest', ITEMS, '20261029')
+    expect(r).toHaveLength(1)
+    expect(r[0]).toMatchObject({ phase: 'closed', label: '다음 공고 대기', source: '온통청년' })
+    expect(liveRows('youthButeemok', ITEMS, '20261029')).toEqual([])
+  })
+  it('날짜 없는 항목과 링크', () => {
+    const r = liveRows('sejongRent', [B({ name: '청년 주거임대료 지원사업', url: 'https://x.kr' })], '20261029')
+    expect(r[0]).toMatchObject({ phase: 'unknown', url: 'https://x.kr' })
+    expect(r[0].text).toBeTruthy()
+  })
 })

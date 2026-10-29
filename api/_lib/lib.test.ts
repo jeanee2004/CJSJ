@@ -95,7 +95,9 @@ describe('혜택 정규화', () => {
   it('같은 제도는 하나로 합친다', () => {
     const a = fromYouthCenter({ plcyNo: '1', plcyNm: '세종형 쉐어하우스 청년임대주택 운영', sprvsnInstCdNm: '세종특별자치시' })!
     const b = fromGov24({ 서비스명: '세종형 쉐어하우스 청년임대주택 보급', 서비스ID: '2' })!
-    expect(dedupe([a, b])).toHaveLength(1)
+    const m = dedupe([a, b])
+    expect(m).toHaveLength(1)
+    expect(m[0].seen).toEqual(['youthcenter', 'gov24'])
   })
 })
 

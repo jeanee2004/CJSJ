@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { monthsAgo, useApi, ymdLabel, ymLabel } from '../lib/api'
-import type { BenefitsRes, Load, MyhomeRes, RoneRes, TradesRes } from '../lib/api'
+import type { Benefit, BenefitsRes, Load, MyhomeRes, RoneRes, TradesRes } from '../lib/api'
 import { LiveCarousel } from './LiveCarousel'
 import type { Answers } from '../lib/eligibility'
 import { coveredByVerdicts, fitsNotice } from '../lib/live'
@@ -152,15 +152,17 @@ export function LiveBoard() {
 
   const toAddress = () => document.getElementById('addr-check')?.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'center' })
   const open = myhome.state === 'ok' ? myhome.data.items.filter((n) => n.open) : []
-  const by = (src: string) => (benefits.state === 'ok' ? benefits.data.items.filter((b) => b.source === src).length : 0)
+  // 같은 제도는 한 줄로 합쳐지므로(먼저 온 출처만 남음) 출처별 개수는 seen 으로 센다
+  const mine = (src: string) => (benefits.state === 'ok' ? benefits.data.items.filter((b) => (b.seen ?? [b.source]).includes(src as Benefit['source'])) : [])
+  const by = (src: string) => mine(src).length
   const benefitCard = (src: 'gov24' | 'bokjiro' | 'youthcenter', title: string, href: string) => (
     <Card key={src} tag="세종 청년·신혼 혜택" title={title} busy={benefits.state === 'loading'} foot={<Btn href={href} external size="sm" variant="line">{`${title} 바로가기`}</Btn>}>
       {benefits.state === 'loading' && <p className="hint">불러오는 중이에요…</p>}
       {benefits.state === 'error' && <Stale what={`${title} 혜택`} href={href} label={title} />}
       {benefits.state === 'ok' && (
         <>
-          <Big n={by(src)} unit="개 제도" />
-          <p className="hint">{benefits.data.items.find((b) => b.source === src)?.name ?? '조건에 맞는 제도가 아직 없어요'}</p>
+          {by(src) > 0 ? <Big n={by(src)} unit="개 제도" /> : null}
+          <p className="hint">{mine(src)[0]?.name ?? `지금 ${SRC_NAME[src]}에 올라온 세종 청년 주거 혜택이 없어요. 바로가기에서 직접 확인해 보세요.`}</p>
           <p className="l3d-src"><VBadge v="official" /> {stamp(benefits.data.fetchedAt)}</p>
         </>
       )}

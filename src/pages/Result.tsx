@@ -22,6 +22,7 @@ const LABEL: Record<Status, { t: string; g: string }> = {
   no: { t: '지금은 어려워요', g: '✕' },
 }
 const UNKNOWN_TXT: Record<string, string> = {
+  age: '정확한 만 나이 (만 34세 이하 기준이 많아, 30대는 생일이 지났는지 확인)',
   income: '1년 소득이 얼마인지 (소득 증빙은 홈택스에서 뗄 수 있어요)',
   ownsHome: '내 이름으로 된 집이 없는지',
   livesApart: '부모님과 주민등록 주소가 따로인지 (주민등록등본에서 확인)',
