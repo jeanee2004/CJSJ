@@ -43,11 +43,13 @@ export function Recommendations({ recs, basis, onBasis, apiState }: { recs: Rec[
         <ol className="live-cards rec-list">
           {shown.map((r, i) => (
             <li key={r.key} className="live-card">
+              <span className="rec-no" aria-hidden="true">{i + 1}</span>
               <span className="label">{i + 1}순위 · {r.from === 'verdict' ? '진단' : '공공 API'}</span>
               <h3>{r.name}</h3>
+              {r.amount ? <p className="rec-amt"><b>약 {r.amount.toLocaleString('ko-KR')}만원</b> {r.kind === 'loan' ? '아껴요' : '받아요'} <small>({basis.years}년 기준)</small></p> : null}
               <span className={`status ${r.status}`}><i data-g={STATUS[r.status].g} aria-hidden="true" />{STATUS[r.status].t}</span>
-              <ul className="rec-why">{r.why.map((w, j) => <li key={j}>{w}</li>)}</ul>
-              {r.url && <div style={{ marginTop: 14 }}><Btn href={r.url} external size="sm" variant="line">안내·신청 페이지</Btn></div>}
+              <ul className="rec-why">{r.why.filter((w) => !(r.amount && /만원을 (아껴요|받아요)\.$/.test(w))).map((w, j) => <li key={j}>{w}</li>)}</ul>
+              {r.url && <div className="rec-act"><Btn href={r.url} external size="sm">안내·신청 페이지</Btn></div>}
             </li>
           ))}
         </ol>

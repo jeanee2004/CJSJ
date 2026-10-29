@@ -384,7 +384,7 @@ function Glossary() {
 /* ───────── 실시간 정보 확인: 공공 API 11개 영역을 끝없이 도는 3D 카드로 ───────── */
 function Live() {
   return (
-    <section className="sec live-sec" id="live" aria-labelledby="live-t">
+    <section className="sec live-sec dark" id="live" aria-labelledby="live-t">
       <div className="wrap">
         <div className="sec-head">
           <div className="eyebrow"><i>01</i><span className="label">실시간 정보 확인</span></div>
