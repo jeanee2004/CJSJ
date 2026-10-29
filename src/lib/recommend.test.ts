@@ -77,4 +77,16 @@ describe('순위', () => {
     const closed = r.findIndex((x) => x.phase === 'closed')
     if (closed >= 0) expect(r.slice(closed).every((x) => x.phase === 'closed')).toBe(true)
   })
+  it('둘 중 하나에서 한쪽 접수가 끝났으면 지금 신청할 수 있는 쪽을 남긴다', () => {
+    // 2026-10-29 실제 사례: 세종 이자지원(3.1~3.31 마감)이 이자는 더 적지만 버팀목(상시)을 추천해야 한다
+    const a = A({ age: 27, deal: 'jeonse', deposit: 8000, rent: 0, income: 3000, stage: 'explore' })
+    const items = [B({ source: 'youthcenter', name: '청년 주택임차보증금 이자 지원', begin: '20260301', end: '20260331' })]
+    const keys = rank({ verdicts: evaluate(a), items, answers: a, today: T, bank: 4.5, basis: DEFAULT_BASIS }).map((x) => x.key)
+    expect(keys).toContain('youthButeemok')
+    expect(keys).not.toContain('sejongInterest')
+    // 접수 중이면 이자 비교로 고른다 (이 조건에서는 세종 이자지원)
+    const open = rank({ verdicts: evaluate(a), items, answers: a, today: '20260315', bank: 4.5, basis: DEFAULT_BASIS }).map((x) => x.key)
+    expect(open).toContain('sejongInterest')
+    expect(open).not.toContain('youthButeemok')
+  })
 })

@@ -91,18 +91,25 @@ function phaseWhy(phase: Phase, s: { begin?: string } | null): string | undefine
 }
 
 /** 둘 중 하나만 받을 수 있는 짝에서 순위에 올리지 않을 쪽 */
-function pickOneLosers(vs: Verdict[], a: Answers, bank: number, basis: CostBasis): Set<PolicyId> {
+function pickOneLosers(vs: Verdict[], a: Answers, bank: number, basis: CostBasis, phase: (id: PolicyId) => Phase): Set<PolicyId> {
   const out = new Set<PolicyId>()
+  // 한쪽만 올해 접수가 끝났으면 지금 신청할 수 있는 쪽을 남긴다
+  const closedOne = (x: PolicyId, y: PolicyId) => {
+    const cx = phase(x) === 'closed', cy = phase(y) === 'closed'
+    if (cx === cy) return false
+    out.add(cx ? x : y)
+    return true
+  }
   const by = Object.fromEntries(vs.map((v) => [v.id, v])) as Record<PolicyId, Verdict>
   const both = (x: PolicyId, y: PolicyId) => by[x]?.codes.includes('EXCL_PICK_ONE') && by[y]?.codes.includes('EXCL_PICK_ONE')
   const butee: PolicyId = by.newlywedButeemok?.status !== 'no' ? 'newlywedButeemok' : 'youthButeemok'
-  if (both(butee, 'sejongInterest')) {
+  if (both(butee, 'sejongInterest') && !closedOne(butee, 'sejongInterest')) {
     // 결과 화면의 이자 비교와 같은 기준: 기간 동안 내가 낼 이자가 적은 쪽
     const c = compareCost(a, bank, basis)
     if (c?.better === 'buteemok') out.add('sejongInterest')
     else if (c?.better === 'interest') out.add(butee)
   }
-  if (both('sejongRent', 'molitRent')) {
+  if (both('sejongRent', 'molitRent') && !closedOne('sejongRent', 'molitRent')) {
     const r = amountOf('sejongRent', a, bank, basis) ?? 0
     const m = amountOf('molitRent', a, bank, basis) ?? 0
     if (r !== m) out.add(r > m ? 'molitRent' : 'sejongRent')
@@ -114,14 +121,17 @@ export interface RankInput { verdicts: Verdict[]; items: Benefit[] | null; answe
 
 /** 정렬 키: 상태 → 지금 할 수 있나 → 계약 단계와 맞나 → 금액 → 진단 카드 먼저 */
 export function rank({ verdicts, items, answers: a, today, bank, basis }: RankInput): Rec[] {
-  const losers = pickOneLosers(verdicts, a, bank, basis)
+  const phaseFor = (id: PolicyId): Phase => {
+    const s = items ? scheduleFor(id, items) : null
+    // 버팀목은 은행 상품이라 상시 신청
+    return s ? phaseOf(s, today) : KIND[id] === 'loan' && id !== 'sejongInterest' ? 'always' : 'unknown'
+  }
+  const losers = pickOneLosers(verdicts, a, bank, basis, phaseFor)
   const recs: Rec[] = []
   for (const v of verdicts) {
     if (v.status === 'no' || losers.has(v.id)) continue
     const p = POLICIES.find((x) => x.id === v.id)!
-    const s = items ? scheduleFor(v.id, items) : null
-    // 버팀목은 은행 상품이라 상시 신청
-    const phase: Phase = s ? phaseOf(s, today) : KIND[v.id] === 'loan' && v.id !== 'sejongInterest' ? 'always' : 'unknown'
+    const phase = phaseFor(v.id)
     const amount = amountOf(v.id, a, bank, basis)
     recs.push({ key: v.id, name: p.name, status: v.status, phase, kind: KIND[v.id], amount, why: [], url: p.apply.url, from: 'verdict' })
   }
@@ -144,7 +154,7 @@ export function rank({ verdicts, items, answers: a, today, bank, basis }: RankIn
     if (w) r.why.push(w)
     if (stageFit(r.kind, a) && r.phase !== 'closed') r.why.push(r.kind === 'loan' ? '계약 전에 어떤 대출·지원을 쓸지 정해야 해요.' : '이사했다면 바로 신청할 수 있는 지원이에요.')
     if (r.amount) r.why.push(`${basis.years}년 기준 약 ${r.amount.toLocaleString('ko-KR')}만원을 ${r.kind === 'loan' ? '아껴요' : '받아요'}.`)
-    if (losers.size && r.from === 'verdict' && verdicts.find((v) => v.id === r.key)?.codes.includes('EXCL_PICK_ONE')) r.why.push('함께 받을 수 없는 제도보다 이쪽이 더 이득이에요.')
+    if (losers.size && r.from === 'verdict' && verdicts.find((v) => v.id === r.key)?.codes.includes('EXCL_PICK_ONE')) r.why.push('함께 받을 수 없는 제도 중 지금 신청할 수 있거나 더 이득인 쪽이에요.')
     if (r.from === 'api') r.why.push(r.ages ? '공공 API 정보로 나이만 확인했어요. 소득 조건은 안내 페이지에서 확인하세요.' : '공공 API에 나이·소득 기준이 없어요. 조건은 안내 페이지에서 확인하세요.')
   }
   return recs
