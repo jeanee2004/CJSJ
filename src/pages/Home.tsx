@@ -1,13 +1,11 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { LayoutGroup, motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { HERO } from '../data/hero'
 import { HeroSequence } from '../lib/heroSequence'
-import { rank } from '../lib/search'
 import { Btn, Lines, Reveal, SourceBlock, Term, VBadge, Wave, reduced } from '../ui'
 import { POLICIES } from '../data/policies'
 import type { PolicyInfo } from '../data/policies'
-import { TERMS } from '../data/terms'
 import { DataSection } from '../components/Charts'
 import { LiveBoard } from '../components/LiveCards'
 import { AddressCheck } from '../components/AddressCheck'
@@ -321,65 +319,6 @@ function Policies() {
   )
 }
 
-const POPULAR = ['deposit', 'jeonse', 'wolse', 'jan', 'pickone']
-const SEARCH_ITEMS = TERMS.map((t) => ({ id: t.id, fields: [t.word, ...(t.alias ?? [])], long: t.easy }))
-function Glossary() {
-  const [q, setQ] = useState('')
-  const { hits, suggestions } = useMemo(() => rank(SEARCH_ITEMS, q), [q])
-  const byId = (id: string) => TERMS.find((t) => t.id === id)!
-  const [more, setMore] = useState(false)
-  const typed = q.trim().length > 0
-  // 보조 블록: 검색어가 없으면 처음 6개만 보이고 "더 보기"로 펼친다
-  const list = (typed || more ? hits : hits.slice(0, 6)).map(byId)
-  return (
-    <section className="sec gloss-slim" id="glossary" aria-labelledby="gl-t">
-      <div className="wrap">
-        <div className="sec-head">
-          <h2 id="gl-t" className="gl-title">낯선 말은 여기서 쉽게 찾아보세요</h2>
-          <p>자주 나오는 말을 한 문장으로 풀어 두었어요. 초성(ㅂㅈㄱ)만 입력해도 찾아 드려요.</p>
-        </div>
-        <label className="sr-only" htmlFor="gq">용어 검색</label>
-        <input id="gq" className="gloss-search" placeholder="예: 보증금, 전세, 잔금, ㅂㅈㄱ" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" />
-        {!typed && (
-          <p className="gloss-chips" aria-label="자주 찾는 말">
-            <span className="hint">자주 찾는 말</span>
-            {POPULAR.map((id) => <button key={id} type="button" className="chip-s" onClick={() => setQ(byId(id).word.replace(/ \(.*\)/, ''))}>{byId(id).word.replace(/ \(.*\)/, '')}</button>)}
-          </p>
-        )}
-        {typed && list.length === 0 && (
-          <div className="didyou" role="status">
-            {suggestions.length > 0 ? (
-              <>
-                <p>“{q.trim()}”에 맞는 말이 없네요. <b>혹시 이걸 찾으셨나요?</b></p>
-                <p className="gloss-chips">
-                  {suggestions.map((id) => <button key={id} type="button" className="chip-s on" onClick={() => setQ(byId(id).word.replace(/ \(.*\)/, ''))}>{byId(id).word}</button>)}
-                </p>
-              </>
-            ) : (
-              <>
-                <p>“{q.trim()}”와 비슷한 말을 찾지 못했어요. 아래 자주 찾는 말을 눌러 보시겠어요?</p>
-                <p className="gloss-chips">
-                  {POPULAR.map((id) => <button key={id} type="button" className="chip-s" onClick={() => setQ(byId(id).word.replace(/ \(.*\)/, ''))}>{byId(id).word}</button>)}
-                </p>
-              </>
-            )}
-          </div>
-        )}
-        <div className="gloss">
-          {list.map((t) => (
-            <div className="gl-row" key={t.id}>
-              <h3>{t.word}</h3>
-              <div><p>{t.easy}</p>{t.example && <p className="ex">예) {t.example}</p>}</div>
-            </div>
-          ))}
-        </div>
-        {!typed && hits.length > 6 && (
-          <button type="button" className="btn-s" style={{ marginTop: 16 }} aria-expanded={more} onClick={() => setMore((m) => !m)}>{more ? '접기' : `용어 ${hits.length - 6}개 더 보기`}</button>
-        )}
-      </div>
-    </section>
-  )
-}
 
 /* ───────── 실시간 정보 확인: 공공 API 11개 영역을 끝없이 도는 3D 카드로 ───────── */
 function Live() {
@@ -466,7 +405,6 @@ export default function Home() {
           <DataSection />
         </div>
       </section>
-      <Glossary />
       <Footer />
     </>
   )

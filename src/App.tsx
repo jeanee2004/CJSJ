@@ -5,6 +5,7 @@ import { Header } from './components/Header'
 import { LoginModal } from './components/LoginModal'
 import { Loader } from './components/Loader'
 import { ScrollTop } from './components/ScrollTop'
+import { GlossaryFab } from './components/GlossaryFab'
 import { Flutter } from './components/Flutter'
 import Home from './pages/Home'
 import { Modals, OpenModalRedirect } from './components/Modals'
@@ -39,6 +40,7 @@ export default function App() {
       <LoginModal />
       <Modals />
       <ScrollTop />
+      <GlossaryFab />
     </StoreProvider>
   )
 }

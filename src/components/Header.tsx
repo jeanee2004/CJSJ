@@ -6,10 +6,10 @@ import { useStore } from '../store'
 
 // action 이 있는 항목은 페이지 이동 없이 팝업으로 열린다
 export const NAV: { n: string; label: string; to?: string; action?: 'diagnose' | 'feedback' }[] = [
-  { n: '01', label: '내 상황 확인', action: 'diagnose' },
+  { n: '01', label: '실시간 정보', to: '/#live' },
   { n: '02', label: '지원 제도', to: '/#policies' },
   { n: '03', label: '숫자로 보기', to: '/#data' },
-  { n: '04', label: '쉬운 용어', to: '/#glossary' },
+  { n: '04', label: '내 상황 확인', action: 'diagnose' },
   { n: '05', label: '의견 남기기', action: 'feedback' },
 ]
 
