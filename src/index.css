@@ -999,6 +999,8 @@ input[type='text'], input[type='number'], input:not([type]), textarea { cursor: 
 .pol-ref .facts dd { font-size: 14px; }
 .idx-more-t { font-family: var(--f-kr); font-weight: 800; font-size: clamp(20px, 2.4vw, 26px); margin: 48px 0 6px; letter-spacing: -0.02em; }
 .idx-more-t .num { font-size: 0.8em; opacity: 0.6; margin-left: 4px; }
+.cmp-closed { margin: 18px 0 4px; padding: 12px 16px; border: 1px solid rgba(243, 239, 231, 0.35); border-radius: 12px; color: rgba(243, 239, 231, 0.9); max-width: 720px; }
+.cmp.closed { opacity: 0.72; }
 .pol-live { margin-top: 14px; padding: 12px 16px; border: 1px solid currentColor; border-radius: 12px; font-size: 14px; }
 .pol-live p { margin: 6px 0 0; }
 .pol-live a { text-decoration: underline; }

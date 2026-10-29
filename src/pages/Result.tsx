@@ -11,7 +11,7 @@ import { Footer } from './Home'
 import { ExtraBenefits, PublicRentals } from '../components/LiveCards'
 import { todayKst, useApi } from '../lib/api'
 import type { BenefitsRes } from '../lib/api'
-import { applySchedules } from '../lib/live'
+import { applySchedules, phaseOf, scheduleFor, scheduleText } from '../lib/live'
 import { flagAgeConflicts, rank } from '../lib/recommend'
 import { Recommendations } from '../components/Recommend'
 import { Navigate } from 'react-router-dom'
@@ -169,7 +169,12 @@ export default function Result() {
             })}
           </div>
 
-          {cost && pickOne && (
+          {cost && pickOne && (() => {
+            // 세종 이자지원 접수가 끝났으면 이자가 더 적어도 지금은 버팀목만 신청할 수 있다 (먼저 할 일 추천과 같은 기준)
+            const sched = items ? scheduleFor('sejongInterest', items) : null
+            const closed = !!sched && phaseOf(sched, todayKst()) === 'closed'
+            const win = closed ? 'buteemok' : cost.better
+            return (
             <section className="cmp-wrap" aria-labelledby="cmp-t">
               <span className="label" style={{ color: 'rgba(243,239,231,.6)' }}>둘 중 하나 · 예시 계산</span>
               <h2 id="cmp-t">둘 중 하나만 받을 수 있어요.<br /><span className="em">{cost.years}년 동안 낼 이자</span>를 비교해 볼게요</h2>
@@ -178,25 +183,32 @@ export default function Result() {
                 <label htmlFor="bank"><b>시중 은행 대출금리(가정): <span className="num" style={{ fontSize: 22 }}>{bank.toFixed(1)}%</span></b></label>
                 <input id="bank" type="range" min={3} max={6} step={0.1} value={bank} onChange={(e) => setBank(Number(e.target.value))} />
               </div>
+              {closed && (
+                <p className="cmp-closed" role="note">
+                  <b>세종 이자지원은 올해 접수가 끝났어요.</b> {scheduleText(sched!, todayKst())} 지금 전세 계약을 앞두고 있다면 버팀목을 신청할 수 있고, 아래 이자 비교는 다음 공고를 기다릴지 정할 때 참고하세요.
+                </p>
+              )}
               <div className="compare">
-                <div className={`cmp ${cost.better === 'buteemok' ? 'win' : ''}`}>
+                <div className={`cmp ${win === 'buteemok' ? 'win' : ''}`}>
                   <span className="label" style={{ color: 'inherit', opacity: 0.7 }}>버팀목 (나라)</span>
                   <b className="big num">{cost.buteemokPaid.toLocaleString()}<small style={{ fontSize: '0.3em', letterSpacing: 0 }}>만원</small></b>
                   <p>대출 {Math.round(cost.loanButeemok).toLocaleString()}만원 × 연 {cost.buteemokRate}% × {cost.years}년</p>
                   {cost.better === 'buteemok' && <p><b>✓ 이쪽이 부담이 더 적어요</b></p>}
+                  {closed && <p><b>✓ 지금 신청할 수 있어요 (상시)</b></p>}
                 </div>
-                <div className={`cmp ${cost.better === 'interest' ? 'win' : ''}`}>
-                  <span className="label" style={{ color: 'inherit', opacity: 0.7 }}>세종 이자지원</span>
+                <div className={`cmp ${win === 'interest' ? 'win' : ''} ${closed ? 'closed' : ''}`}>
+                  <span className="label" style={{ color: 'inherit', opacity: 0.7 }}>세종 이자지원{closed && ' · 올해 접수 마감'}</span>
                   <b className="big num">{cost.interestPaid.toLocaleString()}<small style={{ fontSize: '0.3em', letterSpacing: 0 }}>만원</small></b>
                   <p>대출 {Math.round(cost.loanInterest).toLocaleString()}만원 × 내가 내는 이자 {cost.interestSelf}% × {cost.years}년</p>
-                  {cost.better === 'interest' && <p><b>✓ 이쪽이 부담이 더 적어요</b></p>}
+                  {cost.better === 'interest' && <p><b>{closed ? '이자는 더 적지만 다음 공고까지 기다려야 해요' : '✓ 이쪽이 부담이 더 적어요'}</b></p>}
                 </div>
               </div>
               <p className="chart-note">
                 ※ 예시 계산이에요. 버팀목 금리는 소득에 따라 연 {a.marital === 'single' ? `${RULES.youthButeemok.rateMin}~${RULES.youthButeemok.rateMax}` : `${RULES.newlywedButeemok.rateMin}~${RULES.newlywedButeemok.rateMax}`}% 범위에서 {basis.rate === 'min' ? '하단으로' : basis.rate === 'max' ? '상단으로' : '소득으로 추정해'} 계산했고, 세종 이자지원은 은행금리에서 최대 {RULES.sejongInterest.maxSupportRate}%p를 빼서 계산했어요. 이자지원은 보증료 같은 부대비용을 따로 내야 하고 대출 가능 금액도 달라서 실제와 차이가 나요. 신청 전 은행에서 확인하세요. <VBadge v="secondary" />
               </p>
             </section>
-          )}
+            )
+          })()}
 
           <PublicRentals answers={a} />
           <ExtraBenefits load={benefits} answers={a} />
