@@ -159,3 +159,13 @@ it('나이 기준: 온통청년 필드와 정부24 지원조건, 합칠 때 둘 
   const [m] = dedupe([y, g])
   expect(m.ages?.map((x) => `${x.source}:${x.max}`)).toEqual(['youthcenter:39', 'gov24:34'])
 })
+
+it('출처별 원문은 합쳐도 모두 남는다 (2026-10-29 실제 응답 모양)', () => {
+  const y = fromYouthCenter({ plcyNo: '1', plcyNm: '세종형 쉐어하우스 청년임대주택 운영', sprvsnInstCdNm: '세종특별자치시', plcySprtCn: '주변 시세보다 50~70% 저렴한 임대주택', plcyAplyMthdCn: '공실발생시 입주자 모집공고', lastMdfcnDt: '2026-09-29 18:17:36' })!
+  const g = fromGov24({ 서비스명: '세종형 쉐어하우스 청년임대주택 보급', 서비스ID: '2', 지원내용: '○ 입주 순위에 따라\n\n  시중 시세의 30∼50%', 지원대상: '무주택 미혼 청년', 신청방법: '방문신청||직접입력', 신청기한: '수시', 전화문의: '주택과/044-300-5914', 수정일시: '20261022134752' })!
+  const [m] = dedupe([y, g])
+  expect(m.details?.map((d) => d.source)).toEqual(['youthcenter', 'gov24'])
+  expect(m.details?.[0]).toMatchObject({ support: '주변 시세보다 50~70% 저렴한 임대주택', updated: '20260929' })
+  expect(m.details?.[1]).toMatchObject({ support: '○ 입주 순위에 따라\n시중 시세의 30∼50%', how: '방문신청, 직접입력 · 수시', contact: '주택과/044-300-5914', updated: '20261022' })
+  expect(m.details?.[1].target).toBe('무주택 미혼 청년')
+})

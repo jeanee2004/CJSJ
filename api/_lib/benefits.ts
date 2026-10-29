@@ -20,8 +20,35 @@ export interface Benefit {
   conditions?: string
   /** 합쳐지기 전에 이 제도가 올라와 있던 출처들 (dedupe 가 채운다) */
   seen?: Benefit['source'][]
+  /** 출처별 공식 원문. 합쳐도 버리지 않고 모두 남겨 화면에서 출처를 밝혀 보여 준다 */
+  details?: Detail[]
 }
 export interface AgeRange { min: number; max: number; source: Benefit['source'] }
+/** 한 출처가 올린 제도 원문 (필드명은 2026-10-29 실제 응답으로 확인) */
+export interface Detail {
+  source: Benefit['source']
+  name: string
+  /** 지원 내용: 정부24 지원내용 · 온통청년 plcySprtCn · 복지로 servDgst */
+  support?: string
+  /** 지원 대상: 정부24 지원대상 · 온통청년 earnEtcCn/addAplyQlfcCndCn */
+  target?: string
+  /** 신청 방법: 정부24 신청방법 · 온통청년 plcyAplyMthdCn · 복지로 aplyMtdNm */
+  how?: string
+  /** 문의처: 정부24 전화문의 · 복지로 담당 부서 */
+  contact?: string
+  url?: string
+  /** 원문 최종 수정일 YYYYMMDD */
+  updated?: string
+}
+
+// 원문이 길면 화면이 무너지지 않게 자른다. 줄바꿈은 남긴다
+const MAX = 700
+const clean = (t: string) => {
+  const x = t.split(/\r?\n/).map((l) => l.replace(/[ \t]+/g, ' ').trim()).filter(Boolean).join('\n')
+  return x ? (x.length > MAX ? `${x.slice(0, MAX)}…` : x) : undefined
+}
+const ymd = (t: string) => t.replace(/\D/g, '').slice(0, 8) || undefined
+const detail = (d: Detail): Detail => Object.fromEntries(Object.entries(d).filter(([, v]) => v)) as unknown as Detail
 
 const age = (min: unknown, max: unknown, source: Benefit['source']): AgeRange[] => {
   const lo = Number(min) || 0
@@ -41,7 +68,9 @@ export function fromGov24(r: Record<string, unknown>): Benefit | null {
   const name = g('서비스명')
   const text = `${name} ${g('서비스목적요약')} ${g('지원대상')}`
   if (!name || ADMIN.test(name) || !HOUSING.test(text) || !PEOPLE.test(text)) return null
-  return { source: 'gov24', id: g('서비스ID'), name, summary: g('서비스목적요약'), org: [g('소관기관명'), g('부서명')].filter(Boolean).join(' '), apply: g('신청기한'), url: g('상세조회URL'), deadline: g('신청기한') || undefined, conditions: g('지원대상') || g('선정기준') || undefined }
+  const raw = (k: string) => (typeof r[k] === 'string' ? (r[k] as string) : '')
+  const details = [detail({ source: 'gov24', name, support: clean(raw('지원내용')), target: clean(raw('지원대상') || raw('선정기준')), how: clean([g('신청방법').replace(/\|\|/g, ', '), g('신청기한')].filter(Boolean).join(' · ')), contact: clean(g('전화문의')), url: g('상세조회URL'), updated: ymd(g('수정일시')) })]
+  return { source: 'gov24', id: g('서비스ID'), name, summary: g('서비스목적요약'), org: [g('소관기관명'), g('부서명')].filter(Boolean).join(' '), apply: g('신청기한'), url: g('상세조회URL'), deadline: g('신청기한') || undefined, conditions: g('지원대상') || g('선정기준') || undefined, details }
 }
 
 /** 정부24 supportConditions 한 줄 → 나이 기준. JA0110/JA0111 이 나이 하한·상한 (2026-10-29 확인).
@@ -52,7 +81,9 @@ export function fromBokjiro(r: Record<string, string>): Benefit | null {
   const text = `${r.servNm ?? ''} ${r.servDgst ?? ''} ${r.intrsThemaNmArray ?? ''}`
   const people = `${r.servNm ?? ''} ${r.lifeNmArray ?? ''} ${r.servDgst ?? ''}`
   if (!r.servNm || !HOUSING.test(text) || !PEOPLE.test(people)) return null
-  return { source: 'bokjiro', id: r.servId ?? '', name: r.servNm.trim(), summary: (r.servDgst ?? '').replace(/^[○ㅇ\s]+/, ''), org: r.bizChrDeptNm ?? '', apply: r.aplyMtdNm ?? '', url: r.servDtlLink ?? '' }
+  // 문의처는 담당 부서만 (inqNum 은 조회수라 쓰지 않는다)
+  const details = [detail({ source: 'bokjiro', name: r.servNm.trim(), support: clean(r.servDgst ?? ''), how: clean([r.aplyMtdNm, r.sprtCycNm && `지원 주기 ${r.sprtCycNm}`].filter(Boolean).join(' · ')), contact: clean(r.bizChrDeptNm ?? ''), url: r.servDtlLink, updated: ymd(r.lastModYmd ?? '') })]
+  return { source: 'bokjiro', id: r.servId ?? '', name: r.servNm.trim(), summary: (r.servDgst ?? '').replace(/^[○ㅇ\s]+/, ''), org: r.bizChrDeptNm ?? '', apply: r.aplyMtdNm ?? '', url: r.servDtlLink ?? '', details }
 }
 
 export function fromYouthCenter(r: Record<string, unknown>): Benefit | null {
@@ -63,7 +94,9 @@ export function fromYouthCenter(r: Record<string, unknown>): Benefit | null {
   // sprtTrgtAgeLmtYn 이 N 이면 나이 제한이 있다 (Y 면 0/0 으로 온다, 2026-10-29 확인)
   const ages = g('sprtTrgtAgeLmtYn') === 'N' ? age(g('sprtTrgtMinAge'), g('sprtTrgtMaxAge'), 'youthcenter') : []
   const conditions = [g('earnEtcCn'), g('addAplyQlfcCndCn')].filter(Boolean).join(' / ') || undefined
-  return { source: 'youthcenter', id: g('plcyNo'), name: g('plcyNm'), summary: g('plcyExplnCn').replace(/^[○ㅇ\s]+/, ''), org: g('sprvsnInstCdNm'), apply: g('aplyYmd') ? `신청 ${g('aplyYmd')}` : '', url, ...period, ...(ages.length ? { ages } : {}), conditions }
+  const raw = (k: string) => (typeof r[k] === 'string' ? (r[k] as string) : '')
+  const details = [detail({ source: 'youthcenter', name: g('plcyNm'), support: clean(raw('plcySprtCn') || raw('plcyExplnCn')), target: clean(conditions ?? ''), how: clean([g('plcyAplyMthdCn'), g('srngMthdCn') && `선정: ${g('srngMthdCn')}`].filter(Boolean).join(' · ')), url, updated: ymd(g('lastMdfcnDt')) })]
+  return { source: 'youthcenter', id: g('plcyNo'), name: g('plcyNm'), summary: g('plcyExplnCn').replace(/^[○ㅇ\s]+/, ''), org: g('sprvsnInstCdNm'), apply: g('aplyYmd') ? `신청 ${g('aplyYmd')}` : '', url, ...period, ...(ages.length ? { ages } : {}), conditions, details }
 }
 
 /** "20260601 ~ 20260630" → { begin, end }. 기간이 여러 개면 가장 늦게 끝나는 것 */
@@ -85,6 +118,7 @@ export function dedupe(list: Benefit[]): Benefit[] {
     for (const f of ['summary', 'url', 'begin', 'end', 'deadline', 'conditions'] as const) if (!prev[f] && b[f]) prev[f] = b[f]
     // 나이는 출처별로 모두 남겨 어긋나는지 볼 수 있게 한다
     if (b.ages?.length) prev.ages = [...(prev.ages ?? []), ...b.ages]
+    if (b.details?.length) prev.details = [...(prev.details ?? []), ...b.details]
   }
   return [...by.values()]
 }

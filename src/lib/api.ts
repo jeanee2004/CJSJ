@@ -28,6 +28,14 @@ export interface Benefit {
   conditions?: string
   /** 합쳐지기 전에 올라와 있던 출처들 */
   seen?: Benefit['source'][]
+  /** 출처별 공식 원문 (지원 내용·대상·신청 방법·문의처·수정일) */
+  details?: BenefitDetail[]
+}
+export interface BenefitDetail {
+  source: Benefit['source']; name: string
+  support?: string; target?: string; how?: string; contact?: string; url?: string
+  /** YYYYMMDD */
+  updated?: string
 }
 export interface BenefitsRes { source: string; fetchedAt: string; items: Benefit[] }
 
