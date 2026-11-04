@@ -47,7 +47,7 @@ export function AddressCheck({ onResult }: { onResult?: (isMulti: boolean) => vo
       setSt({ s: 'done', addr, res })
       if (res.isMultiHouse !== 'unknown') onResult?.(res.isMultiHouse)
     } catch (e) {
-      setSt({ s: 'error', addr, msg: e instanceof ApiError && e.code !== 'NETWORK' ? `${e.message}. 잠시 뒤 다시 해 보세요.` : '최신 데이터를 불러오지 못했습니다. 잠시 뒤 다시 해 보세요.' })
+      setSt({ s: 'error', addr, msg: e instanceof ApiError && e.code !== 'NETWORK' ? `${e.message}. 잠시 뒤 다시 해 보세요.` : '최신 데이터를 불러오지 못했어요. 잠시 뒤 다시 해 보세요.' })
     }
   }
 

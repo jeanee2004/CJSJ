@@ -142,7 +142,7 @@ export default function Result() {
               <span>
                 <b>저장되지 않은 결과예요</b>
                 로그인하지 않으면 이 결과는 화면을 닫거나 새로고침할 때 사라져요. 로그인하면 이 기기에 내 계정으로 저장돼서 다시 볼 수 있어요.
-                <span className="strip-act"><Btn size="sm" variant="light" onClick={() => openLogin()}>회원등록하고 저장하기</Btn></span>
+                <span className="strip-act"><Btn size="sm" variant="light" onClick={() => openLogin()}>로그인하고 저장하기</Btn></span>
               </span>
             </div>
           )}
@@ -198,7 +198,7 @@ export default function Result() {
             ))}
           </div>
 
-          {benefits.state === 'error' && <p className="hint" style={{ marginTop: 14 }}>최신 데이터를 불러오지 못했습니다. 접수 일정은 각 제도 안내 페이지에서 한 번 더 확인해 주세요.</p>}
+          {benefits.state === 'error' && <p className="hint" style={{ marginTop: 14 }}>최신 데이터를 불러오지 못했어요. 접수 일정은 각 제도 안내 페이지에서 한 번 더 확인해 주세요.</p>}
           <div className="verdicts">
             {shown.map((v) => {
               const p = policyById(v.id)!
@@ -274,7 +274,7 @@ export default function Result() {
           </p>
 
           <div className="restart">
-            <Btn onClick={() => openModal('diagnose')}>간편 설문 다시 해 보기</Btn>
+            <Btn onClick={() => openModal('diagnose')}>맛보기 설문 다시 해 보기</Btn>
             {a.surveyType !== 'deep' && <Btn variant="line" onClick={openDeep}>심화 설문 하기</Btn>}
             <Btn to="/#policies" variant="line">제도 전체 보기</Btn>
           </div>

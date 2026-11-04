@@ -1,20 +1,38 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useId, useRef, useState } from 'react'
 import { LayoutGroup, motion } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
 import { HERO } from '../data/hero'
 import { HeroSequence } from '../lib/heroSequence'
 import { Btn, Lines, Reveal, SourceBlock, Term, VBadge, Wave, reduced } from '../ui'
 import { POLICIES } from '../data/policies'
+import { QUESTIONS, SIMPLE_IDS } from '../data/survey'
 import type { PolicyInfo } from '../data/policies'
-import { DataSection } from '../components/Charts'
 import { LiveBoard } from '../components/LiveCards'
 import { AddressCheck } from '../components/AddressCheck'
+import { TrustStrip } from '../components/TrustStrip'
 import { useStore } from '../store'
 import { todayKst, useApi } from '../lib/api'
 import type { Benefit, BenefitsRes } from '../lib/api'
 import { ymdLabel } from '../lib/api'
 import type { LiveRow, Official } from '../lib/live'
 import { isStaleCaution, liveRows, officialFor, officialOf, otherPolicies, phaseOf, scheduleFor, scheduleText, stripDates } from '../lib/live'
+
+/** recharts 는 무거워서, '숫자로 보기' 가까이 스크롤했을 때에만 불러와 그린다 */
+const DataSection = lazy(() => import('../components/Charts').then((m) => ({ default: m.DataSection })))
+function LazyData() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [near, setNear] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof IntersectionObserver === 'undefined') { setNear(true); return }
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { setNear(true); io.disconnect() } }, { rootMargin: '600px 0px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+  // 해시 이동(#data)으로 바로 올 때도 대비: 해시가 data 면 즉시 연다
+  useEffect(() => { if (window.location.hash === '#data') setNear(true) }, [])
+  return <div ref={ref} style={near ? undefined : { minHeight: 900 }}>{near && <Suspense fallback={<div style={{ minHeight: 900 }} />}><DataSection /></Suspense>}</div>
+}
 
 /* ───────── 첫 화면: 영상 히어로 ─────────
    · 세션 첫 방문에만 자동 재생: 영상 1(스마트폰) → 영상 0(대학생·결혼) → 영상 2 → Looking for House (각각 1초간 서서히 섞이며 이어짐) → 마지막 장면에서 정지
@@ -47,7 +65,7 @@ function HeroVideo() {
     if (!z || !a || !b || !c) return
     const s = new HeroSequence([a, z, b, c], [HERO.clip1, HERO.clip0, HERO.clip2, HERO.clip3], HERO.fade)
     seq.current = s
-    const id = setInterval(() => s.tick(), 60)
+    const id = setInterval(() => { if (!document.hidden && !s.done) s.tick() }, 100)
     // 첫 방문: 로딩 막이 걷힌 뒤(약 2.1초) + 첫 영상이 재생 가능해지면 처음부터 재생.
     // 영상이 늦어도 3초 뒤에는 시작하고, 브라우저가 자동재생을 막으면 재생 버튼을 보여준다.
     const timers: ReturnType<typeof setTimeout>[] = []
@@ -91,6 +109,29 @@ function HeroVideo() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [popupOpen])
 
+  // 영상이 화면 밖으로 나가거나 탭이 숨겨지면 멈췄다가, 돌아오면 이어서 재생한다 (디코딩 부하 제거)
+  const wasPlaying = useRef(false)
+  const offscreen = useRef(false)
+  useEffect(() => {
+    const root = va.current?.closest('.vhero')
+    const s = seq.current
+    if (!root || !s) return
+    const sync = () => {
+      const away = document.hidden || offscreen.current
+      if (away && !wasPlaying.current && [v0, va, vb, vc].some((r) => r.current && !r.current.paused)) {
+        wasPlaying.current = true
+        s.pause()
+      } else if (!away && wasPlaying.current) {
+        wasPlaying.current = false
+        if (!document.body.classList.contains('has-popup')) s.resume()
+      }
+    }
+    const io = typeof IntersectionObserver !== 'undefined' ? new IntersectionObserver((es) => { offscreen.current = !es[es.length - 1].isIntersecting; sync() }, { threshold: 0.02 }) : null
+    io?.observe(root)
+    document.addEventListener('visibilitychange', sync)
+    return () => { io?.disconnect(); document.removeEventListener('visibilitychange', sync) }
+  }, [])
+
   const autoplay = firstRun && !still
   const showBtn = !playing && (started || !autoplay || blocked)
   const mark = () => { try { sessionStorage.setItem(HERO_KEY, '1') } catch { /* noop */ } }
@@ -115,10 +156,10 @@ function HeroVideo() {
           lines={[<span className="l" key="a">청년이 머무는 곳,</span>, <span key="b">세종이 <span className="em">시작</span>되는 곳</span>]}
         />
         <p className="vh-sub">세종에서 첫 집, <b>어디서부터 시작하죠?</b></p>
-        <p className="lead">받을 수 있는 지원금, 신청하는 순서, 놓치기 쉬운 함정까지 — 로그인 없이 2분 맛보기 설문으로 먼저 확인하고, 로그인하면 6분 안팎의 심화 설문으로 더 정확하게 알려드릴게요.</p>
+        <p className="lead">받을 수 있는 지원금, 신청하는 순서, 놓치기 쉬운 함정까지 — 로그인 없이 약 2분 걸리는 맛보기 설문({SIMPLE_IDS.length}문항)으로 먼저 확인하고, 로그인하면 약 6분 걸리는 심화 설문({QUESTIONS.length}문항)으로 더 정확하게 알려드릴게요.</p>
         <div className="hero-cta">
           <Btn onClick={openDiagnose} variant="light" track="hero_start_survey">내 상황 확인해 보기</Btn>
-          <Btn to="/#intro" variant="glass">청정 세종 이야기</Btn>
+          <Btn to="/#intro" variant="glass">청정 세종 소개</Btn>
         </div>
       </div>
       <div className="vh-right">
@@ -138,47 +179,24 @@ function Intro() {
     else if (hasSaved) navigate('/result')
     else openModal('survey')
   }
-  const ref = useRef<HTMLElement>(null)
-  useEffect(() => {
-    const el = ref.current
-    if (!el || reduced() || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return
-    let tx = 0, ty = 0, x = 0, y = 0, raf = 0
-    // 마우스가 멈춰 값이 안정되면 계산을 멈춘다 (움직이면 다시 시작)
-    const tick = () => {
-      x += (tx - x) * 0.16; y += (ty - y) * 0.16
-      el.style.setProperty('--px', x.toFixed(3))
-      el.style.setProperty('--py', y.toFixed(3))
-      raf = Math.abs(tx - x) < 0.002 && Math.abs(ty - y) < 0.002 ? 0 : requestAnimationFrame(tick)
-    }
-    const move = (e: MouseEvent) => {
-      const r = el.getBoundingClientRect()
-      tx = ((e.clientX - r.left) / r.width - 0.5) * 2
-      ty = ((e.clientY - r.top) / r.height - 0.5) * 2
-      if (!raf) raf = requestAnimationFrame(tick)
-    }
-    el.addEventListener('mousemove', move)
-    return () => { el.removeEventListener('mousemove', move); cancelAnimationFrame(raf) }
-  }, [])
   return (
-    <section className="hero hero2" id="intro" ref={ref} aria-labelledby="intro-t">
+    <section className="hero hero2" id="intro" aria-labelledby="intro-t">
       <div className="scene" aria-hidden="true">
         <div className="arch a1"><img src="/photos/home-interior.jpg" alt="" loading="lazy" decoding="async" style={{ objectPosition: '50% 38%' }} /></div>
         <div className="arch a2"><img src="/photos/sejong-lake.jpg" alt="" loading="lazy" decoding="async" style={{ objectPosition: '62% 50%' }} /></div>
         <div className="arch a3"><img src="/photos/sejong-skyline.jpg" alt="" loading="lazy" decoding="async" style={{ objectPosition: '50% 55%' }} /></div>
-        <div className="stairs" /><div className="orb" />
-        <span className="sticker st1" style={{ ["--d" as string]: 30 }}>전세 · 월세 한 번에</span>
-        <span className="sticker st2" style={{ ["--d" as string]: 24 }}>숫자는 실시간 ●</span>
-        <span className="sticker st3" style={{ ["--d" as string]: 36 }}>쉬운 말로 ✦</span>
+        <div className="orb" />
+        <span className="sticker st1">전세 · 월세 한 번에</span>
+        <span className="sticker st2">쉬운 말로 ✦</span>
       </div>
-      <div className="grain" aria-hidden="true" />
       <div className="wrap hero-inner">
         <div className="emblem"><img src="/logo-lg.png" alt="청정 세종 CJSJ 로고" /></div>
-        <span className="label" style={{ color: 'var(--ink)' }}>청정 세종이라는 이름에는</span>
+        <span className="label" style={{ color: 'var(--ink)' }}>세종 청년 주거지원 안내</span>
         <Lines
           as="h2" id="intro-t" className="display"
           lines={[<span className="l" key="a"><Wave text="내 집으로 가는 길," /></span>, <span key="b"><Wave text="함께 " /><Wave text="확인해" accent /><Wave text=" 봐요" /></span>]}
         />
-        <p className="lead">청정(靑定)은 푸를 청에 정할 정, 청년이 세종에 마음 편히 자리 잡도록 돕고 싶은 마음을 담았어요. 어려운 경제 용어는 쉬운 말로 풀어서, 받을 수 있는 지원과 조심할 점을 차근차근 안내해 드릴게요.</p>
+        <p className="lead">받을 수 있는 지원과 조심할 점을 어려운 경제 용어 없이 차근차근 안내해 드릴게요. 이름의 청정(靑定)은 푸를 청에 정할 정, 청년이 세종에 마음 편히 자리 잡도록 돕고 싶은 마음을 담았어요.</p>
         <div className="hero-cta">
           <Btn to="/#policies" track="intro_policies">지원 제도 둘러보기</Btn>
           <Btn onClick={onPast} variant="line" track="intro_past_result">지난 결과 보기</Btn>
@@ -188,25 +206,11 @@ function Intro() {
   )
 }
 
-function Marquee() {
-  const items = ['놓치기 쉬운 지원금', '신청 순서가 중요해요', '월세도 지원받을 수 있어요', '전세·월세 한 번에 확인', '나에게 더 이득인 쪽은?']
-  const row = (
-    <span aria-hidden="true">
-      {items.map((t) => (<span key={t}>{t}<i>✺</i></span>))}
-    </span>
-  )
-  return (
-    <div className="marquee" aria-label="핵심 메시지: 놓치기 쉬운 지원금, 신청 순서가 중요해요, 월세도 지원받을 수 있어요, 전세·월세 한 번에 확인">
-      <div className="track">{row}{row}</div>
-    </div>
-  )
-}
-
 /* ───────── 이용 3단계 ───────── */
 const STEPS = [
-  { n: '01', t: '편하게 답해 주세요', d: '나이·소득·사는 집·아는 정책까지 한 번에 한 가지씩 여쭤볼게요. 모르는 건 "잘 모르겠어요"를 눌러도 괜찮아요. 모르는 청년이 더 많아요.' },
+  { n: '01', t: '편하게 답해 주세요', d: '나이·소득·사는 집 같은 질문에 답해 주세요. 맛보기는 12문항, 약 2분이에요. 모르는 건 "잘 모르겠어요"를 눌러도 괜찮아요.' },
   { n: '02', t: '쉬운 말로 알려드려요', d: '"신청할 수 있어요 / 확인해 보면 좋아요 / 지금은 어려워요"로 알려드리고, 이유도 풀어서 설명해 드려요.' },
-  { n: '03', t: '순서대로 신청해요', d: '집값을 다 치르기 전에 신청해야 하는 제도도 있어요. 이런 순서를 미리 알려드리고, 신청할 곳도 이어 드려요.' },
+  { n: '03', t: '순서대로 신청해요', d: '잔금(집값의 마지막 지급)을 치르기 전에 신청해야 하는 제도도 있어요. 이런 순서를 미리 알려드리고, 신청할 곳으로 이어 드려요.' },
 ]
 function How() {
   return (
@@ -214,7 +218,7 @@ function How() {
       <div className="wrap">
         <div className="sec-head">
           <div className="eyebrow"><i>00</i><span className="label">이용 방법</span></div>
-          <p>경제 용어를 몰라도 괜찮아요. <b>분홍 형광펜</b>이 그어진 단어를 누르면 쉬운 말로 풀어 드려요. 예를 들어 <Term id="deposit" />을 한번 눌러 보세요.</p>
+          <p>경제 용어를 몰라도 괜찮아요. <b>형광펜</b>이 그어진 단어를 누르면 쉬운 말로 풀어 드려요. 예를 들어 <Term id="deposit" />을 한번 눌러 보세요.</p>
           <Lines id="how-t" lines={[<span className="l" key="1">세 걸음이면</span>, <span key="2">충분해요.</span>]} className="display" />
         </div>
         <div className="steps">
@@ -395,8 +399,8 @@ function Policies() {
       <div className="wrap">
         <div className="sec-head">
           <div className="eyebrow"><i>02</i><span className="label">지원 제도</span></div>
-          <p>집을 <Term id="jeonse" />로 구하는지 <Term id="wolse" />로 구하는지에 따라 받을 수 있는 지원이 달라져요. 내 상황을 먼저 골라 보시고, 궁금한 줄을 눌러 펼쳐 보세요.</p>
-          <Lines id="pol-t" className="display" lines={[<span className="l" key="1">세종에서 받을 수 있는</span>, <span key="2">다섯 가지 지원</span>]} />
+          <p>집을 <Term id="jeonse" />로 구하는지 <Term id="wolse" />로 구하는지에 따라 받을 수 있는 지원이 달라져요. 아래에서 내 상황을 먼저 고르고, 궁금한 제도를 눌러 펼쳐 보세요.</p>
+          <Lines id="pol-t" className="display" lines={[<span className="l" key="1">세종에서 받을 수 있는</span>, <span key="2">주요 지원 제도</span>]} />
         </div>
         <LayoutGroup>
           <div className="filters" role="group" aria-label="제도 필터">
@@ -409,7 +413,7 @@ function Policies() {
           </div>
         </LayoutGroup>
         {benefits.state === 'loading' && <p className="hint" aria-live="polite">공공 API에서 세종시 공식 정책 원문을 불러오는 중이에요…</p>}
-        {benefits.state === 'error' && <p className="hint">최신 데이터를 불러오지 못했습니다. 아래는 공식 안내·언론 보도로 정리한 내용이에요.</p>}
+        {benefits.state === 'error' && <p className="hint">최신 데이터를 불러오지 못했어요. 아래는 공식 안내·언론 보도로 정리한 내용이에요.</p>}
         <ul className="idx">
           {list.map((p, i) => (
             <IdxItem key={p.id} p={p} i={i} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} live={live(p.id)} rows={items ? liveRows(p.id, items, today) : undefined} off={items ? officialFor(p.id, items) : undefined} />
@@ -418,7 +422,7 @@ function Policies() {
         {extra.length > 0 && (
           <>
             <h3 className="idx-more-t">공공 API에서 찾은 세종 주거 정책 <span className="num">{extra.length}</span></h3>
-            <p className="hint" style={{ marginBottom: 8 }}>정부24·온통청년·복지로에 세종시가 올린 청년·신혼 주거 정책 중 위 다섯 가지에 없는 것이에요. 조건은 원문에서 확인하세요.</p>
+            <p className="hint" style={{ marginBottom: 8 }}>정부24·온통청년·복지로에 세종시가 올린 청년·신혼 주거 정책 중 위 주요 지원 제도에 없는 것이에요. 조건은 원문에서 확인하세요.</p>
             <ul className="idx">
               {extra.map((b, i) => (
                 <ApiIdxItem key={`${b.source}-${b.id}`} b={b} i={list.length + i} open={open === `api-${b.source}-${b.id}`} onToggle={() => setOpen(open === `api-${b.source}-${b.id}` ? null : `api-${b.source}-${b.id}`)} today={today} />
@@ -441,7 +445,7 @@ function Live() {
     <section className="sec live-sec dark" id="live" aria-labelledby="live-t">
       <div className="wrap">
         <div className="sec-head">
-          <div className="eyebrow"><i>01</i><span className="label">실시간 정보 확인</span></div>
+          <div className="eyebrow"><i>01</i><span className="label">실시간 정보</span></div>
           <p>국토교통부 실거래가, 건축HUB, 마이홈, 정부24·복지로·온통청년, 한국부동산원의 공공데이터를 지금 바로 불러와 보여드려요. 카드에 마우스를 올리면 멈춰요.</p>
           <Lines id="live-t" className="display" lines={[<span className="l" key="1">세종의 집 소식,</span>, <span key="2">지금 <span className="em">실시간</span>으로</span>]} />
         </div>
@@ -487,7 +491,7 @@ export function Footer({ tone = 'home' }: { tone?: 'home' | 'paper' }) {
             <ul>
               <li><VBadge v="official" /> 공식 페이지에서 직접 확인</li>
               <li><VBadge v="secondary" /> 언론·2차 자료(공식 발표 인용)</li>
-              <li><VBadge v="unverified" /> 이번 조사에서 원문 확인 못한 값</li>
+              <li><VBadge v="unverified" /> 원문을 확인하지 못한 값</li>
             </ul>
           </div>
         </div>
@@ -506,7 +510,7 @@ export default function Home() {
   return (
     <>
       <HeroVideo />
-      <Marquee />
+      <TrustStrip />
       <Intro />
       <How />
       <Live />
@@ -518,7 +522,7 @@ export default function Home() {
             <p>세종 청년들은 어떤 집에 살고, 왜 지원을 놓칠까요? 출처가 확인된 숫자와 아직 확인 중인 숫자를 구분해서 보여드려요.</p>
             <Lines id="data-t" className="display" lines={[<span className="l" key="1">숫자로 보면</span>, <span key="2">이유가 <span className="em">보여요</span></span>]} />
           </div>
-          <DataSection />
+          <LazyData />
         </div>
       </section>
       <Footer />

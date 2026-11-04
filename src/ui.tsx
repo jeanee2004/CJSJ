@@ -24,20 +24,34 @@ export function useMagnetic<T extends HTMLElement>(max = 10) {
   useEffect(() => {
     const el = ref.current
     if (!el || reduced() || !canHover()) return
-    const move = (e: MouseEvent) => {
-      const r = el.getBoundingClientRect()
-      const dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2)
-      const dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2)
-      el.style.transition = 'transform .15s linear'
+    // 들어올 때 한 번만 크기를 재고, 이동은 프레임당 한 번만 반영한다 (mousemove 마다 레이아웃을 읽지 않는다)
+    let rect: DOMRect | null = null
+    let raf = 0, cx = 0, cy = 0
+    const apply = () => {
+      raf = 0
+      if (!rect) return
+      const dx = (cx - (rect.left + rect.width / 2)) / (rect.width / 2)
+      const dy = (cy - (rect.top + rect.height / 2)) / (rect.height / 2)
       el.style.transform = `translate(${dx * max}px, ${dy * max}px)`
     }
+    const enter = () => { rect = el.getBoundingClientRect() }
+    const move = (e: MouseEvent) => {
+      if (!rect) rect = el.getBoundingClientRect()
+      if (!raf) el.style.transition = 'transform .15s linear'
+      cx = e.clientX; cy = e.clientY
+      if (!raf) raf = requestAnimationFrame(apply)
+    }
     const leave = () => {
+      cancelAnimationFrame(raf); raf = 0; rect = null
       el.style.transition = 'transform .8s cubic-bezier(.34,1.56,.64,1)'
       el.style.transform = ''
     }
-    el.addEventListener('mousemove', move)
-    el.addEventListener('mouseleave', leave)
+    el.addEventListener('mouseenter', enter, { passive: true })
+    el.addEventListener('mousemove', move, { passive: true })
+    el.addEventListener('mouseleave', leave, { passive: true })
     return () => {
+      cancelAnimationFrame(raf)
+      el.removeEventListener('mouseenter', enter)
       el.removeEventListener('mousemove', move)
       el.removeEventListener('mouseleave', leave)
     }

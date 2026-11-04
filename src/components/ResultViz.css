@@ -1,4 +1,4 @@
-.rviz { display: grid; gap: 14px; margin: 28px 0 8px; grid-template-columns: 1fr; --rv-ok: var(--ok); --rv-maybe: #e3a72b; --rv-no: #8b94b3; --rv-bg: rgba(255,255,255,.72); }
+.rviz { display: grid; gap: 14px; margin: 28px 0 8px; grid-template-columns: 1fr; --rv-ok: var(--ok); --rv-maybe: #c99a2e; --rv-no: #8b95a6; --rv-bg: #fff; }
 .vd { scroll-margin-top: 96px; }
 .rv-card { background: var(--rv-bg); border: 1px solid var(--line); border-radius: 18px; padding: 18px 18px 20px; min-width: 0; animation: rv-in .6s var(--ease) both; }
 .rv-card:nth-child(2) { animation-delay: .06s } .rv-card:nth-child(3) { animation-delay: .12s } .rv-card:nth-child(4) { animation-delay: .18s } .rv-card:nth-child(5) { animation-delay: .24s }
@@ -23,7 +23,7 @@
 .rv-stack .seg { min-width: 8px; border-radius: 4px; transform-origin: left; animation: rv-grow .9s var(--ease) both; }
 .rv-stack .seg:first-child { border-radius: 10px 4px 4px 10px; } .rv-stack .seg:last-child { border-radius: 4px 10px 10px 4px; } .rv-stack .seg:only-child { border-radius: 10px; }
 .seg.s-ok { background: var(--rv-ok); } .seg.s-maybe { background: var(--rv-maybe); }
-.seg.s-no { background: repeating-linear-gradient(135deg, var(--rv-no) 0 4px, #c9cde0 4px 8px); }
+.seg.s-no { background: repeating-linear-gradient(135deg, var(--rv-no) 0 4px, #cfd4dd 4px 8px); }
 .rv-legend { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .rv-legend li { display: grid; gap: 2px; border-top: 3px solid; padding-top: 8px; font-size: 13px; font-weight: 700; }
 .rv-legend li b { font-size: clamp(30px, 9vw, 44px); line-height: 1; letter-spacing: -.04em; }
@@ -43,7 +43,7 @@
 .rv-go { grid-row: 1; grid-column: 4; color: var(--mute); }
 
 .rv-bars { display: grid; gap: 16px; }
-.rv-bar .rv-track { height: 22px; border-radius: 6px; } .rv-bar .rv-track i { background: #7e89ad; border-radius: 6px; }
+.rv-bar .rv-track { height: 22px; border-radius: 6px; } .rv-bar .rv-track i { background: #5f7391; border-radius: 6px; }
 .rv-bar.best .rv-track i { background: var(--rv-ok); }
 .rv-bar.closed .rv-track i { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.35) 0 4px, transparent 4px 8px); }
 .rv-tag { display: inline-block; margin-top: 6px; font-size: 13px; font-weight: 800; color: var(--ok); }

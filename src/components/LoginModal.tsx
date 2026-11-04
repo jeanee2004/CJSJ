@@ -71,17 +71,17 @@ export function LoginModal() {
             {loginReason === 'deep' ? (
               <>
                 <h2 id="login-title">심화 설문은<br /><span className="em">로그인</span> 후에 할 수 있어요</h2>
-                <p className="modal-lead">로그인하면 더 자세한 질문으로 내 상황을 꼼꼼히 점검해 볼 수 있어요. 로그인이 끝나면 바로 이어집니다.</p>
+                <p className="modal-lead">로그인하면 더 자세한 질문으로 내 상황을 꼼꼼히 점검해 볼 수 있어요. 로그인이 끝나면 바로 이어져요.</p>
               </>
             ) : loginReason === 'history' ? (
               <>
                 <h2 id="login-title">지난 결과는<br /><span className="em">회원</span>만 볼 수 있어요</h2>
-                <p className="modal-lead">로그인하면 진단 결과가 내 계정에 저장되고, 언제든 다시 볼 수 있어요.</p>
+                <p className="modal-lead">로그인하면 설문 결과가 내 계정에 저장되고, 언제든 다시 볼 수 있어요.</p>
               </>
             ) : (
               <>
                 <h2 id="login-title">로그인하고<br />결과를 <span className="em">저장</span>해 볼까요?</h2>
-                <p className="modal-lead">로그인하면 진단 결과가 저장돼서 다음에도 이어서 볼 수 있어요.</p>
+                <p className="modal-lead">로그인하면 설문 결과가 저장돼서 다음에도 이어서 볼 수 있어요.</p>
               </>
             )}
             <div className="demo-note">

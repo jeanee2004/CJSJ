@@ -15,7 +15,7 @@ function Stale({ what, href, label }: { what: string; href: string; label: strin
   return (
     <div className="strip ask">
       <span className="ico" aria-hidden="true">i</span>
-      <span><b>최신 데이터를 불러오지 못했습니다</b>{what}은 <a href={href} target="_blank" rel="noreferrer noopener" style={{ textDecoration: 'underline' }}>{label}</a>에서 바로 확인할 수 있어요.</span>
+      <span><b>최신 데이터를 불러오지 못했어요</b>{what}은 <a href={href} target="_blank" rel="noreferrer noopener" style={{ textDecoration: 'underline' }}>{label}</a>에서 바로 확인할 수 있어요.</span>
     </div>
   )
 }
@@ -71,11 +71,11 @@ export function ExtraBenefits({ load: r, answers }: { load: Load<BenefitsRes>; a
     <section className="live" aria-labelledby="live-benefit" aria-busy={r.state === 'loading' || undefined}>
       <span className="label">정부24 · 복지로 · 온통청년</span>
       <h2 id="live-benefit">추가로 확인해볼 혜택</h2>
-      <p className="hint" style={{ marginBottom: 12 }}>위 진단에 넣지 않은 제도도 있어요. 나이와 무주택 여부만 확인했고, 소득 등 나머지 조건은 각 안내 페이지에서 직접 확인하세요.</p>
+      <p className="hint" style={{ marginBottom: 12 }}>위 설문 결과에 넣지 않은 제도도 있어요. 나이와 무주택 여부만 확인했고, 소득 등 나머지 조건은 각 안내 페이지에서 직접 확인하세요.</p>
       {r.state === 'loading' && <p className="hint">혜택 목록을 불러오는 중이에요…</p>}
       {r.state === 'error' && <Stale what="세종 청년·신혼 혜택" href="https://www.gov.kr/portal/rcvfvrSvc/main" label="정부24 혜택 찾기" />}
-      {r.state === 'ok' && matches.length === 0 && <p className="hint">위 진단에 없는 세종 청년·신혼 주거 혜택은 지금 없어요.</p>}
-      {r.state === 'ok' && matches.length > 0 && fit.length === 0 && !all && <p className="hint">위 진단에 없는 혜택 {matches.length}건은 응답하신 나이·주택 상황과 맞지 않아 보여요.</p>}
+      {r.state === 'ok' && matches.length === 0 && <p className="hint">위 설문 결과에 없는 세종 청년·신혼 주거 혜택은 지금 없어요.</p>}
+      {r.state === 'ok' && matches.length > 0 && fit.length === 0 && !all && <p className="hint">위 설문 결과에 없는 혜택 {matches.length}건은 응답하신 나이·주택 상황과 맞지 않아 보여요.</p>}
       {items.length > 0 && (
         <ul className="live-list">
           {items.map(({ benefit: b, status, reasons }) => (

@@ -8,7 +8,7 @@ import { monthsAgo, useApi, ymLabel } from '../lib/api'
 import type { TradesRes } from '../lib/api'
 
 // 다크 배경용 팔레트. 색만으로 구분하지 않도록 값 라벨·범례·표를 함께 둔다.
-const C = { lime: '#f0a9bf', mint: '#8cf0cf', aqua: '#7ccbff', peri: '#a3afff', coral: '#ff7a59', grey: '#7b8296', text: '#fff8fa' }
+const C = { lime: '#e8a3bb', mint: '#9fcfb8', aqua: '#86b3d6', peri: '#b0b4d6', coral: '#e8926f', grey: '#8b95a7', text: '#f6eef1' }
 const DIM = 0.28
 
 function Frame({ meta, children, table, legend, busy }: { meta: ChartMeta; children: ReactNode; table: { k: string; v: string }[]; legend?: string; busy?: boolean }) {
@@ -57,7 +57,7 @@ function useSaleVsJeonse(): { data: { name: string; value: number }[]; meta: Cha
   return {
     state: failed ? 'error' : 'loading',
     data: SALE_VS_JEONSE,
-    meta: { ...SALE_META, note: `${failed ? '최신 데이터를 불러오지 못했습니다. ' : ''}국토부 실거래가, ${ymLabel(SALE_FALLBACK_YM)} 계약 기준 (2026.11.4 조회) 값이에요.` },
+    meta: { ...SALE_META, note: `${failed ? '최신 데이터를 불러오지 못했어요. ' : ''}국토부 실거래가, ${ymLabel(SALE_FALLBACK_YM)} 계약 기준 (2026.11.4 조회) 값이에요.` },
   }
 }
 

@@ -60,3 +60,28 @@
 
 @media (min-width: 700px) { .adm-cards { grid-template-columns: repeat(5, 1fr); } }
 @media (min-width: 1000px) { .adm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* 인사이트·제안·리포트·수집 상태 */
+.adm-insights, .adm-sugs { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.adm-insights li { border-left: 3px solid var(--a1); padding: 2px 0 2px 12px; }
+.adm-insights b, .adm-sugs b { font-size: 14px; }
+.adm-insights p, .adm-sugs p { margin: 2px 0 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+.adm-low { display: inline-block; margin-top: 4px; font-size: 12px; font-weight: 700; color: var(--no); border: 1px solid currentColor; border-radius: 999px; padding: 1px 8px; }
+.adm-sugs li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; }
+.adm-sugs small { display: block; margin-top: 3px; color: var(--mute); font-size: 12px; }
+.adm-pri { font-family: var(--f-num); font-weight: 800; font-size: 12px; border-radius: 8px; padding: 3px 7px; background: var(--paper-2); color: var(--ink); border: 1px solid var(--line); }
+.adm-pri.p1 { background: var(--ink); color: var(--paper); }
+.adm-flow { margin-bottom: 18px; }
+.adm-checks { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+.adm-checks li::before { content: '○ '; color: var(--no); font-weight: 800; }
+.adm-checks li[data-ok='true']::before { content: '● '; color: var(--ok); }
+.adm-report { margin: 18px 0; }
+.adm-pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 14px; line-height: 1.65; background: var(--paper-2); border-radius: 12px; padding: 14px; margin: 10px 0 0; color: var(--ink); }
+
+@media print {
+  body * { visibility: hidden; }
+  .adm-print, .adm-print * { visibility: visible; }
+  .adm-print { position: absolute; left: 0; top: 0; width: 100%; border: 0; background: var(--white); padding: 0; }
+  .adm-noprint { display: none !important; }
+  .adm-pre { background: none; padding: 0; font-size: 12pt; }
+}

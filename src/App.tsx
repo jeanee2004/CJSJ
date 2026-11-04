@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { Route, Routes, useLocation } from 'react-router-dom'
 import { StoreProvider } from './store'
 import { Header } from './components/Header'
@@ -9,10 +9,10 @@ import { GlossaryFab } from './components/GlossaryFab'
 import { Flutter } from './components/Flutter'
 import Home from './pages/Home'
 import { Modals, OpenModalRedirect } from './components/Modals'
-import Result from './pages/Result'
-import Admin from './pages/Admin'
+const Result = lazy(() => import('./pages/Result'))
+const Admin = lazy(() => import('./pages/Admin'))
+const Privacy = lazy(() => import('./pages/Privacy'))
 import { initTracking, observeSections, track } from './lib/track'
-import Privacy from './pages/Privacy'
 
 function ScrollManager() {
   const { pathname, hash } = useLocation()
@@ -50,6 +50,7 @@ export default function App() {
       <div className="aurora" aria-hidden="true" />
       <Flutter />
       <Header />
+      <Suspense fallback={null}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/diagnose" element={<OpenModalRedirect kind="survey" />} />
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="/admin" element={<Admin />} />
         <Route path="*" element={<Home />} />
       </Routes>
+      </Suspense>
       <LoginModal />
       <Modals />
       <ScrollTop />

@@ -48,7 +48,9 @@ export async function GET(request: Request): Promise<Response> {
   const { data: u, error: ue } = await db.auth.getUser(token)
   if (ue || !u.user) return denied(401)
   const adminId = u.user.id
-  const { data: prof, error: pe } = await db.from('profiles').select('role').eq('id', adminId).maybeSingle()
+  // 관리자 판정: 사용자가 바꿀 수 없는 app_metadata.role 또는 profiles.role
+  const metaAdmin = u.user.app_metadata?.role === 'admin'
+  const { data: prof, error: pe } = metaAdmin ? { data: { role: 'admin' }, error: null } : await db.from('profiles').select('role').eq('id', adminId).maybeSingle()
   if (pe) { console.error('admin-export: profiles 조회 실패', pe.code); return json({ error: 'SERVER_ERROR', message: '권한 확인 실패' }, 500) }
   if (prof?.role !== 'admin') return denied(403)
 

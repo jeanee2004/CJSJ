@@ -20,7 +20,8 @@ create policy "profiles: read own" on public.profiles for select to authenticate
 -- 관리자 판정 (RLS 정책과 서버가 함께 사용)
 create or replace function public.is_admin() returns boolean
 language sql stable security definer set search_path = public as $$
-  select exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+  select coalesce((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin', false)
+      or exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
 $$;
 
 -- 가입·이메일 인증 때 profiles 를 만들고, 인증을 마친 관리자 이메일이면 admin 부여

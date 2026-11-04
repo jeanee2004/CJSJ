@@ -36,15 +36,15 @@ export function Recommendations({ recs, basis, onBasis, apiState }: { recs: Rec[
         <Chips label="비교 기간" value={basis.years} opts={YEARS.map((y) => ({ id: y, t: `${y}년` }))} onChange={(years) => onBasis({ ...basis, years })} />
         <Chips label="버팀목 금리" value={basis.rate} opts={RATES} onChange={(rate) => onBasis({ ...basis, rate })} />
       </div>
-      {apiState === 'loading' && <p className="hint">최신 접수 일정과 혜택을 불러오는 중이에요. 먼저 진단 결과로 정렬해 두었어요.</p>}
-      {apiState === 'error' && <p className="hint">최신 데이터를 불러오지 못했습니다. 진단 결과만으로 정렬했어요.</p>}
+      {apiState === 'loading' && <p className="hint">최신 접수 일정과 혜택을 불러오는 중이에요. 먼저 설문 결과로 정렬해 두었어요.</p>}
+      {apiState === 'error' && <p className="hint">최신 데이터를 불러오지 못했어요. 설문 결과만으로 정렬했어요.</p>}
       {recs.length === 0 && <p className="hint">지금 바로 신청할 수 있는 지원은 없어요. 아래에서 어려운 이유와 조건이 바뀌면 받을 수 있는 지원을 확인하세요.</p>}
       {shown.length > 0 && (
         <ol className="live-cards rec-list">
           {shown.map((r, i) => (
             <li key={r.key} className="live-card">
               <span className="rec-no" aria-hidden="true">{i + 1}</span>
-              <span className="label">{i + 1}순위 · {r.from === 'verdict' ? '진단' : '공공 API'}</span>
+              <span className="label">{i + 1}순위 · {r.from === 'verdict' ? '설문 결과' : '공공 API'}</span>
               <h3>{r.name}</h3>
               {r.amount ? <p className="rec-amt"><b>약 {r.amount.toLocaleString('ko-KR')}만원</b> {r.kind === 'loan' ? '아껴요' : '받아요'} <small>({basis.years}년 기준)</small></p> : null}
               <span className={`status ${r.status}`}><i data-g={STATUS[r.status].g} aria-hidden="true" />{STATUS[r.status].t}</span>

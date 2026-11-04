@@ -15,8 +15,8 @@ export function SurveyChooser() {
           <div className="ch-top"><span className="ch-ico" aria-hidden="true">⚡</span><span className="ch-badge free">로그인 없이</span></div>
           <h3>맛보기 설문</h3>
           <p className="ch-big"><b>{SIMPLE_IDS.length}</b><span>문항</span><span className="ch-time">약 2분</span></p>
-          <ul className="ch-list"><li>4화면, 한 화면에 몇 개씩 한 번에 답해요</li><li>받을 수 있는 지원을 <b>대략</b> 확인해요</li></ul>
-          <Btn onClick={() => openModal('diagnose')} track="survey_choose_simple">바로 시작</Btn>
+          <ul className="ch-list"><li>관련 질문을 묶은 4개 화면에 답해요</li><li>받을 수 있는 지원을 <b>대략</b> 확인해요</li></ul>
+          <Btn onClick={() => openModal('diagnose')} track="survey_choose_simple">맛보기 시작</Btn>
         </article>
         <article className="ch-card deep">
           <div className="ch-top"><span className="ch-ico" aria-hidden="true">🔎</span><span className="ch-badge login">{user ? '로그인됨' : '로그인 필요'}</span></div>

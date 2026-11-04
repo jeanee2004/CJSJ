@@ -78,7 +78,8 @@ export function Flutter() {
     window.addEventListener('resize', resize)
 
     const ps: P[] = []
-    let painted = false
+    let dirty: [number, number, number, number] | null = null // 마지막으로 그린 영역(전체 캔버스를 매번 지우지 않는다)
+    let ambCount = 0
     let mx = W / 2, my = H / 2, lastMove = -1e9, now = 0
     const hoverAt = new WeakMap<Element, number>()
 
@@ -107,9 +108,10 @@ export function Flutter() {
     const step = (dt: number) => {
       now += dt
       const active = fine && window.location.pathname === '/' && window.scrollY < H * 1.7 && !document.body.classList.contains('has-popup')
-      const amb = ps.filter((p) => p.mode === 1).length
+      const amb = ambCount
       if (active && amb < AMBIENT && Math.random() < 0.02) {
         const left = Math.random() < 0.5
+        ambCount++
         ps.push({
           mode: 1, x: left ? -30 : W + 30, y: rnd(H * 0.25, H * 0.75), vx: 0, vy: 0, a: left ? 0 : Math.PI,
           size: rnd(22, 30), ph: rnd(0, 6.28), seed: rnd(0, 100), age: 0, life: 1e9, fade: 0,
@@ -120,7 +122,7 @@ export function Flutter() {
         p.age += dt
         if (p.mode === 1) {
           p.fade += ((active ? 1 : 0) - p.fade) * 0.03
-          if (!active && p.fade < 0.03) { ps.splice(i, 1); continue }
+          if (!active && p.fade < 0.03) { ps.splice(i, 1); ambCount--; continue }
           let speed = 0.8
           if (now - lastMove < 2400) {
             const tx = mx + Math.cos(now * 0.0016 + p.seed) * 90
@@ -141,12 +143,17 @@ export function Flutter() {
         p.y += p.vy + Math.cos(p.age * 0.005 + p.ph) * 0.25
         p.a = Math.atan2(p.vy, p.vx)
       }
-      if (ps.length === 0) {
-        if (painted) { ctx.clearRect(0, 0, W, H); painted = false }
-        return
+      if (dirty) { ctx.clearRect(dirty[0], dirty[1], dirty[2] - dirty[0], dirty[3] - dirty[1]); dirty = null }
+      if (ps.length === 0) return
+      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9
+      for (const p of ps) {
+        const m = p.size * 2.4 + 16 // 날개·그림자가 닿는 반경
+        if (p.x - m < x0) x0 = p.x - m
+        if (p.y - m < y0) y0 = p.y - m
+        if (p.x + m > x1) x1 = p.x + m
+        if (p.y + m > y1) y1 = p.y + m
       }
-      painted = true
-      ctx.clearRect(0, 0, W, H)
+      dirty = [Math.max(0, Math.floor(x0)), Math.max(0, Math.floor(y0)), Math.min(W, Math.ceil(x1)), Math.min(H, Math.ceil(y1))]
       for (const p of ps) {
         const fadeIn = Math.min(1, p.age / 200)
         const fadeOut = p.mode === 1 ? p.fade : Math.min(1, (p.life - p.age) / 700)
@@ -155,10 +162,24 @@ export function Flutter() {
       }
     }
 
-    let last = performance.now(), raf = 0
-    const frame = (ts: number) => { step(Math.min(48, ts - last)); last = ts; raf = requestAnimationFrame(frame) }
-    raf = requestAnimationFrame(frame)
+    // 나비가 없고 나타날 조건도 아니면(다른 페이지·스크롤 아래·팝업·숨은 탭) rAF 를 돌리지 않고 느리게 확인만 한다
+    let last = performance.now(), raf = 0, idleTimer = 0, idling = false
+    const wantsFrames = () =>
+      ps.length > 0 || (fine && window.location.pathname === '/' && window.scrollY < H * 1.7 && !document.body.classList.contains('has-popup'))
+    const schedule = () => {
+      if (document.hidden) return // visibilitychange 에서 다시 시작
+      if (wantsFrames()) { raf = requestAnimationFrame(frame) }
+      else { idling = true; idleTimer = window.setTimeout(() => { idling = false; last = performance.now(); schedule() }, 300) }
+    }
+    const frame = (ts: number) => { step(Math.min(48, ts - last)); last = ts; schedule() }
+    const onVis = () => {
+      cancelAnimationFrame(raf); clearTimeout(idleTimer); idling = false
+      if (!document.hidden) { last = performance.now(); schedule() }
+    }
+    document.addEventListener('visibilitychange', onVis)
+    schedule()
 
+    const wake = () => { if (idling && !document.hidden) { idling = false; clearTimeout(idleTimer); last = performance.now(); schedule() } }
     const onMove = (e: MouseEvent) => { mx = e.clientX; my = e.clientY; lastMove = now }
     const onOver = (e: MouseEvent) => {
       if (!fine) return
@@ -168,17 +189,19 @@ export function Flutter() {
       if (t - (hoverAt.get(el) ?? 0) < 1500) return
       hoverAt.set(el, t)
       burst(e.clientX, e.clientY, 2, 1)
+      wake()
     }
-    const onDown = (e: PointerEvent) => burst(e.clientX, e.clientY, 3, 1.2)
-    window.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseover', onOver)
+    const onDown = (e: PointerEvent) => { burst(e.clientX, e.clientY, 3, 1.2); wake() }
+    window.addEventListener('mousemove', onMove, { passive: true })
+    document.addEventListener('mouseover', onOver, { passive: true })
     window.addEventListener('pointerdown', onDown)
 
     if (import.meta.env.DEV) {
       ;(window as unknown as { __fl: unknown }).__fl = { burst: (x: number, y: number, n = 3) => burst(x, y, n, 1.2), step, count: () => ps.length }
     }
     return () => {
-      cancelAnimationFrame(raf)
+      cancelAnimationFrame(raf); clearTimeout(idleTimer)
+      document.removeEventListener('visibilitychange', onVis)
       window.removeEventListener('resize', resize)
       window.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseover', onOver)

@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { TERMS } from '../data/terms'
 import { GUIDE } from '../data/guidebook'
 import { rank } from '../lib/search'
-import { Guidebook } from './Guidebook'
 import './Guidebook.css'
 
+const Guidebook = lazy(() => import('./Guidebook').then((m) => ({ default: m.Guidebook })))
 const POPULAR = ['deposit', 'jeonse', 'wolse', 'jan', 'pickone']
 const SEARCH_ITEMS = TERMS.map((t) => ({ id: t.id, fields: [t.word, ...(t.alias ?? [])], long: t.easy }))
 
@@ -44,7 +44,7 @@ export function GlossaryFab() {
                 <button type="button" aria-pressed={mode === 'guide'} onClick={() => setMode('guide')}>가이드북</button>
               </div>
               {mode === 'guide' ? (
-                <div className="gb-body"><Guidebook onTerm={(id) => { setQ(byId(id).word.replace(/ \(.*\)/, '')); setMode('terms') }} /></div>
+                <div className="gb-body"><Suspense fallback={null}><Guidebook onTerm={(id) => { setQ(byId(id).word.replace(/ \(.*\)/, '')); setMode('terms') }} /></Suspense></div>
               ) : (
                 <>
           <label className="sr-only" htmlFor="gq">용어 검색</label>

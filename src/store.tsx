@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { DEFAULT_ANSWERS } from './lib/eligibility'
 import type { Answers } from './lib/eligibility'
@@ -96,7 +96,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setUser((prev) => ({
         id: session.user.id, email, profile, name: profile.nickname || email.split('@')[0] || '청년', via: 'email',
         // 프로필을 못 읽었으면(일시 오류) 이전에 알던 값을 유지한다
-        isAdmin: error ? (prev?.id === session.user.id ? prev.isAdmin : false) : data?.role === 'admin',
+        isAdmin: session.user.app_metadata?.role === 'admin' || (error ? (prev?.id === session.user.id ? prev.isAdmin : false) : data?.role === 'admin'),
         respondentId: error ? (prev?.id === session.user.id ? prev.respondentId : null) : data?.respondent_id ?? null,
       }))
       setAuthReady(true)
@@ -146,7 +146,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setUser(null) // 화면에서 결과는 위 effect 가 치운다(이 기기에 저장된 결과는 남아 있다)
   }, [])
 
-  const value: Store = {
+  const openLogin = useCallback((reason: LoginReason = null) => { setLoginReason(reason); setLoginOpen(true) }, [])
+  const setLoginOpenFn = useCallback((b: boolean) => { setLoginOpen(b); if (!b) { setLoginReason(null); pendingDeep.current = false } }, [])
+  const openModal = useCallback((m: Exclude<Modal, null>) => setModal(m), [])
+  const closeModal = useCallback(() => setModal(null), [])
+  const openDeep = useCallback(() => {
+    if (user) setModal('diagnoseDeep')
+    else { pendingDeep.current = true; setLoginReason('deep'); setLoginOpen(true) }
+  }, [user])
+  // 값이 바뀔 때만 새 객체를 만들어 불필요한 전체 리렌더를 막는다
+  const value: Store = useMemo(() => ({
     user,
     logout,
     authReady,
@@ -159,16 +168,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     popupOpen: loginOpen || modal !== null,
     loginOpen,
     loginReason,
-    setLoginOpen: (b) => { setLoginOpen(b); if (!b) { setLoginReason(null); pendingDeep.current = false } },
-    openLogin: (reason = null) => { setLoginReason(reason); setLoginOpen(true) },
+    setLoginOpen: setLoginOpenFn,
+    openLogin,
     modal,
-    openModal: (m) => setModal(m),
-    openDeep: () => {
-      if (user) setModal('diagnoseDeep')
-      else { pendingDeep.current = true; setLoginReason('deep'); setLoginOpen(true) }
-    },
-    closeModal: () => setModal(null),
-  }
+    openModal,
+    openDeep,
+    closeModal,
+  }), [user, logout, authReady, clearSaved, updateProfile, answers, setAnswers, loginOpen, loginReason, modal, openLogin, setLoginOpenFn, openModal, openDeep, closeModal])
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 

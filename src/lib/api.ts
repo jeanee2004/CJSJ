@@ -75,7 +75,7 @@ export class ApiError extends Error {
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(path, { ...init, headers: { 'content-type': 'application/json', ...init?.headers } })
   const body = await r.json().catch(() => null)
-  if (!r.ok || !body) throw new ApiError(body?.error ?? 'NETWORK', body?.message ?? '최신 데이터를 불러오지 못했습니다')
+  if (!r.ok || !body) throw new ApiError(body?.error ?? 'NETWORK', body?.message ?? '최신 데이터를 불러오지 못했어요')
   return body as T
 }
 
@@ -89,7 +89,7 @@ export function useApi<T>(path: string | null): Load<T> {
     let alive = true
     api<T>(path)
       .then((data) => alive && setS({ path, load: { state: 'ok', data } }))
-      .catch((e) => alive && setS({ path, load: { state: 'error', error: e instanceof ApiError ? e : new ApiError('NETWORK', '최신 데이터를 불러오지 못했습니다') } }))
+      .catch((e) => alive && setS({ path, load: { state: 'error', error: e instanceof ApiError ? e : new ApiError('NETWORK', '최신 데이터를 불러오지 못했어요') } }))
     return () => { alive = false }
   }, [path])
   return s && s.path === path ? s.load : { state: 'loading' }

@@ -65,7 +65,7 @@ export function Modals() {
           <div className="pop-feedback">
             <span className="label">의견 남기기</span>
             <h2>집을 구할 때 가장 <span className="em">마음 쓰이는</span> 비용은?</h2>
-            <p className="pop-lead">들려주신 이야기는 이름 없이 모아서, 세종시에 필요한 지원을 전할 때 소중하게 쓸게요.</p>
+            <p className="pop-lead">들려주신 이야기는 이름 없이 받아요. 체험 단계라 지금은 이 기기에만 저장돼요.</p>
             <Feedback />
           </div>
         )}

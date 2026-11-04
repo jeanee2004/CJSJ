@@ -5,6 +5,8 @@ import { supabase } from '../lib/supabase'
 import { QUESTIONS, SIMPLE_IDS } from '../data/survey'
 import { clickRank, daily, distribution, fmtDur, fmtPct, funnel, inRange, sectionAvg, summarize } from '../lib/adminStats'
 import type { Bar, EventRow, ResponseRow, SurveyFilter } from '../lib/adminStats'
+import { analyze, collectionStatus, diagnoseFlow, buildReport, periodLabel } from '../lib/insights'
+import type { Insight, Suggestion } from '../lib/insights'
 import './Admin.css'
 
 const PAGE = 1000
@@ -25,7 +27,7 @@ async function fetchAll<T>(table: 'events' | 'survey_responses', cols: string, s
   for (let from = 0; from < MAX_ROWS; from += PAGE) {
     if (signal.stop) break
     const { data, error } = await supabase.from(table).select(cols).order('created_at', { ascending: false }).range(from, from + PAGE - 1)
-    if (error) return { rows, truncated: false, error: error.message }
+    if (error) return { rows, truncated: false, error: `${error.code ?? ''} ${error.message}`.trim() }
     rows.push(...((data ?? []) as unknown as T[]))
     if (!data || data.length < PAGE) return { rows, truncated: false, error: null }
   }
@@ -145,6 +147,93 @@ const shortTitle = (id: string) => {
 }
 const DIST: [string, string][] = [['Q1', '나이대'], ['Q5', '월 소득 구간'], ['Q6', '현재 사는 집 종류'], ['Q7', '점유 형태']]
 
+
+/* ───────── 인사이트·제안·리포트·수집 상태 (계산은 lib/insights.ts, 여기는 표시만) ───────── */
+const INSIGHT_CTX = {
+  order: { simple: QUESTIONS.map((q) => q.id).filter((id) => SIMPLE_IDS.includes(id)), deep: QUESTIONS.map((q) => q.id) },
+  qTitle: (id: string) => QUESTIONS.find((q) => q.id === id)?.title ?? id,
+  optLabel: (qid: string, code: string) => labelsOf(qid)[code] ?? code,
+  rowLabel: (qid: string, row: string) => QUESTIONS.find((q) => q.id === qid)?.rows?.find((r) => r.k === row)?.t ?? row,
+  sectionLabel: nameOf(SECTION_LABEL),
+  clickLabel: nameOf(CLICK_LABEL),
+}
+
+function InsightList({ items }: { items: Insight[] }) {
+  return (
+    <ul className="adm-insights">
+      {items.map((i) => (
+        <li key={i.id}>
+          <b>{i.title}</b>
+          <p>{i.text}</p>
+          {i.low && <span className="adm-low">표본이 적어요 (n={i.n}) · 참고만 해 주세요</span>}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function SuggestionList({ items }: { items: Suggestion[] }) {
+  return (
+    <ol className="adm-sugs">
+      {items.map((s) => (
+        <li key={s.id}>
+          <span className={`adm-pri p${s.priority}`}>P{s.priority}</span>
+          <div>
+            <b>{s.title}</b>
+            <p>{s.action}</p>
+            <small>근거: {s.evidence}{s.low ? ' · 표본이 적어 참고용' : ''}</small>
+          </div>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+function FlowPanel({ error, events, responses }: { error: string | null; events: EventRow[]; responses: ResponseRow[] }) {
+  const d = diagnoseFlow({ configured: !!supabase, error, events: events.length, responses: responses.length })
+  const st = collectionStatus(events, responses)
+  const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('ko-KR') : '없음')
+  return (
+    <section className="adm-card adm-flow" role="status">
+      <h3>{d.title}</h3>
+      <p className="adm-take">{d.detail}</p>
+      <ul className="adm-checks">
+        <li data-ok={d.kind !== 'no_config'}>연결 설정</li>
+        <li data-ok={d.kind !== 'no_table' && d.kind !== 'no_config'}>표 존재</li>
+        <li data-ok={d.kind !== 'no_permission' && d.kind !== 'no_table' && d.kind !== 'no_config'}>읽기 권한</li>
+        <li data-ok={st.last24h > 0}>최근 24시간 이벤트 수신 {st.last24h}건 (마지막 {when(st.lastEventAt)})</li>
+        <li data-ok={st.responses > 0}>설문 응답 {st.responses}건 (마지막 {when(st.lastResponseAt)})</li>
+      </ul>
+      {st.missing.length > 0 && st.seen.length > 0 && <p className="adm-note">아직 한 번도 안 들어온 이벤트: {st.missing.join(', ')}</p>}
+    </section>
+  )
+}
+
+function ReportCard({ days, text }: { days: number | null; text: string }) {
+  const [msg, setMsg] = useState<string | null>(null)
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(text); setMsg('복사했어요. 메신저나 메일에 붙여 넣으세요.') }
+    catch {
+      const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select()
+      let ok = false
+      try { ok = document.execCommand('copy') } catch { /* noop */ }
+      ta.remove(); setMsg(ok ? '복사했어요.' : '복사하지 못했어요. 아래 글을 직접 선택해 복사해 주세요.')
+    }
+  }
+  return (
+    <section className="adm-card adm-report adm-print">
+      <h3>주간 리포트 · {periodLabel(days)}</h3>
+      <p className="adm-take adm-noprint">위쪽에서 고른 기간 기준 한 장 요약이에요. 복사하거나 인쇄(PDF 저장)할 수 있어요.</p>
+      <div className="adm-noprint adm-csv">
+        <button type="button" className="adm-btn" onClick={copy}>요약 복사</button>
+        <button type="button" className="adm-btn ghost" onClick={() => window.print()}>인쇄 / PDF</button>
+        {msg && <p role="status" className="adm-ok">{msg}</p>}
+      </div>
+      <pre className="adm-pre">{text}</pre>
+    </section>
+  )
+}
+
 /* ───────── CSV ───────── */
 function CsvBox() {
   const [type, setType] = useState<'simple' | 'deep' | 'all'>('all')
@@ -178,7 +267,7 @@ function CsvBox() {
   }
   return (
     <div className="adm-csv">
-      <label>설문<select value={type} onChange={(e) => setType(e.target.value as typeof type)}><option value="all">전체</option><option value="simple">간편</option><option value="deep">심화</option></select></label>
+      <label>설문<select value={type} onChange={(e) => setType(e.target.value as typeof type)}><option value="all">전체</option><option value="simple">맛보기</option><option value="deep">심화</option></select></label>
       <label>기간<select value={days} onChange={(e) => setDays(e.target.value as typeof days)}><option value="7">최근 7일</option><option value="30">최근 30일</option><option value="all">전체</option></select></label>
       <button type="button" className="adm-btn" onClick={download} disabled={busy}>{busy ? '만드는 중…' : 'CSV 내려받기'}</button>
       {msg && <p role="status" className={msg.ok ? 'adm-ok' : 'adm-err'}>{msg.t}</p>}
@@ -212,12 +301,14 @@ function Dashboard() {
   const ftype = sf === 'deep' ? 'deep' : 'simple'
   const order = useMemo(() => QUESTIONS.map((q) => q.id).filter((id) => (ftype === 'simple' ? SIMPLE_IDS.includes(id) : true)), [ftype])
   const fun = useMemo(() => funnel(ev, order, ftype), [ev, order, ftype])
+  const an = useMemo(() => analyze({ ...INSIGHT_CTX, events, responses }, days), [events, responses, days])
+  const report = useMemo(() => buildReport({ days, events: an.events, responses: an.responses, insights: an.insights, suggestions: an.suggestions }), [an, days])
   const respN = rs.filter((r) => sf === 'all' || r.survey_type === sf).length
   const none = !loading && events.length === 0 && responses.length === 0
 
   return (
     <main className="adm wrap">
-      <header className="adm-head">
+      <header className="adm-head adm-noprint">
         <div>
           <h1>사용 현황 대시보드</h1>
           <p className="adm-take">이름·이메일 없이 가명 세션으로만 모은 숫자예요. 관리자만 볼 수 있어요.</p>
@@ -227,25 +318,40 @@ function Dashboard() {
             {([[7, '7일'], [30, '30일'], [null, '전체']] as [number | null, string][]).map(([d, t]) => <button key={t} type="button" aria-pressed={days === d} onClick={() => setDays(d)}>{t}</button>)}
           </div>
           <div role="group" aria-label="설문 종류">
-            {([['all', '전체'], ['simple', '간편'], ['deep', '심화']] as [SurveyFilter, string][]).map(([k, t]) => <button key={k} type="button" aria-pressed={sf === k} onClick={() => setSf(k)}>{t}</button>)}
+            {([['all', '전체'], ['simple', '맛보기'], ['deep', '심화']] as [SurveyFilter, string][]).map(([k, t]) => <button key={k} type="button" aria-pressed={sf === k} onClick={() => setSf(k)}>{t}</button>)}
           </div>
           <button type="button" className="adm-btn ghost" onClick={reload} disabled={loading}>새로고침</button>
         </div>
       </header>
 
       {loading && <p className="adm-empty" role="status">불러오는 중이에요…</p>}
-      {error && <p className="adm-err" role="alert">데이터를 모두 읽지 못했어요: {error}. 아직 Supabase 에 표(SQL)가 없거나 권한이 없는 경우예요.</p>}
-      {none && !error && <Empty>아직 기록된 데이터가 없어요. 사이트가 쓰이기 시작하면 여기에 쌓여요.</Empty>}
+      {error && <p className="adm-err" role="alert">데이터를 모두 읽지 못했어요: {error}</p>}
+      {(none || error) && !loading && <FlowPanel error={error} events={events} responses={responses} />}
 
-      <div className="adm-cards">
+      <div className="adm-cards adm-noprint">
         <div><small>방문 세션</small><b>{sum.visitors.toLocaleString()}</b></div>
         <div><small>설문 시작</small><b>{sum.surveyStarts.toLocaleString()}</b></div>
-        <div><small>간편 완료율</small><b>{fmtPct(sum.completeRate.simple)}</b></div>
+        <div><small>맛보기 완료율</small><b>{fmtPct(sum.completeRate.simple)}</b></div>
         <div><small>심화 완료율</small><b>{fmtPct(sum.completeRate.deep)}</b></div>
         <div><small>평균 체류</small><b>{fmtDur(sum.avgStayMs)}</b></div>
       </div>
 
-      <div className="adm-grid">
+      {!none && (
+        <div className="adm-grid adm-noprint">
+          <section className="adm-card">
+            <h3>자동 인사이트</h3>
+            <p className="adm-take">{periodLabel(days)} 데이터에서 규칙으로 뽑은 문장이에요. 5명 미만 집단은 숨기고, 표본이 30 미만이면 표시해요.</p>
+            {an.insights.length ? <InsightList items={an.insights} /> : <Empty>아직 보여 줄 만큼 모이지 않았어요. 기간을 늘려 보세요.</Empty>}
+          </section>
+          <section className="adm-card">
+            <h3>개선 제안</h3>
+            <p className="adm-take">인사이트에서 나온 할 일이에요. 위에서부터 먼저 하면 좋아요.</p>
+            {an.suggestions.length ? <SuggestionList items={an.suggestions} /> : <Empty>아직 제안할 만한 신호가 없어요.</Empty>}
+          </section>
+        </div>
+      )}
+
+      <div className="adm-grid adm-noprint">
         <Card title="일별 추이" take="하루에 몇 세션이 방문하고 설문을 시작했는지예요." table={dl.map((d) => [d.day, `방문 ${d.visitors} · 시작 ${d.starts}`])}>
           {dl.length ? <Line data={dl} /> : <Empty />}
         </Card>
@@ -255,7 +361,7 @@ function Dashboard() {
         <Card title="버튼 클릭 순위" take="많이 눌린 버튼 상위 10개예요." table={clicks.map((c) => [CLICK_LABEL[c.name] ?? c.name, `${c.value}회`])}>
           {clicks.length ? <HBars rows={clicks} fmt={(n) => `${n}회`} label={nameOf(CLICK_LABEL)} /> : <Empty />}
         </Card>
-        <Card title={`${ftype === 'simple' ? '간편' : '심화'} 설문 문항별 이탈`} take="막대 뒤쪽 분홍이 그 문항에서 그만둔 세션이에요. 숫자는 답함 / 이탈." table={fun.map((r) => [`${r.id} ${shortTitle(r.id)}`, `답함 ${r.answered} · 이탈 ${r.abandoned}`])}>
+        <Card title={`${ftype === 'simple' ? '맛보기' : '심화'} 설문 문항별 이탈`} take="막대 뒤쪽 분홍이 그 문항에서 그만둔 세션이에요. 숫자는 답함 / 이탈." table={fun.map((r) => [`${r.id} ${shortTitle(r.id)}`, `답함 ${r.answered} · 이탈 ${r.abandoned}`])}>
           {fun.length ? <Funnel rows={fun} title={shortTitle} /> : <Empty />}
         </Card>
         {DIST.map(([qid, name]) => {
@@ -270,12 +376,14 @@ function Dashboard() {
         })}
       </div>
 
-      <p className="adm-note">
+      <p className="adm-note adm-noprint">
         ※ 브라우저에서 계산하는 화면이라 이벤트와 설문 응답 각각 최근 {MAX_ROWS.toLocaleString()}행까지만 읽어요{truncated ? ' (이번에 한도에 닿아 오래된 기록은 빠졌어요)' : ''}.
         평균 체류는 세션의 첫 기록~마지막 기록 간격이에요(기록이 2개 이상인 세션만). 많아지면 SQL 집계로 옮겨야 해요.
       </p>
 
-      <section className="adm-card">
+      {!none && <ReportCard days={days} text={report} />}
+
+      <section className="adm-card adm-noprint">
         <h3>설문 원자료 CSV</h3>
         <p className="adm-take">이름·이메일 없이 가명 ID와 구간 값만 들어 있어요. 내려받은 기록은 로그로 남아요.</p>
         <CsvBox />
