@@ -8,9 +8,10 @@ import { evaluate } from '../lib/eligibility'
 import type { Status } from '../lib/eligibility'
 import { POLICIES, policyById } from '../data/policies'
 import { QUESTIONS } from '../data/survey'
+import { DocBox } from './DocBox'
 
-// 로그인 후 마이페이지. 탭: 요약 / 내 결과 / 설문 기록 / 내 정보(별명 등 수정)
-type Tab = 'sum' | 'result' | 'history' | 'info'
+// 로그인 후 마이페이지. 탭: 요약 / 내 결과 / 서류함 / 설문 기록 / 내 정보(별명 등 수정)
+type Tab = 'sum' | 'result' | 'docs' | 'history' | 'info'
 interface Row { id: string; survey_type: 'simple' | 'deep'; created_at: string }
 
 const ST: Record<Status, { t: string; g: string }> = { ok: { t: '신청할 수 있어요', g: '✓' }, maybe: { t: '확인해 보면 좋아요', g: '△' }, no: { t: '지금은 어려워요', g: '✕' } }
@@ -41,6 +42,7 @@ export function MyPage() {
   if (!user?.profile.nickname) todo.push({ t: '별명을 정해 보세요', act: () => setTab('info') })
   if (!hasSaved) todo.push({ t: '맛보기 설문으로 받을 수 있는 지원 확인하기', act: () => openModal('diagnose') })
   else if (!deepDone) todo.push({ t: '심화 설문으로 결과를 더 정확하게 만들기', act: () => { closeModal(); openDeep() } })
+  todo.push({ t: '신청에 필요한 서류를 서류함에 모아 두기', act: () => setTab('docs') })
   if (hasSaved) todo.push({ t: '결과 자세히 보고 신청 순서 확인하기', act: () => { closeModal(); nav('/result') } })
 
   const remove = async (id: string) => {
@@ -75,13 +77,13 @@ export function MyPage() {
       </div>
 
       <ol className="mp-steps" aria-label="설문 진행 단계">
-        <li className={hasSaved ? 'done' : 'now'}><i>{hasSaved ? '✓' : '1'}</i>맛보기 설문</li>
-        <li className={deepDone ? 'done' : hasSaved ? 'now' : ''}><i>{deepDone ? '✓' : '2'}</i>심화 설문</li>
-        <li className={deepDone ? 'now' : ''}><i>3</i>신청 준비</li>
+        <li className={hasSaved ? 'done' : 'now'}><button type="button" onClick={() => (hasSaved ? setTab('result') : openModal('diagnose'))}><i>{hasSaved ? '✓' : '1'}</i>맛보기 설문</button></li>
+        <li className={deepDone ? 'done' : hasSaved ? 'now' : ''}><button type="button" onClick={() => { closeModal(); openDeep() }}><i>{deepDone ? '✓' : '2'}</i>심화 설문</button></li>
+        <li className={deepDone ? 'now' : ''}><button type="button" onClick={() => setTab('docs')}><i>3</i>신청 준비</button></li>
       </ol>
 
       <div className="mp-tabs" role="tablist">
-        {([['sum', '요약'], ['result', '내 결과'], ['history', '설문 기록'], ['info', '내 정보']] as [Tab, string][]).map(([k, t]) => (
+        {([['sum', '요약'], ['result', '내 결과'], ['docs', '서류함'], ['history', '설문 기록'], ['info', '내 정보']] as [Tab, string][]).map(([k, t]) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{t}</button>
         ))}
       </div>
@@ -136,6 +138,8 @@ export function MyPage() {
           )}
         </div>
       )}
+
+      {tab === 'docs' && <DocBox uid={user.id} verdict={Object.fromEntries(verdicts.map((v) => [v.id, v.status]))} interests={user.profile.interests} />}
 
       {tab === 'history' && (
         <div className="mp-body">

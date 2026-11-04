@@ -1555,3 +1555,19 @@ body { background: var(--paper); }
   radial-gradient(circle at 92% 10%, rgba(190, 215, 242, 0.55), transparent 40%),
   radial-gradient(circle at 16% 92%, rgba(190, 232, 214, 0.42), transparent 38%),
   linear-gradient(180deg, var(--paper), #eef3f8); }
+
+/* 마이페이지: 단계 버튼, 서류함 */
+.mp-steps li { padding: 0; } .mp-steps li button { width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.mp-steps li button:hover { background: rgba(0, 0, 0, 0.04); }
+.mp-folders { display: grid; gap: 8px; margin: 14px 0; }
+.mp-folder { border-radius: 14px; background: var(--white); box-shadow: inset 0 0 0 1.5px var(--line); }
+.mp-folder summary { display: flex; align-items: center; gap: 8px; padding: 12px 14px; cursor: pointer; list-style: none; font-size: 15px; }
+.mp-folder summary::-webkit-details-marker { display: none; }
+.mp-folder summary b { flex: 1; font-weight: 700; } .mp-folder summary small { color: var(--ink-2); font-size: 13px; }
+.mp-folder-in { padding: 0 14px 14px; display: grid; gap: 10px; }
+.mp-files { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.mp-files li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1.5px solid var(--line); font-size: 14px; }
+.mp-files li > .link-btn:first-child { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.mp-files small { color: var(--ink-2); font-size: 12px; white-space: nowrap; }
+.mp-errs { list-style: none; margin: 0 0 10px; padding: 0; font-size: 13px; color: #b3402a; }
+@media (max-width: 520px) { .mp-steps li button { padding: 8px; gap: 6px; } .mp-tabs button { font-size: 13px; } }
