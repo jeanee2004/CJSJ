@@ -519,8 +519,8 @@ export default function Home() {
         <div className="wrap">
           <div className="sec-head">
             <div className="eyebrow"><i>03</i><span className="label">숫자로 보기</span></div>
-            <p>세종 청년들은 어떤 집에 살고, 왜 지원을 놓칠까요? 출처가 확인된 숫자와 아직 확인 중인 숫자를 구분해서 보여드려요.</p>
-            <Lines id="data-t" className="display" lines={[<span className="l" key="1">숫자로 보면</span>, <span key="2">이유가 <span className="em">보여요</span></span>]} />
+            <p>세종 청년은 어떤 집에 살까요? 월세 사는 분이 많아서, 월세·이자 지원까지 함께 알아보는 게 좋아요.</p>
+            <Lines id="data-t" className="display" lines={[<span className="l" key="1">숫자로 보는</span>, <span key="2">세종 청년의 <span className="em">집</span></span>]} />
           </div>
           <LazyData />
         </div>

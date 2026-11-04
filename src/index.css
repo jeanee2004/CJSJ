@@ -1417,18 +1417,7 @@ body { background: var(--paper); }
 .loader { background: radial-gradient(60% 50% at 15% 10%, rgba(243, 205, 216, 0.6), transparent 70%), radial-gradient(55% 50% at 90% 95%, rgba(183, 215, 238, 0.55), transparent 70%), var(--paper); }
 
 /* ── 섹션 헤더: 번호 + 라벨 / 제목 / 설명, 모든 섹션 동일 ── */
-.sec-head { gap: 12px; margin-bottom: clamp(32px, 4vw, 52px); }
-.sec-head .eyebrow { gap: 12px; }
-.sec-head .eyebrow i { padding: 0; border-radius: 0; background: none; color: var(--sage-deep); font-family: var(--f-num); font-size: 14px; font-weight: 800; letter-spacing: 0; display: inline-flex; align-items: center; gap: 12px; }
-.sec-head .eyebrow i::after { content: ''; width: 28px; height: 1px; background: currentColor; opacity: 0.6; }
-.dark .sec-head .eyebrow i { background: none; color: var(--accent); }
-.sec-head .eyebrow .label { font-size: 13px; font-weight: 800; letter-spacing: 0.04em; color: var(--ink-2); }
-.dark .sec-head .eyebrow .label { color: rgba(255, 255, 255, 0.78); }
-.sec-head h2 { font-size: clamp(26px, 3.4vw, 44px); line-height: 1.2; letter-spacing: -0.035em; }
-.sec-head .display .l { font-weight: 500; }
-.sec-head h2 .em { background: none; }
-.sec-head p { font-size: 16.5px; color: var(--ink-2); }
-.dark .sec-head p { color: rgba(255, 255, 255, 0.8); }
+/* 섹션 머리말은 정비 전 모양(번호 알약 + 굵은 큰 제목)으로 되돌림 */
 .em { color: var(--sage-deep); }
 .dark .em, .cmp-wrap .em { color: var(--accent); }
 
@@ -1559,3 +1548,10 @@ body { background: var(--paper); }
 .steps, .idx, .choices, .kpis, .gloss, .verdicts { contain: layout style; }
 @media (hover: hover) { .fullmenu a:hover, .fullmenu > button:not(.circle):hover { color: var(--accent); } }
 @media (max-width: 700px) { .trust-list li + li::before { display: none; } }
+
+/* 이용 방법: 정비 전의 은은한 분홍·하늘·민트 빛 번짐(정적 그라데이션, 흐림 필터 없음) */
+#how { background:
+  radial-gradient(circle at 10% 14%, rgba(244, 190, 210, 0.5), transparent 42%),
+  radial-gradient(circle at 92% 10%, rgba(190, 215, 242, 0.55), transparent 40%),
+  radial-gradient(circle at 16% 92%, rgba(190, 232, 214, 0.42), transparent 38%),
+  linear-gradient(180deg, var(--paper), #eef3f8); }

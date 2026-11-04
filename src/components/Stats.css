@@ -1,0 +1,11 @@
+/* 홈 '숫자로 보기' 전용 스타일. index.css 보다 특이도를 높여 덮어쓴다. */
+.sec#data .chart-card h3 { margin: 0 0 18px; max-width: 20em; }
+.sec#data .chart-card .chart-box { height: 260px; }
+.sec#data .stat-easy { margin: 14px 0 0; max-width: 34em; font-size: 16px; line-height: 1.6; color: rgba(255, 248, 250, 0.82); }
+.sec#data .stat-src { margin: 12px 0 0; font-size: 12px; line-height: 1.55; color: rgba(255, 248, 250, 0.5); overflow-wrap: anywhere; }
+.sec#data .stat-src a { color: inherit; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(255, 248, 250, 0.3); }
+.sec#data .stat-src a:hover { text-decoration-color: currentColor; }
+.sec#data .kpis + .stat-src { margin-bottom: 36px; }
+.sec#data .chart-card .pie-legend { margin-top: 10px; font-size: 14px; }
+.sec#data .stat-cta { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; padding: 44px 0 8px; }
+.sec#data .stat-cta p { margin: 0; font-size: clamp(18px, 2.2vw, 24px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.4; }

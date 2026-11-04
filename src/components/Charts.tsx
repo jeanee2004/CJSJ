@@ -1,73 +1,61 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { Bar, BarChart, Cell, LabelList, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { EXAMPLE_COUPLE, HOUSING_META, HOUSING_TYPE, INCOME_LIMITS, INCOME_META, OUTFLOW, OUTFLOW_META, SALE_FALLBACK_YM, SALE_META, SALE_VS_JEONSE, YOUTH_KPIS } from '../data/stats'
-import type { ChartMeta } from '../data/stats'
-import { CountUp, Reveal, SourceBlock, VBadge } from '../ui'
-import { monthsAgo, useApi, ymLabel } from '../lib/api'
-import type { TradesRes } from '../lib/api'
+import { Bar, BarChart, Cell, LabelList, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { HOUSING_META, HOUSING_TYPE, INCOME_LIMITS, INCOME_META, YOUTH_KPIS } from '../data/stats'
+import { SOURCES } from '../data/sources'
+import { Btn, CountUp, Reveal } from '../ui'
+import { useStore } from '../store'
+import './Stats.css'
 
 // 다크 배경용 팔레트. 색만으로 구분하지 않도록 값 라벨·범례·표를 함께 둔다.
 const C = { lime: '#e8a3bb', mint: '#9fcfb8', aqua: '#86b3d6', peri: '#b0b4d6', coral: '#e8926f', grey: '#8b95a7', text: '#f6eef1' }
 const DIM = 0.28
 
-function Frame({ meta, children, table, legend, busy }: { meta: ChartMeta; children: ReactNode; table: { k: string; v: string }[]; legend?: string; busy?: boolean }) {
+/** 출처는 알약 없이 작은 글씨 한 줄. 이름은 「 앞까지만 쓰고, 2차 자료·확인 중이면 짧게 병기한다. */
+function SourceLine({ ids, note }: { ids: string[]; note?: string }) {
+  const items = ids.map((id) => SOURCES[id]).filter(Boolean)
   return (
-    <div className="chart-card" aria-busy={busy || undefined}>
-      <VBadge v={meta.verified} />
-      <h3>{meta.title}</h3>
-      <p className="take">{meta.takeaway}</p>
-      <div className="chart-box" role="img" aria-label={`${meta.title}. ${table.map((t) => `${t.k} ${t.v}`).join(', ')}`}>
-        {children}
-      </div>
-      {legend && <p className="chart-note">{legend}</p>}
-      {busy && <p className="chart-note">최신 데이터를 불러오는 중이에요…</p>}
-      {meta.note && <p className="chart-note">※ {meta.note}</p>}
-      <details className="table-alt">
-        <summary>표로 보기</summary>
-        <table><tbody>{table.map((t) => <tr key={t.k}><th scope="row">{t.k}</th><td>{t.v}</td></tr>)}</tbody></table>
-      </details>
-      <SourceBlock ids={meta.sourceIds} />
-    </div>
+    <p className="stat-src">
+      출처:{' '}
+      {items.map((s, i) => {
+        const name = s.name.split('「')[0].trim()
+        const tag = s.verified === 'secondary' ? ' (2차 자료)' : s.verified === 'unverified' ? ' (확인 중)' : ''
+        return (
+          <span key={s.id}>
+            {i > 0 && ', '}
+            {s.url ? <a href={s.url} target="_blank" rel="noreferrer noopener">{name}</a> : name}
+            {' '}· {s.asOf} 기준{tag}
+          </span>
+        )
+      })}
+      {note && <> · {note}</>}
+    </p>
   )
 }
 
-/**
- * 세종 아파트 매매 vs 전세. /api/trades 로 2개월 전(신고 기한 30일이 지난 가장 최근 달)을 불러오고,
- * 실패하면 stats.ts 폴백값을 보여준다.
- */
-function useSaleVsJeonse(): { data: { name: string; value: number }[]; meta: ChartMeta; state: 'loading' | 'ok' | 'error' } {
-  const ym = monthsAgo(2)
-  const sale = useApi<TradesRes>(`/api/trades?type=apt-trade&dealYmd=${ym}&summary=1`)
-  const rent = useApi<TradesRes>(`/api/trades?type=apt-rent&dealYmd=${ym}&summary=1`)
-  if (sale.state === 'ok' && rent.state === 'ok') {
-    const s = sale.data.summary.sale, j = rent.data.summary.jeonse
-    const ratio = s > 0 ? j / s : 0
-    const title = s === 0 && j === 0 ? '세종 아파트 매매·전세 거래가 아직 없어요'
-      : ratio >= 1.1 ? `세종 아파트는 전세 거래가 매매의 ${ratio.toFixed(1)}배예요`
-      : ratio <= 0.9 ? `세종 아파트는 매매 거래가 전세보다 많아요`
-      : '세종 아파트 매매와 전세 거래가 비슷해요'
-    return {
-      state: 'ok',
-      data: [{ name: '매매', value: s }, { name: '전세', value: j }],
-      meta: { ...SALE_META, title, note: `국토부 실거래가, ${ymLabel(ym)} 계약 기준 (${new Date(sale.data.fetchedAt).toLocaleDateString('ko-KR')} 조회). 매매는 해제 ${sale.data.summary.saleCancelled}건 제외, 전세는 월세 0원 계약만 셌어요. 신고 기한이 남아 있어 조금 늘어날 수 있어요.` },
-    }
-  }
-  const failed = sale.state === 'error' || rent.state === 'error'
-  return {
-    state: failed ? 'error' : 'loading',
-    data: SALE_VS_JEONSE,
-    meta: { ...SALE_META, note: `${failed ? '최신 데이터를 불러오지 못했어요. ' : ''}국토부 실거래가, ${ymLabel(SALE_FALLBACK_YM)} 계약 기준 (2026.11.4 조회) 값이에요.` },
-  }
+/** 한 줄 결론(큰 글씨) → 그림 → 쉬운 설명 → 작은 출처 */
+function Frame({ title, easy, children, table, legend, ids, srcNote }: { title: string; easy: string; children: ReactNode; table: { k: string; v: string }[]; legend?: ReactNode; ids: string[]; srcNote?: string }) {
+  return (
+    <div className="chart-card">
+      <h3>{title}</h3>
+      <div className="chart-box" role="img" aria-label={`${title}. ${table.map((t) => `${t.k} ${t.v}`).join(', ')}`}>
+        {children}
+      </div>
+      {legend}
+      <p className="stat-easy">{easy}</p>
+      <SourceLine ids={ids} note={srcNote} />
+    </div>
+  )
 }
 
 const tipStyle = { background: '#f3efe7', color: '#0b1220', border: 0, borderRadius: 12, fontSize: 13, fontWeight: 600 }
 
 export function DataSection() {
+  const { openModal } = useStore()
   const [pie, setPie] = useState<number | null>(null)
   const [bar, setBar] = useState<number | null>(null)
   const PIE = [C.lime, C.mint, C.aqua, C.grey]
-  const live = useSaleVsJeonse()
+  const kpiSrc = SOURCES[YOUTH_KPIS[0].sourceId]
 
   return (
     <>
@@ -86,11 +74,22 @@ export function DataSection() {
           )
         })}
       </div>
-      <p className="chart-note" style={{ marginBottom: 32 }}>세종시 「2025 청년통계」(2024.12 기준) 보도 인용 · <VBadge v="secondary" /></p>
+      <SourceLine ids={[kpiSrc.id]} note="세종시 2025 청년통계(2024.12 기준 수치) 인용" />
 
       <div className="charts">
         <Reveal>
-          <Frame meta={HOUSING_META} table={HOUSING_TYPE.map((h) => ({ k: h.name, v: `${h.value}%` }))}>
+          <Frame
+            title={HOUSING_META.title}
+            easy="전세 대출만 알아보면 월세 사는 청년이 받을 수 있는 지원을 놓치기 쉬워요."
+            ids={HOUSING_META.sourceIds}
+            srcNote="기타 5.3%는 100%에서 나머지를 뺀 값"
+            table={HOUSING_TYPE.map((h) => ({ k: h.name, v: `${h.value}%` }))}
+            legend={
+              <ul className="pie-legend">
+                {HOUSING_TYPE.map((h, i) => <li key={h.name}><i style={{ background: PIE[i] }} />{h.name} <b>{h.value}%</b></li>)}
+              </ul>
+            }
+          >
             <ResponsiveContainer>
               <PieChart>
                 <Pie data={HOUSING_TYPE} dataKey="value" nameKey="name" innerRadius={62} outerRadius={104} paddingAngle={3} stroke="none" isAnimationActive={false}
@@ -101,19 +100,21 @@ export function DataSection() {
               </PieChart>
             </ResponsiveContainer>
           </Frame>
-          <ul className="pie-legend">
-            {HOUSING_TYPE.map((h, i) => <li key={h.name}><i style={{ background: PIE[i] }} />{h.name} <b>{h.value}%</b></li>)}
-          </ul>
         </Reveal>
 
         <Reveal delay={0.08}>
-          <Frame meta={INCOME_META} legend="분홍 = 세종시 제도 · 하늘 = 나라(주택도시기금) 제도 · 단위 만원/연" table={[...INCOME_LIMITS.map((i) => ({ k: i.name, v: `${i.value.toLocaleString()}만원` })), { k: '예시 맞벌이 부부', v: `${EXAMPLE_COUPLE.toLocaleString()}만원` }]}>
+          <Frame
+            title={INCOME_META.title}
+            easy="같은 소득이어도 어떤 제도는 받고 어떤 제도는 못 받을 수 있어요. 신혼은 부부 합산 소득이에요."
+            ids={INCOME_META.sourceIds}
+            table={INCOME_LIMITS.map((i) => ({ k: i.name, v: `연 ${i.value.toLocaleString()}만원 이하` }))}
+            legend={<ul className="pie-legend"><li><i style={{ background: C.lime }} />세종시 제도</li><li><i style={{ background: C.aqua }} />나라(주택도시기금) 제도</li><li>단위: 연소득 만원</li></ul>}
+          >
             <ResponsiveContainer>
-              <BarChart data={INCOME_LIMITS} layout="vertical" margin={{ left: 4, right: 52, top: 10, bottom: 4 }} onMouseLeave={() => setBar(null)}>
-                <XAxis type="number" domain={[0, 9500]} hide />
-                <YAxis type="category" dataKey="name" width={124} tick={{ fontSize: 12, fill: C.text }} axisLine={false} tickLine={false} />
-                <Tooltip cursor={false} contentStyle={tipStyle} formatter={(v) => `${Number(v).toLocaleString()}만원`} />
-                <ReferenceLine x={EXAMPLE_COUPLE} stroke={C.coral} strokeDasharray="4 3" label={{ value: '예시 8,500', position: 'insideTopRight', fontSize: 11, fill: C.coral }} />
+              <BarChart data={INCOME_LIMITS} layout="vertical" margin={{ left: 4, right: 60, top: 10, bottom: 4 }} onMouseLeave={() => setBar(null)}>
+                <XAxis type="number" domain={[0, 9000]} hide />
+                <YAxis type="category" dataKey="name" width={118} tick={{ fontSize: 12, fill: C.text }} axisLine={false} tickLine={false} />
+                <Tooltip cursor={false} contentStyle={tipStyle} formatter={(v) => `${Number(v).toLocaleString()}만원 이하`} />
                 <Bar dataKey="value" radius={4} isAnimationActive={false} onMouseEnter={(_, i) => setBar(i)}>
                   {INCOME_LIMITS.map((d, i) => <Cell key={i} fill={d.kind === 'sejong' ? C.lime : C.aqua} fillOpacity={bar === null || bar === i ? 1 : DIM} />)}
                   <LabelList dataKey="value" position="right" formatter={(v) => Number(v).toLocaleString()} fontSize={12} fill={C.text} />
@@ -122,36 +123,11 @@ export function DataSection() {
             </ResponsiveContainer>
           </Frame>
         </Reveal>
+      </div>
 
-        <Reveal>
-          <Frame meta={live.meta} busy={live.state === 'loading'} table={live.data.map((s) => ({ k: s.name, v: `${s.value.toLocaleString()}건` }))}>
-            <ResponsiveContainer>
-              <BarChart data={live.data} margin={{ top: 24 }}>
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: C.text, fontSize: 13 }} />
-                <YAxis hide />
-                <Tooltip cursor={false} contentStyle={tipStyle} formatter={(v) => `${v}건`} />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false}>
-                  <Cell fill={C.lime} /><Cell fill={C.mint} />
-                  <LabelList dataKey="value" position="top" formatter={(v) => `${v}건`} fill={C.text} fontSize={13} />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </Frame>
-        </Reveal>
-
-        <Reveal delay={0.08}>
-          <Frame meta={OUTFLOW_META} table={OUTFLOW.map((o) => ({ k: o.name, v: `−${o.value}명` }))}>
-            <ResponsiveContainer>
-              <BarChart data={OUTFLOW} layout="vertical" margin={{ left: 4, right: 60 }}>
-                <XAxis type="number" domain={[0, 600]} hide />
-                <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 12, fill: C.text }} axisLine={false} tickLine={false} />
-                <Bar dataKey="value" fill={C.coral} radius={4} isAnimationActive={false} barSize={56}>
-                  <LabelList dataKey="value" position="right" formatter={(v) => `−${v}명`} fill={C.text} fontSize={14} />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </Frame>
-        </Reveal>
+      <div className="stat-cta">
+        <p>그럼 나는 어디에 해당할까요? 몇 가지만 답하면 바로 알려드려요.</p>
+        <Btn onClick={() => openModal('survey')} variant="light" track="data_start_survey">내 상황 확인해 보기</Btn>
       </div>
     </>
   )

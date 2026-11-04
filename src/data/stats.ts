@@ -17,14 +17,14 @@ export const HOUSING_TYPE = [
 ]
 
 export const HOUSING_META: ChartMeta = {
-  title: '세종 청년 10명 중 4명은 월세에 살아요',
-  takeaway: '전세만 알아보면 놓치는 지원이 많아요. 월세 지원도 함께 살펴보세요.',
+  title: '전세보다 월세로 사는 청년이 2배 많아요',
+  takeaway: '전세 대출만 알아보면 월세 사는 청년이 받을 수 있는 지원을 놓치기 쉬워요.',
   sourceIds: ['newsis_youth_stat'],
   verified: 'secondary',
   note: '세종시 2025 청년통계(2024.12 기준, 2026.11.4 확인 시 최신판)예요. 기타 5.3%는 100%에서 나머지를 뺀 값이에요.',
 }
 
-// 소득 상한 비교 (만원, 연)
+// 소득 상한 비교 (만원, 연). 화면의 '예시 맞벌이 8,500만원' 기준선은 통계가 아니라 자체 예시라 사용을 중단했다(EXAMPLE_COUPLE는 보관).
 export const INCOME_LIMITS = [
   { name: '세종 이자지원 · 미혼', value: 4500, kind: 'sejong' },
   { name: '청년 버팀목', value: 5000, kind: 'nation' },
@@ -34,13 +34,14 @@ export const INCOME_LIMITS = [
 export const EXAMPLE_COUPLE = 8500
 
 export const INCOME_META: ChartMeta = {
-  title: '맞벌이 부부 합산 8,500만원이면 받을 수 있는 제도가 없어요',
-  takeaway: '소득 상한선 바로 위에 있는 부부는 어디에도 해당되지 않는 "경계선"에 놓이게 돼요.',
+  title: '연소득 기준은 제도마다 달라요',
+  takeaway: '같은 소득이어도 어떤 제도는 받고 어떤 제도는 못 받을 수 있어요.',
   sourceIds: ['newspim_interest', 'myhome_buteemok'],
   verified: 'secondary',
   note: '8,500만원은 청정 세종이 만든 예시 가구(P4)예요. 실제 통계가 아니에요.',
 }
 
+// [화면 사용 중단] 아래 매매 vs 전세 거래 건수·20~24세 순유출 두 통계는 홈 '숫자로 보기'에서 뺐다(주거지원 판단과 거리가 멀거나 미검증). 데이터는 보관.
 // 실거래가 API 폴백값. 화면은 /api/trades 로 최신 달을 불러오고, 실패하면 이 값을 보여준다.
 // PRD 인용값(매매 580 vs 전세 150)은 국토부 실거래가 API로 확인해 보니 맞지 않아 실측값으로 바꿨다.
 // 2026-11-04 조회: 2026년 9월 계약분(신고 기한 10.30 경과). 매매는 해제(cdealType=O) 24건을 뺀 509건(신고 533건), 전세는 월세 0원인 계약만 센 값.
@@ -72,5 +73,5 @@ export const OUTFLOW_META: ChartMeta = {
 export const YOUTH_KPIS = [
   { label: '세종 청년(15~39세)', value: '119,927명', sub: '전체 인구의 30.7%', sourceId: 'newsis_youth_stat' },
   { label: '청년 1인 가구', value: '55.4%', sub: '청년가구 2만 6,757가구', sourceId: 'newsis_youth_stat' },
-  { label: '보증부 월세 거주', value: '42.5%', sub: '자가 30.8% · 전세 21.4%', sourceId: 'newsis_youth_stat' },
+  { label: '보증금 있는 월세 거주', value: '42.5%', sub: '자가 30.8% · 전세 21.4%', sourceId: 'newsis_youth_stat' },
 ]
