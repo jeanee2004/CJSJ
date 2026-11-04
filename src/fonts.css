@@ -1,0 +1,21 @@
+/* 카카오 큰글씨(제목·숫자) + 카카오 작은글씨(본문). 되돌리려면 main.tsx 의 이 파일 import 와 index.html 의 CDN 링크 두 줄을 복원하면 된다. */
+@font-face { font-family: 'Kakao Big'; font-weight: 400; font-display: swap; src: url('/fonts/KakaoBigSans-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Kakao Big'; font-weight: 700; font-display: swap; src: url('/fonts/KakaoBigSans-Bold.woff2') format('woff2'); }
+@font-face { font-family: 'Kakao Big'; font-weight: 800; font-display: swap; src: url('/fonts/KakaoBigSans-ExtraBold.woff2') format('woff2'); }
+@font-face { font-family: 'Kakao Small'; font-weight: 300; font-display: swap; src: url('/fonts/KakaoSmallSans-Light.woff2') format('woff2'); }
+@font-face { font-family: 'Kakao Small'; font-weight: 400; font-display: swap; src: url('/fonts/KakaoSmallSans-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Kakao Small'; font-weight: 700; font-display: swap; src: url('/fonts/KakaoSmallSans-Bold.woff2') format('woff2'); }
+
+:root {
+  --f-kr: 'Kakao Big', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --f-num: 'Kakao Big', 'Apple SD Gothic Neo', sans-serif;
+  --f-body: 'Kakao Small', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --f-pre: 'Kakao Small', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --f-mono: 'Kakao Small', 'Apple SD Gothic Neo', sans-serif;
+}
+/* 큰 제목은 큰글씨, 제목의 얇은 줄은 작은글씨 Light 로 굵기 대비를 유지 */
+#intro .display, #live .display, #policies .display { font-family: var(--f-kr); }
+#intro .display .l, #live .display .l, #policies .display .l, .display .l { font-family: var(--f-body); font-weight: 300; }
+h1, h2, h3 { font-family: var(--f-kr); }
+/* 카카오 서체는 글자 위아래 여백이 커서 제목 줄 마스크(overflow:hidden)에 잘리지 않도록 여유를 준다 */
+.display .row, .hero2 h2 .row { padding-top: 0.12em; padding-bottom: 0.24em; margin-top: -0.12em; margin-bottom: -0.16em; }
