@@ -1432,14 +1432,8 @@ body { background: var(--paper); }
 .em { color: var(--sage-deep); }
 .dark .em, .cmp-wrap .em { color: var(--accent); }
 
-/* ── 이용 방법: 번호 카드 ── */
-.steps { border-top: 0; gap: 16px; }
-.steps > * { display: flex; }
-.steps .step, .steps .step:first-child, .steps .step:last-child { flex: 1; padding: 28px 26px 32px; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); overflow: visible; }
+/* ── 이용 방법: 큰 외곽선 숫자(사용자가 마음에 들어 해서 유지) — hover 흐림만 끈다 ── */
 .steps:hover .step:not(:hover) { opacity: 1; }
-.step .big { font-size: 15px; letter-spacing: 0.02em; color: var(--sage-deep); -webkit-text-stroke: 0; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
-.step:hover .big { color: var(--sage-deep); transform: none; }
-.step h3 { font-size: 20px; }
 
 /* ── 실시간 카드: 평평한 카드 + 위쪽 얇은 분류선 ── */
 .l3d { --tone: #5d7391; min-height: 300px; padding: 22px 22px 0; border-radius: var(--radius); border: 0; border-top: 3px solid var(--tone); background: #fffdfc; box-shadow: none; transform: none !important; }
@@ -1488,7 +1482,6 @@ body { background: var(--paper); }
 .term { background-image: linear-gradient(#f5d6e1, #f5d6e1); }
 
 /* ── 숫자(어두운 섹션) ── */
-.kpi b { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: #f4e4ea; }
 .kpi:hover b { filter: none; }
 .kpis:hover .kpi:not(:hover) { opacity: 1; }
 .chart-card h3 { margin-top: 10px; }
@@ -1565,5 +1558,4 @@ body { background: var(--paper); }
 .kpis:hover .kpi:not(:hover), .steps:hover .step:not(:hover), .verdicts:hover .vd:not(:hover), .about-points:hover li:not(:hover) { opacity: 1; }
 .steps, .idx, .choices, .kpis, .gloss, .verdicts { contain: layout style; }
 @media (hover: hover) { .fullmenu a:hover, .fullmenu > button:not(.circle):hover { color: var(--accent); } }
-.kpi b { font-size: clamp(40px, 5.2vw, 76px); letter-spacing: -0.05em; }
 @media (max-width: 700px) { .trust-list li + li::before { display: none; } }
