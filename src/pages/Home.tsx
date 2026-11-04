@@ -430,9 +430,6 @@ function Policies() {
             </ul>
           </>
         )}
-        <p className="disclaimer">
-          참고용 안내예요. 최종 자격은 각 기관에서 판단해요. <VBadge v="official" /> 표시는 공공 API(정부24·온통청년·복지로)로 받은 세종시 공식 원문이고{benefits.state === 'ok' && ` (${new Date(benefits.data.fetchedAt).toLocaleDateString('ko-KR')} 조회)`}, 원문이 없는 버팀목 대출은 주택도시기금 안내와 보도로 정리했어요. 공고는 자주 바뀌니 신청 전에 원문을 꼭 확인해 주세요.
-        </p>
       </div>
     </section>
   )
