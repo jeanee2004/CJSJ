@@ -115,7 +115,7 @@ export interface PolicyInfo {
   money: string
   who: string
   how: string
-  apply: { name: string; url: string }
+  apply: { name: string; url: string; /** true 면 해당 제도 상세 페이지가 아니라 기관 첫 화면으로 연결된다 */ general?: boolean }
   sourceIds: string[]
   verified: Verified
   caution?: string
@@ -149,7 +149,7 @@ export const POLICIES: PolicyInfo[] = [
     money: '월 최대 20만원 · 평생 1회 · 최대 10개월',
     who: '세종 거주 19~39세 무주택 1인 가구. 보증금 1억 이하, 월세 60만원 이하, 85㎡ 이하. 소득은 기준중위소득 150% 이하(1인 월 384만원), 재산 1.22억 이하',
     how: '세종 일자리 종합 플랫폼 온라인 신청 (2026년은 3.3~3.5 사흘만 접수. 보도에 "상반기" 모집으로 나와 하반기 재모집은 공고에서 확인)',
-    apply: PORTALS.sejong,
+    apply: { ...PORTALS.sejong, general: true },
     sourceIds: ['viva_rent'], // 2026.11 재확인: 접수 3.3~3.5, 기준중위소득 150%(월 384만원)·재산 1.22억 일치
     verified: 'secondary',
     caution: '1년에 사흘만 접수해요. 놓치면 다음 해를 기다려야 해서, 접수 기간을 꼭 챙겨 주세요.',
@@ -164,7 +164,7 @@ export const POLICIES: PolicyInfo[] = [
     money: '월 최대 20만원 · 최대 24개월 (총 480만원) · 2026년 신규 접수는 5.29 마감',
     who: '만 19~34세 무주택, 부모와 따로 거주. 청년가구 중위소득 60% 이하·재산 1.22억 이하, 원가구 중위소득 100% 이하·재산 4.7억 이하',
     how: '복지로 또는 행정복지센터 (2026년 신규 접수는 3.30~5.29 16시에 마감. 다음 접수는 국토부·복지로 공고에서 확인)',
-    apply: PORTALS.bokjiro,
+    apply: { ...PORTALS.bokjiro, general: true },
     sourceIds: ['studygov_rent', 'vegan_rent'],
     verified: 'secondary',
     caution: '세종시 임대료 지원과 같은 기간에는 둘 중 하나만 받을 수 있어요. 2026년 신규 접수는 끝났고, 2027년에는 소득 기준 완화 등 확대안이 예산안 단계라 확정 공고를 기다려야 해요. 이미 선정된 사람은 계속 지급받아요.',
@@ -242,7 +242,7 @@ const MORE: PolicyInfo[] = [
     money: '금리 연 2.0~4.5%(조건 충족 시 최고) · 월 2만~100만원 납입 · 소득공제',
     who: '만 19~34세 무주택, 연소득 5,000만원 이하 (병역 이행 기간만큼 나이에서 빼 줘요)',
     how: '취급 은행 (우리·국민·신한·하나·농협 등) 앱·창구',
-    apply: { name: '청약홈', url: 'https://www.applyhome.co.kr' }, sourceIds: ['korea_dream'], verified: 'secondary',
+    apply: { name: '청약홈', url: 'https://www.applyhome.co.kr', general: true }, sourceIds: ['korea_dream'], verified: 'secondary',
     caution: '전월세 지원이 아니라 내 집 마련 준비용이에요. 4.5%는 최고 금리라 가입 후 무주택을 유지하는 등 조건이 붙어요.',
     checklist: ['신분증', '소득 확인 서류(소득금액증명 등)', '무주택 확인(주택소유확인 서류)'],
   },
@@ -253,7 +253,7 @@ const MORE: PolicyInfo[] = [
     money: '최저 연 2.2%부터(소득·만기별 차등) · 최대 40년 만기',
     who: '만 19~34세 무주택, 연소득 미혼 7,000만원 / 신혼 부부합산 1억원 이하, 청약통장 1년 이상 가입·1,000만원 이상 납입 후 청약 당첨',
     how: '기금e든든 / 취급 은행',
-    apply: PORTALS.nhuf, sourceIds: ['korea_dream'], verified: 'secondary',
+    apply: { ...PORTALS.nhuf, general: true }, sourceIds: ['korea_dream'], verified: 'secondary',
     caution: '집을 사는 계획이 있을 때만 해당돼요. 지금 전월세를 구한다면 참고만 하세요.',
     checklist: ['청약통장 가입일·납입 내역', '소득금액증명', '분양 계약서'],
   },
@@ -338,7 +338,7 @@ const MORE: PolicyInfo[] = [
     money: '월세 연 1,000만원까지 대상 · 총급여 5,500만원 이하 17%, 8,000만원 이하 15% (최대 약 170만원)',
     who: '총급여 8,000만원 이하 근로소득자, 무주택 세대주(또는 세대원), 국민주택규모 이하 또는 기준시가 4억원 이하 주택, 계약서 주소와 주민등록 주소가 같아야 함',
     how: '연말정산(회사) 또는 5월 종합소득세 신고 / 홈택스 경정청구',
-    apply: { name: '국세청 홈택스', url: 'https://www.hometax.go.kr' }, sourceIds: ['tax_rent', 'mtn_tax_2027'], verified: 'secondary',
+    apply: { name: '국세청 홈택스', url: 'https://www.hometax.go.kr', general: true }, sourceIds: ['tax_rent', 'mtn_tax_2027'], verified: 'secondary',
     caution: '정부 지원금이 아니라 세금 환급이에요. 근거는 조세특례제한법 시행령 제95조로 안내되고, 국세청 원문 확인을 권해요. 2026.8 세제개편안에 공제 대상 월세 한도를 1,200만원으로 올려 2027.1.1부터 적용하는 안이 있어요(국회 통과는 확인 못 함). 지금 적용은 1,000만원이에요.',
     checklist: ['임대차계약서 사본', '월세 이체 내역(계좌이체 영수증)', '주민등록등본', '임대인 인적사항'],
   },
@@ -349,7 +349,7 @@ const MORE: PolicyInfo[] = [
     money: '기준임대료 안에서 실제 임차료 지원 (가구원수·지역에 따라 달라요)',
     who: '소득인정액이 기준중위소득 48% 이하(2026 1인 월 약 123만원). 부양의무자 소득·재산은 보지 않음',
     how: '복지로 또는 행정복지센터',
-    apply: PORTALS.bokjiro, sourceIds: ['molit_housing_benefit', 'bokjiro_median'], verified: 'official',
+    apply: { ...PORTALS.bokjiro, general: true }, sourceIds: ['molit_housing_benefit', 'bokjiro_median'], verified: 'official',
     caution: '소득인정액은 소득에 재산을 월 소득으로 바꾼 값을 더해요. 부모와 따로 사는 청년은 부모 가구와 별도로 신청(분리지급)할 수 있는 경우가 있어요.',
     checklist: ['임대차계약서', '소득·재산 조회 동의', '통장 사본', '주민등록등본'],
   },

@@ -208,7 +208,7 @@ export default function Result() {
                     <span className="rv-lock-cat">{p.category}</span>
                     <h3>{p.name}</h3>
                     <p className="easy">{p.easy}</p>
-                    {v.status !== 'no' && <div style={{ marginTop: 18 }}><Btn href={p.apply.url} external size="sm" track={`apply:${p.id}`}>{`${p.apply.name.split(' ')[0]}에서 신청하기`}</Btn></div>}
+                    {v.status !== 'no' && <div style={{ marginTop: 18 }}><Btn href={p.apply.url} external size="sm" track={`apply:${p.id}`}>{`${p.apply.name.split(' ')[0]}에서 ${p.apply.general ? '안내 보기' : '신청하기'}`}</Btn></div>}
                   </div>
                   <div>
                     <ul>{v.reasons.map((r, i) => <li key={i}>{r}</li>)}</ul>
