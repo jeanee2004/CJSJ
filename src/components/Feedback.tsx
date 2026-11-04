@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Btn } from '../ui'
+import { track } from '../lib/track'
 
 const OPTIONS = [
   { id: 'agent', t: '중개보수 (부동산 수수료)', d: '집 계약할 때 부동산에 내는 돈' },
@@ -11,7 +12,7 @@ const OPTIONS = [
 ]
 const KEY = 'cjsj.feedback'
 
-// 역제안 수집 (S2). 데모: 이 기기에만 저장하고 서버로 보내지 않는다.
+// 역제안 수집 (S2). 고른 보기 코드만 익명 이벤트(click, feedback:…)로 보내고, 이 기기에도 기억해 둔다.
 export function Feedback() {
   const [sel, setSel] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem(KEY) ?? '[]') } catch { return [] }
@@ -20,6 +21,7 @@ export function Feedback() {
   const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
   const submit = () => {
     try { localStorage.setItem(KEY, JSON.stringify(sel)) } catch { /* noop */ }
+    track('click', { name: `feedback:${sel.join(',')}` })
     setDone(true)
   }
   return (
@@ -37,7 +39,7 @@ export function Feedback() {
         <span className="hint">개인정보는 받지 않아요. 여러 개를 골라 주셔도 좋아요.</span>
         <Btn disabled={sel.length === 0} onClick={submit}>의견 보내기</Btn>
       </div>
-      {done && <div className="thanks" role="status">소중한 이야기 고마워요! 이 기기에 저장해 두었어요. (체험 단계라 서버로는 전송되지 않아요)</div>}
+      {done && <div className="thanks" role="status">소중한 이야기 고마워요! 이름 없이 보기 선택만 전달했어요.</div>}
     </div>
   )
 }

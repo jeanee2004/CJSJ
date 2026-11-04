@@ -149,7 +149,7 @@ function sejongInterest(a: Answers): Verdict {
   if (a.usedBefore) fail(v, 'EXCL_ONCE', '평생 한 번만 받을 수 있는데, 이미 받으신 적이 있어요.')
   if (a.deal === 'wolse') fail(v, 'EXCL_DEAL_TYPE', '전세 대출 이자를 도와주는 제도예요. 월세(보증금 대출 없음)는 대상이 아니에요.')
   else if (a.deal === 'banjeonse' && !blocked(v))
-    warn(v, '반전세(보증금+월세)가 "전세계약"으로 인정되는지 공식 기준이 확인되지 않았어요.', '세종시 청년지원팀(☎1533-1934)에 반전세도 되는지 먼저 물어보세요.')
+    warn(v, '반전세(보증금+월세)가 "전세계약"으로 인정되는지 공식 기준이 확인되지 않았어요.', '세종시 청년지원팀(☎044-300-6033)에 반전세도 되는지 먼저 물어보세요.')
   if (blocked(v) === false) {
     if (a.stage === 'paid' || a.stage === 'movedin')
       fail(v, 'EXCL_TIMING', '잔금을 이미 치렀어요. 이 지원은 잔금 치르기 전에 신청해야 해서 지금은 받을 수 없어요.')
@@ -524,7 +524,7 @@ function depositGuaranteeFee(a: Answers): Verdict {
   if (a.ownsHome) fail(v, 'EXCL_OWN_HOME', '집이 없는 사람(무주택)만 해당돼요.')
   if (!blocked(v)) {
     v.needCheck = true
-    warn(v, `세종시가 반환보증 보증료를 최대 ${RULES.depositGuaranteeFee.feeCap}만원까지 지원해요(정부24 원문). 소득·보증금 세부 기준은 확인하지 못했어요.`, '반환보증에 가입한 뒤 보증료 납부 영수증을 보관하고, 세종시 청년지원팀(☎1533-1934)에 신청 방법을 물어보세요.')
+    warn(v, `세종시가 반환보증 보증료를 최대 ${RULES.depositGuaranteeFee.feeCap}만원까지 지원해요(정부24 원문). 소득·보증금 세부 기준은 확인하지 못했어요.`, '반환보증에 가입한 뒤 보증료 납부 영수증을 보관하고, 세종시 주택과(☎044-300-5917)에 신청 방법을 물어보세요.')
     if (a.stage === 'explore') v.todo.push('계약 전에 안심전세앱(HUG)으로 이 집이 반환보증에 가입 가능한지 먼저 확인하세요.')
   }
   residenceTodo(a, v)
@@ -630,7 +630,7 @@ export function warnings(a: Answers): Warning[] {
       break
   }
   if (a.deal === 'wolse' || a.deal === 'banjeonse')
-    w.push({ tone: 'todo', text: '세종 임대료 지원은 1년에 사흘만 접수해요(2026년은 3.3~3.5). 접수가 끝났다면 국토부 청년월세 다음 공고를 확인하세요(2026년 신규 접수는 5.29 마감).' })
+    w.push({ tone: 'todo', text: '세종 임대료 지원은 접수 기간이 짧아요. 아래 카드의 최신 접수 일정을 확인하고, 끝났다면 국토부 청년월세 다음 공고도 함께 챙기세요.' })
   return w
 }
 

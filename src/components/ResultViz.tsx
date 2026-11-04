@@ -47,7 +47,7 @@ export function ResultViz({ verdicts, names, phases, onJump, cost, costClosed, s
           <div className="rv-track" role="img" aria-label={`전체 ${acc.total}문항 중 ${acc.answered}문항에 답했어요 (${acc.pct}%)`}>
             <i style={{ width: `${acc.pct}%` }} />
           </div>
-          <p className="rv-sub"><b className="num">{acc.answered}</b> / {acc.total}문항 응답 · 정확도 약 {acc.pct}%</p>
+          <p className="rv-sub">내 상황에 맞는 심화 문항 {acc.total}개 중 <b className="num">{acc.answered}</b>개 응답 · 정확도 약 {acc.pct}%</p>
         </section>
       )}
 

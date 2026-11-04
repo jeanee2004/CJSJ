@@ -285,6 +285,7 @@ export function DiagnoseFlow({ mode, onClose }: { mode: SurveyType; onClose: () 
             ))}
             <div className="nav-row">
               <button className="back" type="button" onClick={() => go(-1)} style={{ visibility: idx === 0 ? 'hidden' : 'visible' }}>← 이전</button>
+              {!ok && <span className="hint" role="status">{scr.qs.filter((qq) => !answered(qq, sv[qq.id])).length}개 문항이 남았어요</span>}
               <Btn onClick={next} disabled={!ok}>{isLast ? '결과 보기' : '다음'}</Btn>
             </div>
           </section>

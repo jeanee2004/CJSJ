@@ -18,7 +18,7 @@ const CLICK_LABEL: Record<string, string> = {
   policy_card_open: '지원 제도 카드 열기', policy_filter: '지원 제도 필터', glossary_fab: '돋보기(용어 사전)', glossary_terms: '돋보기 · 용어 사전',
   guidebook_open: '돋보기 · 가이드북', login_open: '로그인 열기', nav_diagnose: '메뉴 · 내 상황 확인', nav_feedback: '메뉴 · 의견 남기기',
 }
-const nameOf = (m: Record<string, string>) => (k: string) => m[k] ?? k
+const nameOf = (m: Record<string, string>) => (k: string) => m[k] ?? (k.startsWith('apply:') ? `신청 링크 · ${k.slice(6)}` : k.startsWith('feedback:') ? `의견 · ${k.slice(9)}` : k)
 
 /** 한 테이블을 1000행씩 최대 MAX_ROWS 까지 읽는다(최신순). 막히면 지금까지 읽은 행과 오류를 돌려준다 */
 async function fetchAll<T>(table: 'events' | 'survey_responses', cols: string, signal: { stop: boolean }): Promise<{ rows: T[]; truncated: boolean; error: string | null }> {
@@ -303,6 +303,7 @@ function Dashboard() {
   const fun = useMemo(() => funnel(ev, order, ftype), [ev, order, ftype])
   const an = useMemo(() => analyze({ ...INSIGHT_CTX, events, responses }, days), [events, responses, days])
   const report = useMemo(() => buildReport({ days, events: an.events, responses: an.responses, insights: an.insights, suggestions: an.suggestions }), [an, days])
+  const applyN = new Set(ev.filter((e) => e.event_type === 'click' && e.name?.startsWith('apply:')).map((e) => e.session_id)).size
   const respN = rs.filter((r) => sf === 'all' || r.survey_type === sf).length
   const none = !loading && events.length === 0 && responses.length === 0
 
@@ -333,6 +334,7 @@ function Dashboard() {
         <div><small>설문 시작</small><b>{sum.surveyStarts.toLocaleString()}</b></div>
         <div><small>맛보기 완료율</small><b>{fmtPct(sum.completeRate.simple)}</b></div>
         <div><small>심화 완료율</small><b>{fmtPct(sum.completeRate.deep)}</b></div>
+        <div><small>신청 링크 클릭</small><b>{applyN.toLocaleString()}</b></div>
         <div><small>평균 체류</small><b>{fmtDur(sum.avgStayMs)}</b></div>
       </div>
 

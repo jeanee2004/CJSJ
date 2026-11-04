@@ -22,8 +22,18 @@ const device = (): 'mobile' | 'desktop' => {
   try { return window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768 ? 'mobile' : 'desktop' } catch { return 'desktop' }
 }
 
+// 팀원 기기 제외: 주소에 ?internal=1 로 한 번 들어오면 이 기기의 기록을 보내지 않는다 (?internal=0 으로 해제)
+const internal = (() => {
+  try {
+    const q = new URLSearchParams(location.search).get('internal')
+    if (q === '1') localStorage.setItem('cjsj.internal', '1')
+    if (q === '0') localStorage.removeItem('cjsj.internal')
+    return localStorage.getItem('cjsj.internal') === '1'
+  } catch { return false }
+})()
+
 export function track(event_type: EventType, extra: Extra = {}): void {
-  if (!supabase) return
+  if (!supabase || internal) return
   try {
     const row: Row = { session_id: sessionId(), event_type, path: location.pathname.slice(0, 200), device: device() }
     if (extra.name) row.name = extra.name.slice(0, 80)

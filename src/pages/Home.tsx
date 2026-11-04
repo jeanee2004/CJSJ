@@ -303,7 +303,7 @@ function IdxItem({ p, i, open, onToggle, live, rows, off }: { p: PolicyInfo; i: 
             <div>
               <div className="tags" style={{ marginBottom: 14 }}>{p.type.map((t) => <span className="tag" key={t}>{t}</span>)}</div>
               {p.caution && !(live && isStaleCaution(p.id, p.caution)) && <div className="note">⚠ {p.caution}</div>}
-              <div className="apply"><Btn href={p.apply.url} external variant="light" size="sm">{`${p.apply.name.split(' ')[0]}에서 신청하기`}</Btn></div>
+              <div className="apply"><Btn href={p.apply.url} external variant="light" size="sm" track={`apply:${p.id}`}>{`${p.apply.name.split(' ')[0]}에서 신청하기`}</Btn></div>
               {rows && <LiveBox rows={rows} fallback={p.apply} />}
               {off ? (
                 <>
@@ -367,7 +367,7 @@ function ApiIdxItem({ b, i, open, onToggle, today }: { b: Benefit; i: number; op
                 {typesOf(b.name).map((t) => <span className="tag" key={t}>{t}</span>)}
                 {phase !== 'unknown' && <span className="tag">{{ open: '접수 중', upcoming: '접수 예정', closed: '다음 공고 대기', always: '상시 접수' }[phase]}</span>}
               </div>
-              {url && <div className="apply"><Btn href={url} external variant="light" size="sm">원문·신청 페이지</Btn></div>}
+              {url && <div className="apply"><Btn href={url} external variant="light" size="sm" track={`apply:${b.name}`}>원문·신청 페이지</Btn></div>}
               {off && <OfficialRefs o={off} />}
             </div>
           </div>

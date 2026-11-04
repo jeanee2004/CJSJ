@@ -77,7 +77,7 @@ export default function Result() {
     ? verdicts.filter((v) => v.status !== 'no' && !knownIds.includes(v.id)).map((v) => policyById(v.id)!.name)
     : []
   const sum = a.survey ? summarize(a.survey as Survey) : null
-  const best = count('ok') + count('maybe')
+  const ok = count('ok'), maybe = count('maybe'), best = ok + maybe
 
   return (
     <>
@@ -87,11 +87,11 @@ export default function Result() {
           <Lines
             as="h1" className="display"
             lines={best > 0
-              ? [<span className="l" key="1">받을 수 있는 지원이</span>, <span key="2"><span className="em">{best}개</span> 있어요</span>]
+              ? [<span className="l" key="1">{ok > 0 ? '지금 신청할 수 있는 지원이' : '확인해 볼 만한 지원이'}</span>, <span key="2"><span className="em">{ok || maybe}개</span> 있어요</span>]
               : [<span className="l" key="1">아직은 맞는 지원이</span>, <span key="2"><span className="em">없지만</span> 괜찮아요</span>]}
           />
           <p style={{ color: 'var(--ink-2)', maxWidth: 560 }}>
-            {best > 0 ? '아래에서 이유와 다음에 할 일을 천천히 살펴보세요. 순서를 지키는 게 가장 중요해요.' : '너무 속상해하지 않으셔도 돼요. 어려운 이유를 쉬운 말로 풀어 두었고, 조건이 바뀌면 결과도 달라질 수 있어요.'}
+            {ok > 0 && maybe > 0 ? `확인해 볼 지원 ${maybe}개도 함께 정리했어요. ` : ''}{best > 0 ? '아래에서 이유와 다음에 할 일을 천천히 살펴보세요. 순서를 지키는 게 가장 중요해요.' : '너무 속상해하지 않으셔도 돼요. 어려운 이유를 쉬운 말로 풀어 두었고, 조건이 바뀌면 결과도 달라질 수 있어요.'}
           </p>
 
           <ResultViz
@@ -210,7 +210,7 @@ export default function Result() {
                     <span className="rv-lock-cat">{p.category}</span>
                     <h3>{p.name}</h3>
                     <p className="easy">{p.easy}</p>
-                    {v.status !== 'no' && <div style={{ marginTop: 18 }}><Btn href={p.apply.url} external size="sm">{`${p.apply.name.split(' ')[0]}에서 신청하기`}</Btn></div>}
+                    {v.status !== 'no' && <div style={{ marginTop: 18 }}><Btn href={p.apply.url} external size="sm" track={`apply:${p.id}`}>{`${p.apply.name.split(' ')[0]}에서 신청하기`}</Btn></div>}
                   </div>
                   <div>
                     <ul>{v.reasons.map((r, i) => <li key={i}>{r}</li>)}</ul>
