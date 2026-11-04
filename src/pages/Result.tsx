@@ -197,8 +197,6 @@ export default function Result() {
               <button key={c} className="fchip" type="button" aria-pressed={cat === c} onClick={() => setCat(c)}><span>{c === 'all' ? '모든 분류' : c}</span></button>
             ))}
           </div>
-
-          {benefits.state === 'error' && <p className="hint" style={{ marginTop: 14 }}>최신 데이터를 불러오지 못했어요. 접수 일정은 각 제도 안내 페이지에서 한 번 더 확인해 주세요.</p>}
           <div className="verdicts">
             {shown.map((v) => {
               const p = policyById(v.id)!

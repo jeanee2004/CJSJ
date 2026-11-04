@@ -413,7 +413,6 @@ function Policies() {
           </div>
         </LayoutGroup>
         {benefits.state === 'loading' && <p className="hint" aria-live="polite">공공 API에서 세종시 공식 정책 원문을 불러오는 중이에요…</p>}
-        {benefits.state === 'error' && <p className="hint">최신 데이터를 불러오지 못했어요. 아래는 공식 안내·언론 보도로 정리한 내용이에요.</p>}
         <ul className="idx">
           {list.map((p, i) => (
             <IdxItem key={p.id} p={p} i={i} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} live={live(p.id)} rows={items ? liveRows(p.id, items, today) : undefined} off={items ? officialFor(p.id, items) : undefined} />
