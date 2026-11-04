@@ -5,7 +5,7 @@ import { JEONSE_AVG_PRICE, JEONSE_INDEX, RONE_BASE, SEJONG_CLS, parseRone, summa
 import type { RoneSeries } from './_lib/rone.js'
 import { fetchUpstream } from './_lib/upstream.js'
 
-/** 최근 14개월(전년 동월 비교용 13개월 + 여유). 아직 발표 안 된 달은 비어 있어도 된다 */
+/** 최근 16개월. 최신 발표월이 2~3개월 늦으므로 전년 동월(최신-12개월)이 들어오게 여유를 둔다 (14개월이면 yoy 가 null 이 된다, 2026-11-04 확인) */
 const monthsBack = (n: number, now = new Date()) => {
   const k = new Date(now.getTime() + 9 * 3600_000)
   const d = new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth() - n, 1))
@@ -13,7 +13,7 @@ const monthsBack = (n: number, now = new Date()) => {
 }
 
 async function load(key: string, statblId: string, name: string): Promise<RoneSeries | null> {
-  const url = `${RONE_BASE}?Type=json&STATBL_ID=${statblId}&DTACYCLE_CD=MM&CLS_ID=${SEJONG_CLS}&START_WRTTIME=${monthsBack(14)}&END_WRTTIME=${monthsBack(0)}&pIndex=1&pSize=100`
+  const url = `${RONE_BASE}?Type=json&STATBL_ID=${statblId}&DTACYCLE_CD=MM&CLS_ID=${SEJONG_CLS}&START_WRTTIME=${monthsBack(16)}&END_WRTTIME=${monthsBack(0)}&pIndex=1&pSize=100`
   const r = await fetchUpstream(url, key, 'KEY')
   if (!r.ok) { logUpstream(`rone/${name}`, r.code, r.detail); return null }
   const p = parseRone(r.text)

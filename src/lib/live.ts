@@ -6,7 +6,7 @@ import { POLICIES } from '../data/policies'
 import type { PolicyId } from '../data/policies'
 import type { Answers, Verdict } from './eligibility'
 import type { Benefit, BenefitDetail, Notice } from './api'
-import { ymdLabel } from './api'
+import { todayKst, ymdLabel } from './api'
 
 /** 공공 API 의 제도 이름 → 진단 카드 id (2026-10-28 실제 응답 이름 기준) */
 // 새 제도(2026-11 확장)의 정규식은 공공 API 에 실제로 같은 이름이 올라온 것을 확인하지 못한 채 제도 이름으로 추정한 것이다.
@@ -37,9 +37,15 @@ export const policyOf = (name: string): PolicyId | undefined =>
 
 export interface Schedule { begin?: string; end?: string; deadline?: string; source: Benefit['source'] }
 
-export function scheduleFor(id: PolicyId, items: Benefit[]): Schedule | null {
+/** 날짜 칸을 YYYYMMDD 숫자 8자리로 맞춘다 ("2026-11-04", "2026.11.04" 도 받는다). 못 맞추면 빈 문자열 */
+const ymd8 = (d?: string) => { const x = (d ?? '').replace(/\D/g, ''); return x.length === 8 ? x : '' }
+
+/** 같은 제도에 접수 기간이 여러 개면 지금 접수 중 > 예정 > 가장 최근에 끝난 순으로 고른다 (today 기본값은 한국 시간 오늘) */
+export function scheduleFor(id: PolicyId, items: Benefit[], today: string = todayKst()): Schedule | null {
   const mine = items.filter((b) => policyOf(b.name) === id)
-  const dated = mine.find((b) => b.source === 'youthcenter' && b.begin && b.end) ?? mine.find((b) => b.begin && b.end)
+  const rank = (b: Benefit) => { const p = phaseOf(b, today); return p === 'open' ? 0 : p === 'upcoming' ? 1 : 2 }
+  const dated = mine.filter((b) => b.begin && b.end)
+    .sort((x, y) => rank(x) - rank(y) || (rank(x) === 1 ? ymd8(x.begin).localeCompare(ymd8(y.begin)) : ymd8(y.end).localeCompare(ymd8(x.end))) || Number(y.source === 'youthcenter') - Number(x.source === 'youthcenter'))[0]
   if (dated) return { begin: dated.begin, end: dated.end, deadline: dated.deadline, source: dated.source }
   const text = mine.find((b) => b.deadline)
   return text ? { deadline: text.deadline, source: text.source } : null
@@ -47,20 +53,22 @@ export function scheduleFor(id: PolicyId, items: Benefit[]): Schedule | null {
 
 export type Phase = 'open' | 'closed' | 'upcoming' | 'always' | 'unknown'
 export function phaseOf(s: Schedule, today: string): Phase {
-  if (s.begin && s.end) return today < s.begin ? 'upcoming' : today > s.end ? 'closed' : 'open'
-  if (s.deadline && /마감/.test(s.deadline)) return 'closed'
+  const b = ymd8(s.begin), e = ymd8(s.end)
+  if (b && e) return today < b ? 'upcoming' : today > e ? 'closed' : 'open'
+  // "예산 소진 시 마감" 처럼 조건부 마감은 이미 끝난 것이 아니다
+  if (s.deadline && /마감/.test(s.deadline) && !/소진|시\s*마감|마감\s*예정/.test(s.deadline)) return 'closed'
   if (s.deadline && /상시/.test(s.deadline)) return 'always'
   return 'unknown'
 }
 
 const SRC = { youthcenter: '온통청년', gov24: '정부24', bokjiro: '복지로' } as const
 export function scheduleText(s: Schedule, today: string): string {
-  const range = s.begin && s.end ? `${ymdLabel(s.begin)}~${ymdLabel(s.end)}` : ''
+  const range = ymd8(s.begin) && ymd8(s.end) ? `${ymdLabel(ymd8(s.begin))}~${ymdLabel(ymd8(s.end))}` : ''
   const by = `${SRC[s.source]} 기준`
   switch (phaseOf(s, today)) {
     case 'open': return `지금 접수 중이에요 (${range}, ${by}).`
     case 'upcoming': return `접수는 ${range}예요 (${by}). 그 전에 서류를 준비해 두세요.`
-    case 'closed': return range ? `올해 접수는 ${range}에 끝났어요 (${by}). 다음 공고를 기다려야 해요.` : `${SRC[s.source]}에 "${s.deadline}"으로 올라 있어요. 다음 공고를 기다려야 해요.`
+    case 'closed': return range ? `이번 접수는 ${range}에 끝났어요 (${by}). 다음 공고를 기다려야 해요.` : `${SRC[s.source]}에 "${s.deadline}"으로 올라 있어요. 다음 공고를 기다려야 해요.`
     case 'always': return `상시 접수예요 (${by}).`
     default: return s.deadline ? `신청기한: ${s.deadline} (${by})` : ''
   }
@@ -88,7 +96,7 @@ export const isStaleCaution = (id: PolicyId, text: string) => !!STALE[id]?.test(
 /** 판정(자격)은 그대로 두고, 접수 일정만 덧붙인다. 마감이면 "신청할 수 있어요" → "확인해 보면 좋아요" */
 export function applySchedules(vs: Verdict[], items: Benefit[], today: string): Verdict[] {
   return vs.map((v) => {
-    const s = scheduleFor(v.id, items)
+    const s = scheduleFor(v.id, items, today)
     if (!s || v.status === 'no') return v
     const text = scheduleText(s, today)
     if (!text) return v

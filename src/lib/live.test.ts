@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_ANSWERS, evaluate } from './eligibility'
 import type { Answers } from './eligibility'
 import type { Benefit, Notice } from './api'
-import { liveRows, officialFor, otherPolicies, applySchedules, coveredByVerdicts, fitsNotice, phaseOf, policyOf, scheduleFor } from './live'
+import { liveRows, officialFor, otherPolicies, applySchedules, coveredByVerdicts, fitsNotice, phaseOf, policyOf, scheduleFor, scheduleText } from './live'
 
 const B = (x: Partial<Benefit>): Benefit => ({ source: 'gov24', id: '1', name: '', summary: '', org: '', apply: '', url: '', ...x })
 // 2026-10-28 /api/benefits 실제 응답에서 일정 관련 항목만 옮김
@@ -72,6 +72,33 @@ describe('접수 일정', () => {
     const after = applySchedules(evaluate(a), ITEMS, '20260615').find((v) => v.id === 'sejongRent')!
     expect(after.status).toBe(before)
     expect(after.reasons[0]).toContain('지금 접수 중')
+  })
+})
+
+describe('오늘(2026-11-04) 기준 실응답 샘플', () => {
+  // 2026-11-04 /api/benefits 실제 응답: 날짜가 있는 항목은 모두 2026년 상반기에 끝났다
+  it('끝난 일정은 closed, 상시는 always, 조건부 마감 문구는 closed 가 아니다', () => {
+    const today = '20261104'
+    expect(phaseOf({ begin: '20260301', end: '20260331', deadline: '금년 접수 마감', source: 'youthcenter' }, today)).toBe('closed')
+    expect(phaseOf({ begin: '20260302', end: '20260530', source: 'youthcenter' }, today)).toBe('closed')
+    expect(phaseOf({ begin: '20260601', end: '20260630', source: 'youthcenter' }, today)).toBe('closed')
+    expect(phaseOf({ deadline: '상시신청', source: 'youthcenter' }, today)).toBe('always')
+    expect(phaseOf({ deadline: '수시(입주 잔여세대 감소 시)', source: 'youthcenter' }, today)).toBe('unknown')
+    expect(phaseOf({ deadline: '예산 소진 시 마감', source: 'gov24' }, today)).toBe('unknown')
+    expect(phaseOf({ begin: '2026-11-01', end: '2026-11-04', source: 'gov24' }, today)).toBe('open')
+  })
+  it('접수 기간이 여러 개면 지금 접수 중인 것을 먼저 고른다', () => {
+    const items = [
+      B({ source: 'youthcenter', name: '청년월세 지원', begin: '20260302', end: '20260530' }),
+      B({ source: 'gov24', name: '청년월세 지원', id: '2', begin: '20261101', end: '20261130' }),
+    ]
+    expect(scheduleFor('molitRent', items, '20261104')).toMatchObject({ begin: '20261101' })
+    expect(scheduleFor('molitRent', items, '20261201')).toMatchObject({ begin: '20261101' }) // 더 최근에 끝난 쪽
+  })
+  it('끝난 일정 문구에 "올해"를 쓰지 않는다 (지난해 일정일 수 있다)', () => {
+    const t = scheduleText({ begin: '20251101', end: '20251130', source: 'youthcenter' }, '20261104')
+    expect(t).toContain('2025.11.01~2025.11.30')
+    expect(t).not.toContain('올해')
   })
 })
 

@@ -305,7 +305,7 @@ function IdxItem({ p, i, open, onToggle, live, rows, off }: { p: PolicyInfo; i: 
                 <>
                   <OfficialRefs o={off} />
                   <details className="pol-ref">
-                    <summary>참고: 언론 보도로 정리한 요약</summary>
+                    <summary>참고: 언론 보도로 정리한 요약 (출처별 기준일은 아래에 적었어요)</summary>
                     <dl className="facts">
                       <div><dt>지원 내용</dt><dd>{p.money}</dd></div>
                       <div><dt>지원 대상</dt><dd>{p.who}</dd></div>
@@ -495,7 +495,7 @@ export function Footer({ tone = 'home' }: { tone?: 'home' | 'paper' }) {
         <p className="legal">
           사진 출처(Pixabay 콘텐츠 라이선스, 상업적 이용 가능): 세종호수공원 <a className="ulink" href="https://pixabay.com/photos/sejong-city-lake-boat-korea-pond-4331956/" target="_blank" rel="noreferrer noopener">YHBae</a> · 호수 너머 도시 풍경 <a className="ulink" href="https://pixabay.com/photos/sejong-city-sejong-city-day-6003866/" target="_blank" rel="noreferrer noopener">BinnaKim714</a> · 집 안 풍경 <a className="ulink" href="https://pixabay.com/photos/interior-room-couch-window-4226020/" target="_blank" rel="noreferrer noopener">atanaspaskalev</a>.
           <br /><br />
-          이 서비스는 참고용이에요. 대출·지원금의 최종 판정은 각 기관(세종시, 주택도시기금, 복지로 등)에서 해요. 제도 수치는 2026년 공고·보도 기준이며 자주 바뀔 수 있어요. 신청을 대신해 드리지는 않아요. 설문 응답은 이름·이메일 없이 구간 값으로만 통계에 쓰여요.
+          이 서비스는 참고용이에요. 대출·지원금의 최종 판정은 각 기관(세종시, 주택도시기금, 복지로 등)에서 해요. 제도 수치는 2026년 11월에 확인한 공고·보도 기준이며 자주 바뀔 수 있어요. 신청을 대신해 드리지는 않아요. 설문 응답은 이름·이메일 없이 구간 값으로만 통계에 쓰여요.
         </p>
       </div>
     </footer>

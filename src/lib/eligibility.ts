@@ -630,7 +630,7 @@ export function warnings(a: Answers): Warning[] {
       break
   }
   if (a.deal === 'wolse' || a.deal === 'banjeonse')
-    w.push({ tone: 'todo', text: '세종 임대료 지원은 1년에 사흘만 접수해요(2026년은 3.3~3.5). 접수가 끝났다면 국토부 청년월세(상시)를 먼저 보세요.' })
+    w.push({ tone: 'todo', text: '세종 임대료 지원은 1년에 사흘만 접수해요(2026년은 3.3~3.5). 접수가 끝났다면 국토부 청년월세 다음 공고를 확인하세요(2026년 신규 접수는 5.29 마감).' })
   return w
 }
 

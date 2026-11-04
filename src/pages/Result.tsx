@@ -240,7 +240,7 @@ export default function Result() {
               </div>
               {closed && (
                 <p className="cmp-closed" role="note">
-                  <b>세종 이자지원은 올해 접수가 끝났어요.</b> {scheduleText(sched!, todayKst())} 지금 전세 계약을 앞두고 있다면 버팀목을 신청할 수 있고, 아래 이자 비교는 다음 공고를 기다릴지 정할 때 참고하세요.
+                  <b>세종 이자지원은 이번 접수가 끝났어요.</b> {scheduleText(sched!, todayKst())} 지금 전세 계약을 앞두고 있다면 버팀목을 신청할 수 있고, 아래 이자 비교는 다음 공고를 기다릴지 정할 때 참고하세요.
                 </p>
               )}
               <div className="compare">
@@ -252,7 +252,7 @@ export default function Result() {
                   {closed && <p><b>✓ 지금 신청할 수 있어요 (상시)</b></p>}
                 </div>
                 <div className={`cmp ${win === 'interest' ? 'win' : ''} ${closed ? 'closed' : ''}`}>
-                  <span className="label" style={{ color: 'inherit', opacity: 0.7 }}>세종 이자지원{closed && ' · 올해 접수 마감'}</span>
+                  <span className="label" style={{ color: 'inherit', opacity: 0.7 }}>세종 이자지원{closed && ' · 접수 마감'}</span>
                   <b className="big num">{cost.interestPaid.toLocaleString()}<small style={{ fontSize: '0.3em', letterSpacing: 0 }}>만원</small></b>
                   <p>대출 {Math.round(cost.loanInterest).toLocaleString()}만원 × 내가 내는 이자 {cost.interestSelf}% × {cost.years}년</p>
                   {cost.better === 'interest' && <p><b>{closed ? '이자는 더 적지만 다음 공고까지 기다려야 해요' : '✓ 이쪽이 부담이 더 적어요'}</b></p>}

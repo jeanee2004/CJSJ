@@ -57,7 +57,7 @@ function useSaleVsJeonse(): { data: { name: string; value: number }[]; meta: Cha
   return {
     state: failed ? 'error' : 'loading',
     data: SALE_VS_JEONSE,
-    meta: { ...SALE_META, note: `${failed ? '최신 데이터를 불러오지 못했습니다. ' : ''}국토부 실거래가, ${ymLabel(SALE_FALLBACK_YM)} 계약 기준 (2026.10.28 조회) 값이에요.` },
+    meta: { ...SALE_META, note: `${failed ? '최신 데이터를 불러오지 못했습니다. ' : ''}국토부 실거래가, ${ymLabel(SALE_FALLBACK_YM)} 계약 기준 (2026.11.4 조회) 값이에요.` },
   }
 }
 

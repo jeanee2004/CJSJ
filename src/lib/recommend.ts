@@ -98,7 +98,7 @@ function phaseWhy(phase: Phase, s: { begin?: string } | null): string | undefine
   if (phase === 'open') return '지금 접수 중이에요.'
   if (phase === 'upcoming') return s?.begin ? `${ymdLabel(s.begin)}에 접수가 시작돼요.` : '곧 접수가 시작돼요.'
   if (phase === 'always') return '언제든 신청할 수 있어요.'
-  if (phase === 'closed') return '올해 접수는 끝났어요. 다음 공고를 기다려야 해요.'
+  if (phase === 'closed') return '이번 접수는 끝났어요. 다음 공고를 기다려야 해요.'
 }
 
 /** 둘 중 하나만 받을 수 있는 짝에서 순위에 올리지 않을 쪽 */

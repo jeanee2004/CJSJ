@@ -77,7 +77,7 @@ export function ResultViz({ verdicts, names, phases, onJump, cost, costClosed, s
           <div className="rv-bars">
             {bars.map((b) => (
               <div key={b.key} className={`rv-bar ${b.best ? 'best' : ''} ${b.key === 'interest' && costClosed ? 'closed' : ''}`}>
-                <div className="rv-bl"><span>{b.label}{b.key === 'interest' && costClosed ? ' · 올해 접수 마감' : ''}</span><b className="num">{won(b.value)}</b></div>
+                <div className="rv-bl"><span>{b.label}{b.key === 'interest' && costClosed ? ' · 접수 마감' : ''}</span><b className="num">{won(b.value)}</b></div>
                 <div className="rv-track" role="img" aria-label={`${b.label} ${won(b.value)}${b.best ? ', 부담이 더 적어요' : ''}`}><i style={{ width: `${Math.max(b.pct, b.value > 0 ? 2 : 0)}%` }} /></div>
                 {b.best && <span className="rv-tag">✓ 부담이 더 적어요</span>}
               </div>

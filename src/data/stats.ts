@@ -21,7 +21,7 @@ export const HOUSING_META: ChartMeta = {
   takeaway: '전세만 알아보면 놓치는 지원이 많아요. 월세 지원도 함께 살펴보세요.',
   sourceIds: ['newsis_youth_stat'],
   verified: 'secondary',
-  note: '기타 5.3%는 100%에서 나머지를 뺀 값이에요.',
+  note: '세종시 2025 청년통계(2024.12 기준, 2026.11.4 확인 시 최신판)예요. 기타 5.3%는 100%에서 나머지를 뺀 값이에요.',
 }
 
 // 소득 상한 비교 (만원, 연)
@@ -42,29 +42,30 @@ export const INCOME_META: ChartMeta = {
 }
 
 // 실거래가 API 폴백값. 화면은 /api/trades 로 최신 달을 불러오고, 실패하면 이 값을 보여준다.
-// PRD 인용값(매매 580 vs 전세 150)은 2026-10-28 국토부 실거래가 API로 확인해 보니 맞지 않아 실측값으로 바꿨다.
-// 매매는 해제(cdealType=O) 23건을 뺀 387건(신고 410건), 전세는 월세 0원인 계약만 센 값.
-export const SALE_FALLBACK_YM = '202605'
+// PRD 인용값(매매 580 vs 전세 150)은 국토부 실거래가 API로 확인해 보니 맞지 않아 실측값으로 바꿨다.
+// 2026-11-04 조회: 2026년 9월 계약분(신고 기한 10.30 경과). 매매는 해제(cdealType=O) 24건을 뺀 509건(신고 533건), 전세는 월세 0원인 계약만 센 값.
+// (10월분은 신고 기한이 11.30까지라 아직 늘어나는 중이어서 쓰지 않았다.)
+export const SALE_FALLBACK_YM = '202609'
 export const SALE_VS_JEONSE = [
-  { name: '매매', value: 387 },
-  { name: '전세', value: 610 },
+  { name: '매매', value: 509 },
+  { name: '전세', value: 603 },
 ]
 export const SALE_META: ChartMeta = {
   title: '세종 아파트는 전세 거래가 매매보다 많아요',
   takeaway: '같은 달에 신고된 아파트 매매(해제 제외)와 전세(월세 0원) 계약 건수예요.',
   sourceIds: ['molit_rtms'],
   verified: 'official',
-  note: '2026년 5월 계약분, 2026.10.28 조회 기준이에요.',
+  note: '2026년 9월 계약분, 2026.11.4 조회 기준이에요.',
 }
 
 // value는 순유출 크기(명). 화면에서 '−'를 붙여 순유출로 표시한다.
 export const OUTFLOW = [{ name: '20~24세 순유출(2025)', value: 479 }]
 export const OUTFLOW_META: ChartMeta = {
-  title: '20~24세는 한 해 479명이 세종을 떠났어요',
+  title: '20~24세 순유출 479명 (확인 중인 수치예요)',
   takeaway: '대학을 졸업할 즈음, 세종에 머물 수 있는 이유가 필요해요.',
-  sourceIds: ['prd'],
+  sourceIds: ['prd', 'kostat_migration_2025'],
   verified: 'unverified',
-  note: 'PRD 인용값. 통계청 국내인구이동통계(KOSIS)로 재확인이 필요해요.',
+  note: 'PRD 인용값이고 2026.11.4 기준 연령별(20~24세) 원자료로 확인하지 못했어요. 국가데이터처 발표상 세종의 2025년 전체 순이동은 −47명이에요. KOSIS 시도·연령별 순이동표로 재확인이 필요해요.',
 }
 
 // 세종시 청년 기본 수치 (뉴시스 2025.12.30, 2024.12 기준)
