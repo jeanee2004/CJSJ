@@ -11,9 +11,12 @@ import type { KV } from './lib/history'
 // 통계용 설문 응답만 비식별화(가명 ID·구간 값)해서 Supabase 에 저장한다. (lib/responses.ts)
 // · 진단 결과는 "로그인한 회원"에게만 저장한다. 비회원의 결과는 이 화면(메모리)에만 있고
 //   새로고침·로그아웃하면 사라진다.
-export type Modal = 'diagnose' | 'diagnoseDeep' | 'feedback' | 'mypage' | null
+export type Modal = 'survey' | 'diagnose' | 'diagnoseDeep' | 'feedback' | 'mypage' | null
 export type LoginReason = 'history' | 'deep' | null
-export interface User { id: string; email: string; name: string; via: string; isAdmin: boolean; respondentId: string | null }
+/** 내 정보(선택 입력). Supabase Auth 의 user_metadata 에 저장하는 본인 전용 값이고, 설문 응답과는 연결하지 않는다 */
+export interface Profile { nickname: string; ageBand: string; residence: string; interests: string[] }
+export const EMPTY_PROFILE: Profile = { nickname: '', ageBand: '', residence: '', interests: [] }
+export interface User { id: string; email: string; name: string; profile: Profile; via: string; isAdmin: boolean; respondentId: string | null }
 interface Store {
   user: User | null
   logout: () => void
@@ -21,6 +24,8 @@ interface Store {
   authReady: boolean
   /** 이 기기에 저장된 내 결과 지우기 */
   clearSaved: () => void
+  /** 별명 등 내 정보 저장. 실패하면 false */
+  updateProfile: (p: Profile) => Promise<boolean>
   answers: Answers
   setAnswers: (a: Answers) => void
   hasSaved: boolean
@@ -45,6 +50,16 @@ const kv: KV = {
   get: (k) => { try { return localStorage.getItem(k) } catch { return null } },
   set: (k, v) => { try { localStorage.setItem(k, v) } catch { /* noop */ } },
   remove: (k) => { try { localStorage.removeItem(k) } catch { /* noop */ } },
+}
+
+function readProfile(m: Record<string, unknown> | undefined): Profile {
+  const p = (m?.profile ?? {}) as Partial<Profile>
+  return {
+    nickname: typeof p.nickname === 'string' ? p.nickname.slice(0, 12) : '',
+    ageBand: typeof p.ageBand === 'string' ? p.ageBand : '',
+    residence: typeof p.residence === 'string' ? p.residence : '',
+    interests: Array.isArray(p.interests) ? p.interests.filter((x): x is string => typeof x === 'string').slice(0, 8) : [],
+  }
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -77,8 +92,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const { data, error } = await sb.from('profiles').select('role, respondent_id').eq('id', session.user.id).maybeSingle()
       if (mine !== seq) return
       const email = session.user.email ?? ''
+      const profile = readProfile(session.user.user_metadata)
       setUser((prev) => ({
-        id: session.user.id, email, name: email.split('@')[0] || '청년', via: 'email',
+        id: session.user.id, email, profile, name: profile.nickname || email.split('@')[0] || '청년', via: 'email',
         // 프로필을 못 읽었으면(일시 오류) 이전에 알던 값을 유지한다
         isAdmin: error ? (prev?.id === session.user.id ? prev.isAdmin : false) : data?.role === 'admin',
         respondentId: error ? (prev?.id === session.user.id ? prev.respondentId : null) : data?.respondent_id ?? null,
@@ -116,6 +132,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setAnswersState(null)
   }, [user])
 
+  const updateProfile = useCallback(async (p: Profile) => {
+    if (!supabase) return false
+    const clean: Profile = { ...p, nickname: p.nickname.trim().slice(0, 12) }
+    const { error } = await supabase.auth.updateUser({ data: { profile: clean } })
+    if (error) return false
+    setUser((u) => (u ? { ...u, profile: clean, name: clean.nickname || u.email.split('@')[0] || '청년' } : u))
+    return true
+  }, [])
+
   const logout = useCallback(() => {
     void supabase?.auth.signOut()
     setUser(null) // 화면에서 결과는 위 effect 가 치운다(이 기기에 저장된 결과는 남아 있다)
@@ -126,6 +151,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     logout,
     authReady,
     clearSaved,
+    updateProfile,
     answers: answers ?? DEFAULT_ANSWERS,
     setAnswers,
     hasSaved: answers !== null,

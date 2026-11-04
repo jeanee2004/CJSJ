@@ -13,8 +13,8 @@ describe('청년 주거 경험 설문 → 판정 답변', () => {
     expect(visibleQuestions({}).length).toBe(QUESTIONS.length)
   })
 
-  it('간편 설문은 10문항이고 모두 실제 문항이며, 심화 설문은 전체다', () => {
-    expect(SIMPLE_IDS.length).toBe(10)
+  it('맛보기 설문은 12문항이고 모두 실제 문항이며, 심화 설문은 전체다', () => {
+    expect(SIMPLE_IDS.length).toBe(12)
     expect(SIMPLE_IDS.every((id) => QUESTIONS.some((q) => q.id === id))).toBe(true)
     expect(visibleQuestions({}, 'simple').map((q) => q.id)).toEqual(SIMPLE_IDS)
     expect(visibleQuestions({}, 'deep').length).toBe(QUESTIONS.length)

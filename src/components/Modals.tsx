@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { DiagnoseFlow } from '../pages/Diagnose'
 import { Feedback } from './Feedback'
 import { MyPage } from './MyPage'
+import { SurveyChooser } from './SurveyChooser'
 import { useStore } from '../store'
 import type { Modal } from '../store'
 
@@ -47,6 +48,9 @@ export function Modals() {
   const { modal, closeModal } = useStore()
   return (
     <>
+      <Popup open={modal === 'survey'} onClose={closeModal} label="설문 고르기">
+        {modal === 'survey' && <SurveyChooser />}
+      </Popup>
       <Popup open={modal === 'diagnose'} onClose={closeModal} label="내 상황 확인" wide>
         {modal === 'diagnose' && <DiagnoseFlow mode="simple" onClose={closeModal} />}
       </Popup>

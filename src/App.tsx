@@ -52,7 +52,7 @@ export default function App() {
       <Header />
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/diagnose" element={<OpenModalRedirect kind="diagnose" />} />
+        <Route path="/diagnose" element={<OpenModalRedirect kind="survey" />} />
         <Route path="/result" element={<Result />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/admin" element={<Admin />} />

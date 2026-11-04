@@ -34,8 +34,8 @@ const SAT = o('매우 불만족', '불만족', '보통', '만족', '매우 만�
 export const SECTIONS = ['나와 우리 집', '지금 사는 집', '집 구하기 경험', '주거정책 알고 있나요', '입주 비용과 안전', '바라는 정책', '세종에서 계속 살기', '새로 구하는 집'] as const
 
 export type SurveyType = 'simple' | 'deep'
-// 간편 설문(로그인 없이): 지원 자격 판정(eligibility)에 쓰이는 문항만 10개. 심화 설문은 전체 문항.
-export const SIMPLE_IDS = ['Q1', 'Q2', 'Q4', 'Q5', 'Q7', 'Q13', 'N1', 'N2', 'N3', 'N4']
+// 맛보기(간편) 설문(로그인 없이): 지원 자격 판정에 꼭 필요한 문항 + 주거 부담 2문항 = 12개. 심화 설문은 전체 28문항.
+export const SIMPLE_IDS = ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q7', 'Q9', 'Q13', 'N1', 'N2', 'N3', 'N4']
 
 export const QUESTIONS: Q[] = [
   // ── 나와 우리 집 ──

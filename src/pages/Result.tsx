@@ -15,6 +15,8 @@ import { applySchedules, phaseOf, scheduleFor, scheduleText } from '../lib/live'
 import { flagAgeConflicts, rank } from '../lib/recommend'
 import { Recommendations } from '../components/Recommend'
 import { Navigate } from 'react-router-dom'
+import { ResultViz } from '../components/ResultViz'
+import { visibleQuestions } from '../lib/survey'
 
 const LABEL: Record<Status, { t: string; g: string }> = {
   ok: { t: '신청할 수 있어요', g: '✓' },
@@ -82,6 +84,17 @@ export default function Result() {
           <p style={{ color: 'var(--ink-2)', maxWidth: 560 }}>
             {best > 0 ? '아래에서 이유와 다음에 할 일을 천천히 살펴보세요. 순서를 지키는 게 가장 중요해요.' : '너무 속상해하지 않으셔도 돼요. 어려운 이유를 쉬운 말로 풀어 두었고, 조건이 바뀌면 결과도 달라질 수 있어요.'}
           </p>
+
+          <ResultViz
+            verdicts={verdicts}
+            names={Object.fromEntries(POLICIES.map((p) => [p.id, p.name]))}
+            phases={Object.fromEntries(verdicts.map((v) => { const sc = items ? scheduleFor(v.id, items) : null; return [v.id, sc ? phaseOf(sc, todayKst()) : undefined] }))}
+            onJump={(id) => { setF('all'); setTimeout(() => document.getElementById(`vd-${id}`)?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' }), 60) }}
+            cost={cost && pickOne ? cost : null}
+            costClosed={(() => { const sc = items ? scheduleFor('sejongInterest', items) : null; return !!sc && phaseOf(sc, todayKst()) === 'closed' })()}
+            summary={sum ? { known: sum.known, total: sum.total, ratio: sum.ratio, housingCost: sum.housingCost } : null}
+            simple={a.surveyType === 'simple' ? { answered: Object.keys(a.survey ?? {}).length, total: visibleQuestions((a.survey ?? {}) as Survey, 'deep').length } : null}
+          />
 
           <div className="tally" aria-label="요약">
             <div className="t-ok"><b className="num"><CountUp to={count('ok')} /></b><span>✓ 신청할 수 있어요</span></div>
@@ -163,7 +176,7 @@ export default function Result() {
               const p = POLICIES.find((x) => x.id === v.id)!
               const L = LABEL[v.status]
               return (
-                <article key={v.id} className="vd" aria-label={`${p.name}: ${L.t}`}>
+                <article key={v.id} id={`vd-${v.id}`} className="vd" aria-label={`${p.name}: ${L.t}`}>
                   <div><span className={`status ${v.status}`}><i data-g={L.g} aria-hidden="true" />{L.t}</span></div>
                   <div>
                     <h3>{p.name}</h3>

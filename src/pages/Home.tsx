@@ -23,7 +23,7 @@ import { isStaleCaution, liveRows, officialFor, officialOf, otherPolicies, phase
 const HERO_KEY = 'cjsj.heroPlayed'
 function HeroVideo() {
   const { openModal, popupOpen } = useStore()
-  const openDiagnose = () => openModal('diagnose')
+  const openDiagnose = () => openModal('survey')
   const v0 = useRef<HTMLVideoElement>(null)
   const va = useRef<HTMLVideoElement>(null)
   const vb = useRef<HTMLVideoElement>(null)
@@ -115,7 +115,7 @@ function HeroVideo() {
           lines={[<span className="l" key="a">청년이 머무는 곳,</span>, <span key="b">세종이 <span className="em">시작</span>되는 곳</span>]}
         />
         <p className="vh-sub">세종에서 첫 집, <b>어디서부터 시작하죠?</b></p>
-        <p className="lead">받을 수 있는 지원금, 신청하는 순서, 놓치기 쉬운 함정까지 — 청년 주거 경험 설문 몇 가지만 답하면, 6분 안팎으로 쉬운 말로 알려드릴게요.</p>
+        <p className="lead">받을 수 있는 지원금, 신청하는 순서, 놓치기 쉬운 함정까지 — 로그인 없이 2분 맛보기 설문으로 먼저 확인하고, 로그인하면 6분 안팎의 심화 설문으로 더 정확하게 알려드릴게요.</p>
         <div className="hero-cta">
           <Btn onClick={openDiagnose} variant="light" track="hero_start_survey">내 상황 확인해 보기</Btn>
           <Btn to="/#intro" variant="glass">청정 세종 이야기</Btn>
@@ -136,7 +136,7 @@ function Intro() {
   const onPast = () => {
     if (!user) openLogin('history')
     else if (hasSaved) navigate('/result')
-    else openModal('diagnose')
+    else openModal('survey')
   }
   const ref = useRef<HTMLElement>(null)
   useEffect(() => {
