@@ -189,7 +189,7 @@ export function LiveBoard() {
       <Big n="1" unit="분이면 확인" />
       <p className="hint">구하려는 집 주소를 넣으면 건축물대장에서 다중주택인지 알려드려요. 아래 입력창으로 바로 이어져요.</p>
     </Card>,
-    <Card key="myhome" tag="마이홈 · 공공임대" title="모집공고" busy={myhome.state === 'loading'} foot={<a className="l3d-link" href="https://www.myhome.go.kr" target="_blank" rel="noreferrer noopener">마이홈포털 ↗</a>}>
+    <Card key="myhome" tag="마이홈 · 공공임대" title="모집공고" busy={myhome.state === 'loading'} foot={<a className="l3d-link" href={open[0]?.url || 'https://www.myhome.go.kr'} target="_blank" rel="noreferrer noopener">{open[0]?.url ? '접수 중인 공고 보기 ↗' : '마이홈포털 ↗'}</a>}>
       {myhome.state === 'loading' && <p className="hint">불러오는 중이에요…</p>}
       {myhome.state === 'error' && <Stale what="세종 공공임대 모집공고" href="https://www.myhome.go.kr" label="마이홈포털" />}
       {myhome.state === 'ok' && (

@@ -89,7 +89,8 @@ export function fromBokjiro(r: Record<string, string>): Benefit | null {
 export function fromYouthCenter(r: Record<string, unknown>): Benefit | null {
   const g = (k: string) => (typeof r[k] === 'string' ? (r[k] as string).trim() : '')
   if (!/세종/.test(g('sprvsnInstCdNm')) || !g('plcyNm')) return null
-  const url = [g('aplyUrlAddr'), g('refUrlAddr1')].find((u) => /^https?:\/\//.test(u)) ?? ''
+  // 기관 메인페이지가 아니라 온통청년의 해당 정책 상세 페이지로 연결한다. 정책번호가 없을 때만 기관이 적은 주소를 쓴다
+  const url = g('plcyNo') ? `https://www.youthcenter.go.kr/youthPolicy/ythPlcyTotalSearch/ythPlcyDetail/${encodeURIComponent(g('plcyNo'))}` : [g('aplyUrlAddr'), g('refUrlAddr1')].find((u) => /^https?:\/\//.test(u)) ?? ''
   const period = parsePeriod(g('aplyYmd'))
   // sprtTrgtAgeLmtYn 이 N 이면 나이 제한이 있다 (Y 면 0/0 으로 온다, 2026-10-29 확인)
   const ages = g('sprtTrgtAgeLmtYn') === 'N' ? age(g('sprtTrgtMinAge'), g('sprtTrgtMaxAge'), 'youthcenter') : []
