@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Btn, Roll, useMagnetic } from '../ui'
 import { useStore } from '../store'
@@ -14,8 +14,7 @@ export const NAV: { n: string; label: string; to?: string; action?: 'diagnose' |
 ]
 
 export function Header() {
-  const { user, logout, setLoginOpen, openModal } = useStore()
-  const navigate = useNavigate()
+  const { user, setLoginOpen, openModal } = useStore()
   const [menu, setMenu] = useState(false)
   const [stuck, setStuck] = useState(false)
   const loc = useLocation()
@@ -46,19 +45,20 @@ export function Header() {
           <nav className="nav" aria-label="주요 메뉴">
             {NAV.map((m) =>
               m.action ? (
-                <button key={m.n} type="button" onClick={() => openModal(m.action!)}><i>{m.n}</i><Roll>{m.label}</Roll></button>
+                <button key={m.n} type="button" data-track={`nav_${m.action}`} onClick={() => openModal(m.action!)}><i>{m.n}</i><Roll>{m.label}</Roll></button>
               ) : (
                 <Link key={m.n} to={m.to!}><i>{m.n}</i><Roll>{m.label}</Roll></Link>
               ),
             )}
+            {user?.isAdmin && <Link to="/admin"><i>A</i><Roll>대시보드</Roll></Link>}
           </nav>
           <div className="header-actions">
             {user ? (
-              <button className="circle avatar" type="button" onClick={() => { logout(); navigate('/') }} title="로그아웃" aria-label={`${user.name}님, 눌러서 로그아웃`}>
+              <button className="circle avatar" type="button" onClick={() => openModal('mypage')} title="마이페이지" aria-label={`${user.name}님, 마이페이지 열기`}>
                 {user.name.slice(0, 1)}
               </button>
             ) : (
-              <Btn variant="light" size="sm" onClick={() => setLoginOpen(true)}>로그인</Btn>
+              <Btn variant="light" size="sm" track="login_open" onClick={() => setLoginOpen(true)}>로그인</Btn>
             )}
             <button ref={menuRef} className="circle menu-btn" type="button" aria-label="메뉴 열기" onClick={() => setMenu(true)}>
               <svg width="20" height="12" viewBox="0 0 20 12" aria-hidden="true"><path d="M0 1h20M6 11h14" stroke="#0b1220" strokeWidth="2" strokeLinecap="round" /></svg>
@@ -77,9 +77,11 @@ export function Header() {
                 <Link key={m.n} to={m.to!}><i>{m.n}</i>{m.label}</Link>
               ),
             )}
+            {user?.isAdmin && <Link to="/admin"><i>A</i>대시보드</Link>}
+            {user && <button type="button" onClick={() => { setMenu(false); openModal('mypage') }}><i>●</i>마이페이지</button>}
             {!user && (
               <div style={{ marginTop: 28 }}>
-                <Btn variant="light" onClick={() => { setMenu(false); setLoginOpen(true) }}>로그인</Btn>
+                <Btn variant="light" track="login_open" onClick={() => { setMenu(false); setLoginOpen(true) }}>로그인</Btn>
               </div>
             )}
           </motion.div>

@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { LayoutGroup, motion } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { HERO } from '../data/hero'
 import { HeroSequence } from '../lib/heroSequence'
 import { Btn, Lines, Reveal, SourceBlock, Term, VBadge, Wave, reduced } from '../ui'
@@ -117,7 +117,7 @@ function HeroVideo() {
         <p className="vh-sub">세종에서 첫 집, <b>어디서부터 시작하죠?</b></p>
         <p className="lead">받을 수 있는 지원금, 신청하는 순서, 놓치기 쉬운 함정까지 — 청년 주거 경험 설문 몇 가지만 답하면, 6분 안팎으로 쉬운 말로 알려드릴게요.</p>
         <div className="hero-cta">
-          <Btn onClick={openDiagnose} variant="light">내 상황 확인해 보기</Btn>
+          <Btn onClick={openDiagnose} variant="light" track="hero_start_survey">내 상황 확인해 보기</Btn>
           <Btn to="/#intro" variant="glass">청정 세종 이야기</Btn>
         </div>
       </div>
@@ -180,8 +180,8 @@ function Intro() {
         />
         <p className="lead">청정(靑定)은 푸를 청에 정할 정, 청년이 세종에 마음 편히 자리 잡도록 돕고 싶은 마음을 담았어요. 어려운 경제 용어는 쉬운 말로 풀어서, 받을 수 있는 지원과 조심할 점을 차근차근 안내해 드릴게요.</p>
         <div className="hero-cta">
-          <Btn to="/#policies">지원 제도 둘러보기</Btn>
-          <Btn onClick={onPast} variant="line">지난 결과 보기</Btn>
+          <Btn to="/#policies" track="intro_policies">지원 제도 둘러보기</Btn>
+          <Btn onClick={onPast} variant="line" track="intro_past_result">지난 결과 보기</Btn>
         </div>
       </div>
     </section>
@@ -272,7 +272,7 @@ function IdxItem({ p, i, open, onToggle, live, rows, off }: { p: PolicyInfo; i: 
   const pid = useId()
   return (
     <li className={`idx-item ${open ? 'open' : ''}`}>
-      <button className="idx-head" type="button" aria-expanded={open} aria-controls={pid} onClick={onToggle}>
+      <button className="idx-head" data-track="policy_card_open" type="button" aria-expanded={open} aria-controls={pid} onClick={onToggle}>
         <span className="idx-no">{String(i + 1).padStart(2, '0')}</span>
         <span className="idx-name">{p.name}</span>
         <span className="idx-sum">{p.easy}</span>
@@ -342,7 +342,7 @@ function ApiIdxItem({ b, i, open, onToggle, today }: { b: Benefit; i: number; op
   const url = off?.refs.find((r) => r.url)?.url ?? (/^https?:\/\//.test(b.url) ? b.url : undefined)
   return (
     <li className={`idx-item api ${open ? 'open' : ''}`}>
-      <button className="idx-head" type="button" aria-expanded={open} aria-controls={pid} onClick={onToggle}>
+      <button className="idx-head" data-track="policy_card_open" type="button" aria-expanded={open} aria-controls={pid} onClick={onToggle}>
         <span className="idx-no">{String(i + 1).padStart(2, '0')}</span>
         <span className="idx-name">{b.name}</span>
         <span className="idx-sum">{b.summary || off?.support?.split('\n')[0]}</span>
@@ -401,7 +401,7 @@ function Policies() {
         <LayoutGroup>
           <div className="filters" role="group" aria-label="제도 필터">
             {FILTERS.map((x) => (
-              <button key={x} type="button" className="fchip" aria-pressed={f === x} onClick={() => { setF(x); setOpen(null) }}>
+              <button key={x} data-track="policy_filter" type="button" className="fchip" aria-pressed={f === x} onClick={() => { setF(x); setOpen(null) }}>
                 {f === x && <motion.span layoutId="fchip-bg" className="bg" transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }} />}
                 <span>{x}<sup>{count(x)}</sup></span>
               </button>
@@ -491,10 +491,11 @@ export function Footer({ tone = 'home' }: { tone?: 'home' | 'paper' }) {
             </ul>
           </div>
         </div>
+        <p className="legal-links"><Link className="privacy-btn" to="/privacy">개인정보처리방침 보기</Link></p>
         <p className="legal">
           사진 출처(Pixabay 콘텐츠 라이선스, 상업적 이용 가능): 세종호수공원 <a className="ulink" href="https://pixabay.com/photos/sejong-city-lake-boat-korea-pond-4331956/" target="_blank" rel="noreferrer noopener">YHBae</a> · 호수 너머 도시 풍경 <a className="ulink" href="https://pixabay.com/photos/sejong-city-sejong-city-day-6003866/" target="_blank" rel="noreferrer noopener">BinnaKim714</a> · 집 안 풍경 <a className="ulink" href="https://pixabay.com/photos/interior-room-couch-window-4226020/" target="_blank" rel="noreferrer noopener">atanaspaskalev</a>.
           <br /><br />
-          이 서비스는 참고용이에요. 대출·지원금의 최종 판정은 각 기관(세종시, 주택도시기금, 복지로 등)에서 해요. 제도 수치는 2026년 공고·보도 기준이며 자주 바뀔 수 있어요. 신청을 대신해 드리지는 않아요. 로그인은 체험용이며, 입력하신 정보는 이 기기에만 저장돼요.
+          이 서비스는 참고용이에요. 대출·지원금의 최종 판정은 각 기관(세종시, 주택도시기금, 복지로 등)에서 해요. 제도 수치는 2026년 공고·보도 기준이며 자주 바뀔 수 있어요. 신청을 대신해 드리지는 않아요. 설문 응답은 이름·이메일 없이 구간 값으로만 통계에 쓰여요.
         </p>
       </div>
     </footer>

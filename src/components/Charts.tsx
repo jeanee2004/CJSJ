@@ -95,12 +95,15 @@ export function DataSection() {
               <PieChart>
                 <Pie data={HOUSING_TYPE} dataKey="value" nameKey="name" innerRadius={62} outerRadius={104} paddingAngle={3} stroke="none" isAnimationActive={false}
                   onMouseEnter={(_, i) => setPie(i)} onMouseLeave={() => setPie(null)}
-                  label={(p) => `${p.name} ${p.value}%`} labelLine={false}>
+                  label={false} labelLine={false}>
                   {HOUSING_TYPE.map((_, i) => <Cell key={i} fill={PIE[i]} fillOpacity={pie === null || pie === i ? 1 : DIM} />)}
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
           </Frame>
+          <ul className="pie-legend">
+            {HOUSING_TYPE.map((h, i) => <li key={h.name}><i style={{ background: PIE[i] }} />{h.name} <b>{h.value}%</b></li>)}
+          </ul>
         </Reveal>
 
         <Reveal delay={0.08}>

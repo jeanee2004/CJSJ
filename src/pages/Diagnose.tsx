@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { SECTIONS } from '../data/survey'
-import type { Opt as SOpt, Q, Survey, Val } from '../data/survey'
+import { Link, useNavigate } from 'react-router-dom'
+import type { Opt as SOpt, Q, Survey, SurveyType, Val } from '../data/survey'
 import { deriveAnswers, visibleQuestions } from '../lib/survey'
 import { Btn } from '../ui'
 import { AddressCheck } from '../components/AddressCheck'
 import { useStore } from '../store'
+import { saveResponse } from '../lib/responses'
+import { track } from '../lib/track'
 
 interface Opt<T> { v: T; t: string; d?: string }
 function Choice<T extends string | boolean>({ opts, value, onPick }: { opts: Opt<T>[]; value: T | undefined; onPick: (v: T) => void }) {
@@ -45,7 +46,7 @@ function NumberField({ value, onChange, unit, presets, hint, max, compact }: { v
 
 const UNK = 'unk'
 const EXCLUSIVE = /^(해당 없음|없음|겪은 적 없음|아무것도 안 함|받고 있는 지원 없음|찾아본 적 없음)/
-const DRAFT = 'cjsj.draft.v2'
+const DRAFT = (t: SurveyType) => `cjsj.draft.v3.${t}`
 const withUnk = (q: Q): SOpt[] => [...(q.opts ?? []), ...(q.unk ? [{ v: UNK, t: '잘 모르겠어요', d: '괜찮아요. 결과에서 어떻게 확인하는지 알려드릴게요' }] : [])]
 
 function QBody({ q, sv, set, next }: { q: Q; sv: Survey; set: (v: Val | undefined | ((prev: Val | undefined) => Val | undefined)) => void; next: () => void }) {
@@ -176,32 +177,54 @@ const answered = (q: Q, v: Val | undefined): boolean => {
   return true
 }
 
-const loadDraft = (): { sv: Survey; i: number } => {
+const loadDraft = (t: SurveyType): { sv: Survey; i: number } | null => {
   try {
-    const d = JSON.parse(sessionStorage.getItem(DRAFT) ?? 'null')
+    const d = JSON.parse(sessionStorage.getItem(DRAFT(t)) ?? 'null')
     if (d && typeof d === 'object' && d.sv) return { sv: d.sv, i: Number(d.i) || 0 }
   } catch { /* noop */ }
-  return { sv: {}, i: 0 }
+  return null
 }
 
-export function DiagnoseFlow({ onClose }: { onClose: () => void }) {
-  const { setAnswers } = useStore()
+export function DiagnoseFlow({ mode, onClose }: { mode: SurveyType; onClose: () => void }) {
+  const { setAnswers, answers, hasSaved, openDeep, user } = useStore()
   const nav = useNavigate()
-  const [draft] = useState(loadDraft)
+  // 이어 쓰던 초안이 없으면, 간편 설문에서 답한 내용을 심화 설문의 시작점으로 쓴다
+  const [draft] = useState(() => loadDraft(mode) ?? { sv: mode === 'deep' && hasSaved ? ((answers.survey ?? {}) as Survey) : {}, i: 0 })
   const [sv, setSv] = useState<Survey>(draft.sv)
   const [i, setI] = useState(draft.i)
   const [dir, setDir] = useState(1)
 
-  const visible = visibleQuestions(sv)
+  const visible = visibleQuestions(sv, mode)
+  const secs = [...new Set(visible.map((x) => x.sec))]
   const idx = Math.min(i, visible.length - 1)
   const q = visible[idx]
   const set = (v: Val | undefined | ((prev: Val | undefined) => Val | undefined)) =>
     setSv((prev) => ({ ...prev, [q.id]: typeof v === 'function' ? v(prev[q.id]) : v }))
+  // 추적: 문항별 소요 시간, 완료/이탈 (식별정보 없이 문항 id 와 시간만)
+  const qStart = useRef(Date.now())
+  const lastQ = useRef('')
+  const finished = useRef(false)
+  lastQ.current = q.id
+  const trackAnswer = () => { track('survey_answer', { name: q.id, survey_type: mode, duration_ms: Date.now() - qStart.current }); qStart.current = Date.now() }
+  const mounted = useRef(false)
+  const started = useRef(false)
+  useEffect(() => {
+    mounted.current = true
+    qStart.current = Date.now()
+    if (!started.current) { started.current = true; track('survey_start', { survey_type: mode }) }
+    return () => {
+      // 개발 모드 StrictMode 의 가짜 언마운트는 곧바로 다시 마운트되므로 한 틱 뒤에 확인한다
+      mounted.current = false
+      setTimeout(() => { if (!mounted.current && !finished.current) track('survey_abandon', { name: lastQ.current, survey_type: mode }) }, 0)
+    }
+  }, [mode])
   const finish = () => {
-    try { sessionStorage.removeItem(DRAFT) } catch { /* noop */ }
-    setAnswers(deriveAnswers(sv)); onClose(); nav('/result')
+    finished.current = true
+    trackAnswer(); track('survey_complete', { survey_type: mode })
+    try { sessionStorage.removeItem(DRAFT(mode)) } catch { /* noop */ }
+    setAnswers(deriveAnswers(sv, mode)); void saveResponse(sv, mode, user?.respondentId ?? null); onClose(); nav('/result')
   }
-  const go = (n: number) => { setDir(n > 0 ? 1 : -1); setI((x) => Math.max(0, x + n)) }
+  const go = (n: number) => { if (n > 0) trackAnswer(); setDir(n > 0 ? 1 : -1); setI((x) => Math.max(0, x + n)) }
   const isLast = idx === visible.length - 1
   const ok = answered(q, sv[q.id])
   const next = () => { if (isLast) finish(); else go(1) }
@@ -209,20 +232,20 @@ export function DiagnoseFlow({ onClose }: { onClose: () => void }) {
   const autoNext = () => setTimeout(() => (isLast ? undefined : go(1)), 180)
 
   useEffect(() => {
-    try { sessionStorage.setItem(DRAFT, JSON.stringify({ sv, i: idx })) } catch { /* noop */ }
-  }, [sv, idx])
+    try { sessionStorage.setItem(DRAFT(mode), JSON.stringify({ sv, i: idx })) } catch { /* noop */ }
+  }, [sv, idx, mode])
 
-  const secNo = SECTIONS.indexOf(q.sec as (typeof SECTIONS)[number]) + 1
+  const secNo = secs.indexOf(q.sec) + 1
   const hues: [string, string][] = [['var(--blush)', 'var(--aqua)'], ['var(--mint)', 'var(--peri)'], ['var(--aqua)', 'var(--blush)'], ['var(--peri)', 'var(--mint)'], ['var(--blush)', 'var(--mint)'], ['var(--tint)', 'var(--aqua)']]
   const [h1, h2] = hues[(secNo - 1) % hues.length]
   const minutes = Math.max(1, Math.ceil((visible.length - idx) * 0.18))
-  const tag = q.id.startsWith('N') ? '맞춤 지원 확인용 추가 질문' : `설문 ${q.id}`
+  const tag = mode === 'simple' ? '간편 설문' : q.id.startsWith('N') ? '맞춤 지원 확인용 추가 질문' : `심화 설문 ${q.id}`
 
   return (
     <div className="diag-flow" style={{ ['--hc1' as string]: h1, ['--hc2' as string]: h2 }}>
       <div>
         <div className="diag-top">
-          <span className="label">질문 {String(idx + 1).padStart(2, '0')} / {String(visible.length).padStart(2, '0')} · {secNo}/{SECTIONS.length} {q.sec}</span>
+          <span className="label">질문 {String(idx + 1).padStart(2, '0')} / {String(visible.length).padStart(2, '0')} · {secNo}/{secs.length} {q.sec}</span>
           <span className="label">약 {minutes}분 남았어요</span>
         </div>
         <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={visible.length} aria-valuenow={idx + 1}><i style={{ width: `${((idx + 1) / visible.length) * 100}%` }} /></div>
@@ -246,7 +269,11 @@ export function DiagnoseFlow({ onClose }: { onClose: () => void }) {
             </div>
           </div>
         </section>
-        <p className="hint" style={{ marginTop: 36 }}>입력한 내용은 서버로 보내지 않고 이 기기에만 저장돼요. 질문은 「청정(靑定) 세종 · 청년 주거 경험 설문」과 같아요.</p>
+        {mode === 'simple' ? (
+          <p className="hint" style={{ marginTop: 36 }}>간편 설문이에요(로그인 없이 {visible.length}문항). 결과는 이 기기에서 계산하고, 통계용으로 이름·이메일 없이 구간 값만 저장해요(<Link to="/privacy" onClick={onClose}>개인정보처리방침</Link>). 더 정확한 점검은 로그인 후 <button type="button" className="link-btn" onClick={() => { onClose(); openDeep() }}>심화 설문</button>에서 할 수 있어요.</p>
+        ) : (
+          <p className="hint" style={{ marginTop: 36 }}>심화 설문이에요. 질문은 「청정(靑定) 세종 · 청년 주거 경험 설문」과 같아요.</p>
+        )}
       </div>
     </div>
   )

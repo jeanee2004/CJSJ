@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { TERMS } from '../data/terms'
 import { rank } from '../lib/search'
+import { Guidebook } from './Guidebook'
+import './Guidebook.css'
 
 const POPULAR = ['deposit', 'jeonse', 'wolse', 'jan', 'pickone']
 const SEARCH_ITEMS = TERMS.map((t) => ({ id: t.id, fields: [t.word, ...(t.alias ?? [])], long: t.easy }))
@@ -9,6 +11,7 @@ const SEARCH_ITEMS = TERMS.map((t) => ({ id: t.id, fields: [t.word, ...(t.alias 
 export function GlossaryFab() {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
+  const [mode, setMode] = useState<'menu' | 'terms' | 'guide'>('menu')
   const { hits, suggestions } = useMemo(() => rank(SEARCH_ITEMS, q), [q])
   const byId = (id: string) => TERMS.find((t) => t.id === id)!
   const typed = q.trim().length > 0
@@ -25,9 +28,24 @@ export function GlossaryFab() {
       {open && (
         <div className="gpanel" role="dialog" aria-label="쉬운 용어 찾기">
           <div className="gpanel-top">
-            <h2>낯선 말, 여기서 찾아보세요</h2>
+            <h2>{mode === 'guide' ? '왕초보 가이드북' : mode === 'terms' ? '낯선 말, 여기서 찾아보세요' : '무엇을 도와드릴까요?'}</h2>
             <button type="button" aria-label="닫기" onClick={() => setOpen(false)}>✕</button>
           </div>
+          {mode === 'menu' ? (
+            <div className="gmenu">
+              <button type="button" data-track="glossary_terms" onClick={() => setMode('terms')}><b>용어 사전</b><small>보증금, 전세, 잔금… 낯선 말을 검색해요</small></button>
+              <button type="button" data-track="guidebook_open" className="lime" onClick={() => setMode('guide')}><b>왕초보 가이드북</b><small>집 구하기부터 입주까지 9단계로 쉽게</small></button>
+            </div>
+          ) : (
+            <>
+              <div className="gtabs" role="group" aria-label="보기 선택">
+                <button type="button" aria-pressed={mode === 'terms'} onClick={() => setMode('terms')}>용어 사전</button>
+                <button type="button" aria-pressed={mode === 'guide'} onClick={() => setMode('guide')}>가이드북</button>
+              </div>
+              {mode === 'guide' ? (
+                <div className="gb-body"><Guidebook onTerm={(id) => { setQ(byId(id).word.replace(/ \(.*\)/, '')); setMode('terms') }} /></div>
+              ) : (
+                <>
           <label className="sr-only" htmlFor="gq">용어 검색</label>
           <input id="gq" className="gloss-search" placeholder="예: 보증금, 전세, 잔금, ㅂㅈㄱ" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" autoFocus />
           <p className="gloss-chips" aria-label={typed && list.length === 0 && suggestions.length > 0 ? '혹시 이걸 찾으셨나요?' : '자주 찾는 말'}>
@@ -43,9 +61,13 @@ export function GlossaryFab() {
               </div>
             ))}
           </div>
+                </>
+              )}
+            </>
+          )}
         </div>
       )}
-      <button type="button" className="gfab" aria-label="쉬운 용어 검색" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+      <button type="button" data-track="glossary_fab" className="gfab" aria-label="쉬운 용어 검색" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         <svg viewBox="0 0 24 24" fill="none" stroke="#1d2745" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="M15.5 15.5 21 21" /></svg>
       </button>
     </>

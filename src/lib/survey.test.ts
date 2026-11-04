@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { QUESTIONS } from '../data/survey'
+import { QUESTIONS, SIMPLE_IDS } from '../data/survey'
 import { deriveAnswers, summarize, visibleQuestions } from './survey'
 
 describe('청년 주거 경험 설문 → 판정 답변', () => {
@@ -11,6 +11,14 @@ describe('청년 주거 경험 설문 → 판정 답변', () => {
   it('폼 24문항 + 새로 구하는 집 4문항(총 28), 건너뛰는 문항은 없다', () => {
     expect(QUESTIONS.length).toBe(28)
     expect(visibleQuestions({}).length).toBe(QUESTIONS.length)
+  })
+
+  it('간편 설문은 10문항이고 모두 실제 문항이며, 심화 설문은 전체다', () => {
+    expect(SIMPLE_IDS.length).toBe(10)
+    expect(SIMPLE_IDS.every((id) => QUESTIONS.some((q) => q.id === id))).toBe(true)
+    expect(visibleQuestions({}, 'simple').map((q) => q.id)).toEqual(SIMPLE_IDS)
+    expect(visibleQuestions({}, 'deep').length).toBe(QUESTIONS.length)
+    expect(deriveAnswers({}, 'simple').surveyType).toBe('simple')
   })
 
   it('연령대·거주 형태·가구 형태를 판정 값으로 바꾼다', () => {

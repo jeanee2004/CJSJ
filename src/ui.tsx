@@ -61,9 +61,10 @@ interface BtnProps {
   disabled?: boolean
   type?: 'button' | 'submit'
   external?: boolean
+  track?: string
 }
 /** 알약 버튼: 호버하면 화살표 원이 번져 전체를 채우고, 글자는 롤오버, 화살표는 회전 */
-export function Btn({ to, href, onClick, children, variant = 'ink', size = 'md', disabled, type = 'button', external }: BtnProps) {
+export function Btn({ to, href, onClick, children, variant = 'ink', size = 'md', disabled, type = 'button', external, track }: BtnProps) {
   const ref = useMagnetic<HTMLElement>(8)
   const cls = `btn ${variant === 'ink' ? '' : variant} ${size === 'sm' ? 'sm' : ''}`.trim()
   const inner = (
@@ -72,14 +73,14 @@ export function Btn({ to, href, onClick, children, variant = 'ink', size = 'md',
       {variant !== 'plain' && <span className="dot"><Arrow /></span>}
     </>
   )
-  if (to) return <Link ref={ref as never} to={to} className={cls} onClick={onClick}>{inner}</Link>
+  if (to) return <Link ref={ref as never} to={to} className={cls} onClick={onClick} data-track={track}>{inner}</Link>
   if (href)
     return (
-      <a ref={ref as never} href={href} className={cls} {...(external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}>
+      <a ref={ref as never} href={href} className={cls} data-track={track} {...(external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}>
         {inner}
       </a>
     )
-  return <button ref={ref as never} type={type} className={cls} onClick={onClick} disabled={disabled}>{inner}</button>
+  return <button ref={ref as never} type={type} className={cls} onClick={onClick} disabled={disabled} data-track={track}>{inner}</button>
 }
 
 /** 줄 단위 마스크 리빌 제목 — CSS 애니메이션 기반(탭이 백그라운드여도 멈추지 않는다) */

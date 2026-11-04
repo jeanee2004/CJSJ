@@ -42,7 +42,7 @@ const FILTERS: { id: 'all' | Status; t: string }[] = [
 ]
 
 export default function Result() {
-  const { answers: a, hasSaved, user, openModal, persisted, openLogin } = useStore()
+  const { answers: a, hasSaved, user, openModal, persisted, openLogin, openDeep, authReady } = useStore()
   const [f, setF] = useState<'all' | Status>('all')
   const [bank, setBank] = useState(4.5)
   // 자격 판정은 evaluate 그대로, 접수 일정만 공공 API(온통청년 우선)로 덧붙인다. 불러오지 못하면 기존 판정을 쓴다
@@ -55,7 +55,7 @@ export default function Result() {
   const [basis, setBasis] = useState<CostBasis>(DEFAULT_BASIS)
   const cost = useMemo(() => compareCost(a, bank, basis), [a, bank, basis])
   const recs = useMemo(() => rank({ verdicts, items, answers: a, today: todayKst(), bank, basis }), [verdicts, items, a, bank, basis])
-  if (!hasSaved) return <Navigate to="/" replace />
+  if (!hasSaved) return authReady ? <Navigate to="/" replace /> : null // 새로고침 직후엔 로그인 확인이 끝나야 저장된 결과를 불러온다
 
   const count = (s: Status) => verdicts.filter((v) => v.status === s).length
   const shown = verdicts.filter((v) => f === 'all' || v.status === f)
@@ -89,12 +89,23 @@ export default function Result() {
             <div className="t-no"><b className="num"><CountUp to={count('no')} /></b><span>✕ 지금은 어려워요</span></div>
           </div>
 
+          {a.surveyType === 'simple' ? (
+            <div className="strip ask">
+              <span className="ico" aria-hidden="true">i</span>
+              <span>
+                <b>간편 설문 결과예요</b>
+                핵심 {Object.keys(a.survey ?? {}).length}문항만으로 계산해서 대략적인 결과예요. 로그인 후 심화 설문으로 더 자세히 답하면 내 상황에 더 가까운 결과를 볼 수 있어요.
+                <span className="strip-act"><Btn size="sm" variant="light" onClick={openDeep}>{user ? '심화 설문 하러 가기' : '로그인하고 심화 설문 하기'}</Btn></span>
+              </span>
+            </div>
+          ) : null}
+
           {!persisted && (
             <div className="strip ask">
               <span className="ico" aria-hidden="true">i</span>
               <span>
                 <b>저장되지 않은 결과예요</b>
-                로그인하지 않으면 이 결과는 화면을 닫거나 새로고침할 때 사라져요. 회원등록(로그인)하면 내 계정에 저장돼서 언제든 다시 볼 수 있어요.
+                로그인하지 않으면 이 결과는 화면을 닫거나 새로고침할 때 사라져요. 로그인하면 이 기기에 내 계정으로 저장돼서 다시 볼 수 있어요.
                 <span className="strip-act"><Btn size="sm" variant="light" onClick={() => openLogin()}>회원등록하고 저장하기</Btn></span>
               </span>
             </div>
@@ -214,12 +225,13 @@ export default function Result() {
           <ExtraBenefits load={benefits} answers={a} />
 
           <p className="disclaimer">
-            결과는 <b>참고용</b>이에요. 최종 판단은 각 기관에서 해요. 공고 기준일은 항목마다 표시해 두었어요. 입력하신 정보는 이 기기에만 저장되고 서버로 보내지 않았어요.
+            결과는 <b>참고용</b>이에요. 최종 판단은 각 기관에서 해요. 공고 기준일은 항목마다 표시해 두었어요. 결과는 이 기기에서 계산했고, 통계용으로 이름·이메일 없이 구간 값만 저장돼요.
             {a.deal === 'banjeonse' && ' 반전세가 “전세계약”으로 인정되는지는 공식 기준을 확인하지 못해 "확인 필요"로 표시했어요.'}
           </p>
 
           <div className="restart">
-            <Btn onClick={() => openModal('diagnose')}>다시 해 보기</Btn>
+            <Btn onClick={() => openModal('diagnose')}>간편 설문 다시 해 보기</Btn>
+            {a.surveyType !== 'deep' && <Btn variant="line" onClick={openDeep}>심화 설문 하기</Btn>}
             <Btn to="/#policies" variant="line">제도 전체 보기</Btn>
           </div>
 

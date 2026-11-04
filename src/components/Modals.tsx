@@ -4,6 +4,7 @@ import { Navigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { DiagnoseFlow } from '../pages/Diagnose'
 import { Feedback } from './Feedback'
+import { MyPage } from './MyPage'
 import { useStore } from '../store'
 import type { Modal } from '../store'
 
@@ -47,7 +48,13 @@ export function Modals() {
   return (
     <>
       <Popup open={modal === 'diagnose'} onClose={closeModal} label="내 상황 확인" wide>
-        {modal === 'diagnose' && <DiagnoseFlow onClose={closeModal} />}
+        {modal === 'diagnose' && <DiagnoseFlow mode="simple" onClose={closeModal} />}
+      </Popup>
+      <Popup open={modal === 'diagnoseDeep'} onClose={closeModal} label="심화 설문" wide>
+        {modal === 'diagnoseDeep' && <DiagnoseFlow mode="deep" onClose={closeModal} />}
+      </Popup>
+      <Popup open={modal === 'mypage'} onClose={closeModal} label="마이페이지">
+        {modal === 'mypage' && <MyPage />}
       </Popup>
       <Popup open={modal === 'feedback'} onClose={closeModal} label="의견 남기기">
         {modal === 'feedback' && (

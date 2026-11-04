@@ -1,7 +1,7 @@
 import { DEFAULT_ANSWERS } from './eligibility'
 import type { Answers, Deal, HouseType, Marital, Residence, Stage } from './eligibility'
-import { QUESTIONS } from '../data/survey'
-import type { Q, Survey } from '../data/survey'
+import { QUESTIONS, SIMPLE_IDS } from '../data/survey'
+import type { Q, Survey, SurveyType } from '../data/survey'
 
 const UNK = 'unk'
 const str = (s: Survey, id: string) => (typeof s[id] === 'string' ? (s[id] as string) : undefined)
@@ -15,7 +15,8 @@ const num = (v: string | number | undefined, d = 0) => (v === undefined || v ===
 export const isUnk = (s: Survey, id: string) => s[id] === UNK || (Array.isArray(s[id]) && (s[id] as string[]).includes(UNK))
 
 /** 화면에 보이는 문항(조건부 문항 제외) */
-export const visibleQuestions = (s: Survey): Q[] => QUESTIONS.filter((q) => !q.show || q.show(s))
+export const visibleQuestions = (s: Survey, type: SurveyType = 'deep'): Q[] =>
+  QUESTIONS.filter((q) => (type === 'deep' || SIMPLE_IDS.includes(q.id)) && (!q.show || q.show(s)))
 
 // 구간으로 받은 응답을 판정용 숫자로 바꿀 때 쓰는 대표값(만원)
 const INCOME_MID = [150, 250, 350, 450, 600, 800] // Q5 월 가구소득
@@ -23,7 +24,7 @@ const COST_MID = [0, 10, 25, 35, 45, 60, 80] // Q8-2 월 주거비
 const AGE_MID = [22, 27, 32, 37, 40] // Q1 연령대
 
 /** 설문 응답 → 지원 자격 판정용 답변 */
-export function deriveAnswers(s: Survey): Answers {
+export function deriveAnswers(s: Survey, type: SurveyType = 'deep'): Answers {
   const unknown = new Set<string>()
   const a: Answers = { ...DEFAULT_ANSWERS }
 
@@ -71,6 +72,7 @@ export function deriveAnswers(s: Survey): Answers {
 
   a.unknown = [...unknown]
   a.survey = s
+  a.surveyType = type
   return a
 }
 

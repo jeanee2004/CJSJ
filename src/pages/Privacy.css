@@ -1,0 +1,13 @@
+.privacy { padding: 120px 0 80px; background: var(--paper); color: var(--ink); }
+.privacy .wrap { max-width: 760px; }
+.privacy h1 { font-size: clamp(30px, 6vw, 48px); line-height: 1.2; margin: 10px 0 14px; }
+.privacy .lead { font-size: 18px; color: var(--ink-2); margin-bottom: 36px; }
+.privacy section { margin-bottom: 34px; }
+.privacy h2 { font-size: 20px; margin-bottom: 12px; }
+.privacy p, .privacy li { line-height: 1.75; font-size: 16px; }
+.privacy ul { padding-left: 20px; display: grid; gap: 8px; }
+.privacy table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 15px; }
+.privacy th, .privacy td { text-align: left; vertical-align: top; padding: 12px 10px; border-bottom: 1.5px solid var(--line); }
+.privacy th { font-size: 13px; color: var(--ink-2); }
+.privacy .meta { font-size: 14px; color: var(--ink-2); margin-top: 14px; }
+@media (max-width: 560px) { .privacy { padding-top: 96px; } .privacy table, .privacy tbody, .privacy tr, .privacy td { display: block; } .privacy thead { display: none; } .privacy tr { padding: 8px 0; border-bottom: 1.5px solid var(--line); } .privacy td { border: 0; padding: 4px 0; } }
