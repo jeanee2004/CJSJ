@@ -2,16 +2,35 @@
 // - 접수 일정: 온통청년(구조화된 날짜)을 먼저, 없으면 정부24 신청기한 문구
 // - 공공임대 공고: 혼인·자녀·나이에 맞지 않는 공고는 숨김
 // - 추가 혜택: 위 진단 카드에 이미 있는 제도는 뺌
+import { POLICIES } from '../data/policies'
 import type { PolicyId } from '../data/policies'
 import type { Answers, Verdict } from './eligibility'
 import type { Benefit, BenefitDetail, Notice } from './api'
 import { ymdLabel } from './api'
 
 /** 공공 API 의 제도 이름 → 진단 카드 id (2026-10-28 실제 응답 이름 기준) */
+// 새 제도(2026-11 확장)의 정규식은 공공 API 에 실제로 같은 이름이 올라온 것을 확인하지 못한 채 제도 이름으로 추정한 것이다.
+// 맞는 이름이 없으면 그냥 안 걸리고 ExtraBenefits 에 남으니 안전하다. 구체적인 이름을 앞에 둔다(먼저 맞는 제도로 연결).
 const MATCH: Partial<Record<PolicyId, RegExp>> = {
   sejongInterest: /주택임차보증금\s*이자/,
   sejongRent: /청년\s*주거\s*임대료/,
   molitRent: /^청년\s*월세\s*지원(사업)?$/,
+  youthMonthlyLoan: /청년(전용)?\s*보증부\s*월세/,
+  smeYouthLoan: /중소기업\s*취업\s*청년.*(전월세|보증금)/,
+  youthDreamAccount: /주택드림\s*청약/,
+  youthDreamLoan: /주택드림\s*대출/,
+  youthButeemok: /청년.*버팀목/,
+  newlywedButeemok: /신혼.*버팀목/,
+  generalButeemok: /^버팀목\s*전세/,
+  lhYouthJeonse: /청년.*전세임대/,
+  lhNewlywedJeonse: /신혼.*전세임대/,
+  happyNewlywed: /신혼.*행복주택/,
+  happyYouth: /(청년|대학생|사회초년생).*행복주택|행복주택.*(청년|대학생)/,
+  youthMaeip: /청년.*매입임대/,
+  nationalRental: /국민임대/,
+  rentTaxCredit: /월세.*세액\s*공제/,
+  housingBenefit: /^주거급여/,
+  depositGuaranteeFee: /반환보증.*(보증료|지원)|보증료\s*지원/,
 }
 export const policyOf = (name: string): PolicyId | undefined =>
   (Object.keys(MATCH) as PolicyId[]).find((id) => MATCH[id]!.test(name.trim()))
@@ -100,7 +119,8 @@ export function fitsNotice(n: Notice, a: Answers): boolean {
 }
 
 /** 진단 카드에 이미 있는 제도인지 */
-export const coveredByVerdicts = (b: Benefit) => policyOf(b.name) !== undefined
+/** shown 을 주면 그 제도들만 "이미 있는 제도"로 본다 (맛보기에서 잠긴 제도의 공고는 추가 혜택에 남긴다) */
+export const coveredByVerdicts = (b: Benefit, shown?: PolicyId[]) => { const id = policyOf(b.name); return id !== undefined && (!shown || shown.includes(id)) }
 
 /* ───────── 제도 카드: 공식 원문 ───────── */
 
@@ -126,4 +146,4 @@ export function officialOf(list: Benefit[]): Official | null {
 export const officialFor = (id: PolicyId, items: Benefit[]) => officialOf(items.filter((b) => policyOf(b.name) === id))
 
 /** 다섯 가지 지원 밖에서 공공 API 에만 있는 세종 주거 정책 */
-export const otherPolicies = (items: Benefit[]) => items.filter((b) => !coveredByVerdicts(b))
+export const otherPolicies = (items: Benefit[]) => items.filter((b) => !POLICIES.some((p) => p.id === policyOf(b.name)))

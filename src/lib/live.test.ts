@@ -16,13 +16,23 @@ const N = (title: string): Notice => ({ id: title, title, status: '', supplier: 
 const A = (x: Partial<Answers>): Answers => ({ ...DEFAULT_ANSWERS, ...x })
 
 describe('제도 이름 매칭', () => {
+  it('확장 제도 이름도 연결하고, 맞는 제도가 없으면 undefined', () => {
+    expect(policyOf('세종 전세보증금반환보증 보증료 지원')).toBe('depositGuaranteeFee')
+    expect(policyOf('청년전용 보증부월세대출')).toBe('youthMonthlyLoan')
+    expect(policyOf('신혼부부 행복주택 모집')).toBe('happyNewlywed')
+    expect(policyOf('청년 매입임대주택')).toBe('youthMaeip')
+    expect(policyOf('청년 버팀목 전세대출')).toBe('youthButeemok')
+    expect(policyOf('세종 청년 아무 사업')).toBeUndefined()
+    expect(coveredByVerdicts(ITEMS[3], ['sejongRent'])).toBe(false)
+    expect(coveredByVerdicts(ITEMS[3])).toBe(true)
+  })
   it('API 이름을 진단 카드 id로', () => {
     expect(policyOf('세종시 청년 주택임차보증금 이자지원')).toBe('sejongInterest')
     expect(policyOf('청년 주거임대료 지원사업')).toBe('sejongRent')
     expect(policyOf('세종형 청년 주거 임대료 지원（월세지원）')).toBe('sejongRent')
     expect(policyOf('청년월세 지원')).toBe('molitRent')
     expect(policyOf('기초청년 주거급여(임차급여)')).toBeUndefined()
-    expect(coveredByVerdicts(ITEMS[3])).toBe(false)
+    expect(coveredByVerdicts(ITEMS[3])).toBe(true) // 확장 제도(세종 반환보증 보증료 지원)로 연결된다
   })
 })
 

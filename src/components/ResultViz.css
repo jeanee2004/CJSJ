@@ -58,3 +58,13 @@
   .rv-card, .rv-track i, .rv-stack .seg { animation: none; }
   .rv-row { transition: none; }
 }
+
+/* 맛보기 결과: 심화에서 확인할 수 있는 잠긴 제도 미리보기 */
+.rv-lock { margin: 20px 0 8px; padding: 20px 22px; border: 1px dashed var(--line, rgba(128,128,128,.45)); border-radius: 14px; background: var(--paper-2, rgba(128,128,128,.06)); }
+.rv-lock-h { font-size: 18px; margin: 0 0 6px; }
+.rv-lock-p { margin: 0 0 12px; font-size: 14px; color: var(--ink-2); }
+.rv-lock-list { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 8px; }
+.rv-lock-list li { display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: var(--paper, transparent); border: 1px solid var(--line, rgba(128,128,128,.25)); opacity: .85; }
+.rv-lock-list small { color: var(--ink-2); font-size: 13px; }
+.rv-lock-cat { display: inline-block; font-size: 11px; letter-spacing: .02em; padding: 1px 8px; border-radius: 99px; border: 1px solid currentColor; opacity: .75; margin-bottom: 4px; width: fit-content; }
+.rv-need { margin-top: 10px; }

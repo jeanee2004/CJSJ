@@ -8,6 +8,9 @@ import { AddressCheck } from '../components/AddressCheck'
 import { useStore } from '../store'
 import { saveResponse } from '../lib/responses'
 import { track } from '../lib/track'
+import { SIMPLE_IDS } from '../data/survey'
+import { simpleScreens } from '../lib/surveyGroups'
+import '../components/Survey.css'
 
 interface Opt<T> { v: T; t: string; d?: string }
 function Choice<T extends string | boolean>({ opts, value, onPick }: { opts: Opt<T>[]; value: T | undefined; onPick: (v: T) => void }) {
@@ -46,11 +49,21 @@ function NumberField({ value, onChange, unit, presets, hint, max, compact }: { v
 
 const UNK = 'unk'
 const EXCLUSIVE = /^(해당 없음|없음|겪은 적 없음|아무것도 안 함|받고 있는 지원 없음|찾아본 적 없음)/
-const DRAFT = (t: SurveyType) => `cjsj.draft.v3.${t}`
+const DRAFT = (t: SurveyType) => `cjsj.draft.v4.${t}`
 const withUnk = (q: Q): SOpt[] => [...(q.opts ?? []), ...(q.unk ? [{ v: UNK, t: '잘 모르겠어요', d: '괜찮아요. 결과에서 어떻게 확인하는지 알려드릴게요' }] : [])]
 
-function QBody({ q, sv, set, next }: { q: Q; sv: Survey; set: (v: Val | undefined | ((prev: Val | undefined) => Val | undefined)) => void; next: () => void }) {
+function QBody({ q, sv, set, next, compact }: { q: Q; sv: Survey; set: (v: Val | undefined | ((prev: Val | undefined) => Val | undefined)) => void; next: () => void; compact?: boolean }) {
   const v = sv[q.id]
+  if (q.kind === 'single' && compact)
+    return (
+      <div className="chips" role="group">
+        {withUnk(q).map((o) => (
+          <button key={o.v} type="button" className="chip" aria-pressed={v === o.v} onClick={() => set(o.v)}>
+            <b>{o.t}</b>{o.d && o.v !== UNK && <small>{o.d}</small>}
+          </button>
+        ))}
+      </div>
+    )
   if (q.kind === 'single')
     return <Choice<string> value={typeof v === 'string' ? v : undefined} onPick={(x) => { set(x); next() }} opts={withUnk(q)} />
 
@@ -142,7 +155,7 @@ function QBody({ q, sv, set, next }: { q: Q; sv: Survey; set: (v: Val | undefine
   if (q.kind === 'matrix') {
     const val = v && typeof v === 'object' && !Array.isArray(v) ? v : {}
     return (
-      <div className="mx" role="group">
+      <div className={`mx${compact ? ' mx-compact' : ''}`} role="group">
         {(q.rows ?? []).map((r, ri) => (
           <div key={r.k} className="mx-row">
             <p><span className="k">{String(ri + 1).padStart(2, '0')}</span>{r.t}</p>
@@ -194,18 +207,27 @@ export function DiagnoseFlow({ mode, onClose }: { mode: SurveyType; onClose: () 
   const [i, setI] = useState(draft.i)
   const [dir, setDir] = useState(1)
 
-  const visible = visibleQuestions(sv, mode)
-  const secs = [...new Set(visible.map((x) => x.sec))]
-  const idx = Math.min(i, visible.length - 1)
-  const q = visible[idx]
-  const set = (v: Val | undefined | ((prev: Val | undefined) => Val | undefined)) =>
-    setSv((prev) => ({ ...prev, [q.id]: typeof v === 'function' ? v(prev[q.id]) : v }))
+  // 맛보기는 관련 질문을 묶은 화면(qs 여러 개), 심화는 한 문항씩
+  const grouped = mode === 'simple'
+  const screens = grouped ? simpleScreens(sv) : visibleQuestions(sv, mode).map((x) => ({ key: x.id, title: x.title, sub: x.sec, qs: [x] }))
+  const visible = screens
+  const idx = Math.min(i, screens.length - 1)
+  const scr = screens[idx]
+  const q = scr.qs[0]
+  const secs = [...new Set(screens.map((x) => x.qs[0].sec))]
+  const setFor = (qq: Q) => (v: Val | undefined | ((prev: Val | undefined) => Val | undefined)) =>
+    setSv((prev) => ({ ...prev, [qq.id]: typeof v === 'function' ? v(prev[qq.id]) : v }))
+  const set = setFor(q)
   // 추적: 문항별 소요 시간, 완료/이탈 (식별정보 없이 문항 id 와 시간만)
   const qStart = useRef(Date.now())
   const lastQ = useRef('')
   const finished = useRef(false)
   lastQ.current = q.id
-  const trackAnswer = () => { track('survey_answer', { name: q.id, survey_type: mode, duration_ms: Date.now() - qStart.current }); qStart.current = Date.now() }
+  const trackAnswer = () => {
+    // 묶음 화면은 문항별로 이벤트를 남기되, 걸린 시간은 첫 문항에 합쳐 기록한다
+    scr.qs.forEach((qq, n) => track('survey_answer', { name: qq.id, survey_type: mode, duration_ms: n === 0 ? Date.now() - qStart.current : 0 }))
+    qStart.current = Date.now()
+  }
   const mounted = useRef(false)
   const started = useRef(false)
   useEffect(() => {
@@ -226,7 +248,7 @@ export function DiagnoseFlow({ mode, onClose }: { mode: SurveyType; onClose: () 
   }
   const go = (n: number) => { if (n > 0) trackAnswer(); setDir(n > 0 ? 1 : -1); setI((x) => Math.max(0, x + n)) }
   const isLast = idx === visible.length - 1
-  const ok = answered(q, sv[q.id])
+  const ok = scr.qs.every((qq) => answered(qq, sv[qq.id]))
   const next = () => { if (isLast) finish(); else go(1) }
   // 선택형 질문은 바로 넘어가므로, 상태 반영 후 이동하도록 setTimeout 사용
   const autoNext = () => setTimeout(() => (isLast ? undefined : go(1)), 180)
@@ -238,17 +260,35 @@ export function DiagnoseFlow({ mode, onClose }: { mode: SurveyType; onClose: () 
   const secNo = secs.indexOf(q.sec) + 1
   const hues: [string, string][] = [['var(--blush)', 'var(--aqua)'], ['var(--mint)', 'var(--peri)'], ['var(--aqua)', 'var(--blush)'], ['var(--peri)', 'var(--mint)'], ['var(--blush)', 'var(--mint)'], ['var(--tint)', 'var(--aqua)']]
   const [h1, h2] = hues[(secNo - 1) % hues.length]
-  const minutes = Math.max(1, Math.ceil((visible.length - idx) * 0.18))
-  const tag = mode === 'simple' ? '간편 설문' : q.id.startsWith('N') ? '맞춤 지원 확인용 추가 질문' : `심화 설문 ${q.id}`
+  const minutes = Math.max(1, Math.ceil((visible.length - idx) * (grouped ? 0.5 : 0.18)))
+  const tag = mode === 'simple' ? `맛보기 · ${scr.sub}` : q.id.startsWith('N') ? '맞춤 지원 확인용 추가 질문' : `심화 설문 ${q.id}`
 
   return (
-    <div className="diag-flow" style={{ ['--hc1' as string]: h1, ['--hc2' as string]: h2 }}>
+    <div className={`diag-flow${grouped ? ' is-grouped' : ''}`} style={{ ['--hc1' as string]: h1, ['--hc2' as string]: h2 }}>
       <div>
         <div className="diag-top">
-          <span className="label">질문 {String(idx + 1).padStart(2, '0')} / {String(visible.length).padStart(2, '0')} · {secNo}/{secs.length} {q.sec}</span>
+          <span className="label">{grouped ? `${idx + 1} / ${visible.length} 단계 · ${scr.sub}` : `질문 ${String(idx + 1).padStart(2, '0')} / ${String(visible.length).padStart(2, '0')} · ${secNo}/${secs.length} ${q.sec}`}</span>
           <span className="label">약 {minutes}분 남았어요</span>
         </div>
         <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={visible.length} aria-valuenow={idx + 1}><i style={{ width: `${((idx + 1) / visible.length) * 100}%` }} /></div>
+        {grouped ? (
+          <section key={scr.key} className="diag-group step-in" aria-live="polite" style={{ ['--dir' as string]: dir }}>
+            <span className="label">{tag}</span>
+            <h1>{scr.title}</h1>
+            {scr.qs.map((qq, n) => (
+              <div key={qq.id} className="gq" data-done={answered(qq, sv[qq.id])}>
+                <p className="gq-t"><span className="gq-n">{n + 1}</span>{qq.id === 'Q13' ? '아래 제도를 알고 계신가요? 이용 경험이 있다면 함께 표시해 주세요.' : qq.title}</p>
+                {qq.why && <details className="gq-why"><summary>여쭤보는 이유</summary><div>{qq.why}</div></details>}
+                <QBody q={qq} sv={sv} set={setFor(qq)} next={() => undefined} compact />
+                {qq.id === 'N3' && <AddressCheck onResult={(multi) => setFor(qq)(multi ? 'multi' : 'normal')} />}
+              </div>
+            ))}
+            <div className="nav-row">
+              <button className="back" type="button" onClick={() => go(-1)} style={{ visibility: idx === 0 ? 'hidden' : 'visible' }}>← 이전</button>
+              <Btn onClick={next} disabled={!ok}>{isLast ? '결과 보기' : '다음'}</Btn>
+            </div>
+          </section>
+        ) : (
         <section key={q.id} className="diag-grid step-in" aria-live="polite" style={{ ['--dir' as string]: dir }}>
           <div className="diag-side">
             <span className="diag-no" aria-hidden="true">{String(idx + 1).padStart(2, '0')}</span>
@@ -269,8 +309,9 @@ export function DiagnoseFlow({ mode, onClose }: { mode: SurveyType; onClose: () 
             </div>
           </div>
         </section>
+        )}
         {mode === 'simple' ? (
-          <p className="hint" style={{ marginTop: 36 }}>간편 설문이에요(로그인 없이 {visible.length}문항). 결과는 이 기기에서 계산하고, 통계용으로 이름·이메일 없이 구간 값만 저장해요(<Link to="/privacy" onClick={onClose}>개인정보처리방침</Link>). 더 정확한 점검은 로그인 후 <button type="button" className="link-btn" onClick={() => { onClose(); openDeep() }}>심화 설문</button>에서 할 수 있어요.</p>
+          <p className="hint" style={{ marginTop: 36 }}>맛보기 설문이에요(로그인 없이 {SIMPLE_IDS.length}문항). 결과는 이 기기에서 계산하고, 통계용으로 이름·이메일 없이 구간 값만 저장해요(<Link to="/privacy" onClick={onClose}>개인정보처리방침</Link>). 더 정확한 점검은 로그인 후 <button type="button" className="link-btn" onClick={() => { onClose(); openDeep() }}>심화 설문</button>에서 할 수 있어요.</p>
         ) : (
           <p className="hint" style={{ marginTop: 36 }}>심화 설문이에요. 질문은 「청정(靑定) 세종 · 청년 주거 경험 설문」과 같아요.</p>
         )}

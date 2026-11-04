@@ -1,5 +1,5 @@
 import { DEFAULT_ANSWERS } from './eligibility'
-import type { Answers, Deal, HouseType, Marital, Residence, Stage } from './eligibility'
+import type { Answers, Band, Deal, HouseType, Marital, Residence, Stage } from './eligibility'
 import { QUESTIONS, SIMPLE_IDS } from '../data/survey'
 import type { Q, Survey, SurveyType } from '../data/survey'
 
@@ -69,6 +69,35 @@ export function deriveAnswers(s: Survey, type: SurveyType = 'deep'): Answers {
   const ht = str(s, 'N3')
   if (ht === UNK || !ht) { a.houseType = 'normal'; unknown.add('houseType') } else a.houseType = ht as HouseType
   a.stage = (str(s, 'N4') as Stage | undefined) ?? 'explore'
+
+  // ── 심화 전용 문항: 답이 있을 때만 채운다 (맛보기에는 없어 undefined 로 남는다) ──
+  if (type === 'deep') {
+    const band = (id: string, key: string): Band | undefined => {
+      const v = str(s, id)
+      if (isUnk(s, id)) { unknown.add(key); return undefined }
+      return v && ['1', '2', '3', '4'].includes(v) ? (Number(v) as Band) : undefined
+    }
+    a.medianBand = band('D1', 'medianBand')
+    a.assetBand = band('D4', 'assets')
+    const sep = str(s, 'D2')
+    if (isUnk(s, 'D2')) unknown.add('separateHousehold')
+    else if (sep === '1' || sep === '2') {
+      a.separateHousehold = sep === '1'
+      // 등본상 세대 정보가 더 정확해서, 부모와 함께 산다고 답했어도 별도 세대면 주소 분리로 본다
+      if (hh !== '2' || sep === '1') a.livesApart = sep === '1'
+    }
+    const hy = str(s, 'D3')
+    if (hy && ['1', '2', '3', '4'].includes(hy)) a.homelessYears = [0, 1, 3, 5][Number(hy) - 1]
+    const debt = str(s, 'D5')
+    if (debt === 'none' || debt === 'small' || debt === 'mid' || debt === 'large') a.debt = debt
+    const job = str(s, 'Q3')
+    if (job === '3') a.employer = 'public'
+    else if (job === '4' || job === '5') { const e = str(s, 'D6'); a.employer = e === 'sme' || e === 'large' ? e : undefined }
+    else if (job) a.employer = 'none'
+    const wish = obj(s, 'D7')
+    if (isUnk(s, 'D7')) unknown.add('wish')
+    else if (wish) { a.wishDeposit = num(wish.maxDeposit, 0) || undefined; a.wishRent = a.deal === 'jeonse' ? 0 : num(wish.maxRent, 0) }
+  }
 
   a.unknown = [...unknown]
   a.survey = s

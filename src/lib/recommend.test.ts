@@ -54,9 +54,15 @@ describe('순위', () => {
     // 국토부 청년월세(24개월 480만원) > 세종 임대료(10개월 200만원)
     expect(keys).toContain('molitRent')
     expect(keys).not.toContain('sejongRent')
-    expect(keys).toContain('gov24-g1')
+    expect(keys).not.toContain('gov24-g1') // 세종 반환보증 보증료 지원은 확장 제도로 연결되고, 월세라 대상이 아니다
+    expect(keys).not.toContain('depositGuaranteeFee')
     expect(keys).not.toContain('youthcenter-y3') // 나이 밖
-    expect(keys.indexOf('molitRent')).toBeLessThan(keys.indexOf('gov24-g1'))
+  })
+  it('전세면 API 의 세종 반환보증 보증료 지원이 진단 제도로 합쳐져 한 번만 나온다', () => {
+    const a = A({ age: 27, deal: 'jeonse', deposit: 10000, rent: 0, income: 3000, stage: 'explore' })
+    const keys = rank({ verdicts: evaluate(a), items: ITEMS, answers: a, today: T, bank: 4.5, basis: DEFAULT_BASIS }).map((x) => x.key)
+    expect(keys).toContain('depositGuaranteeFee')
+    expect(keys).not.toContain('gov24-g1')
   })
   it('비교 기간을 1년으로 바꾸면 금액이 줄어든다', () => {
     const a = A({ age: 27, deal: 'wolse' })

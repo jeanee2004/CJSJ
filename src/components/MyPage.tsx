@@ -6,7 +6,7 @@ import type { Profile } from '../store'
 import { supabase } from '../lib/supabase'
 import { evaluate } from '../lib/eligibility'
 import type { Status } from '../lib/eligibility'
-import { POLICIES } from '../data/policies'
+import { POLICIES, policyById } from '../data/policies'
 import { QUESTIONS } from '../data/survey'
 
 // 로그인 후 마이페이지. 탭: 요약 / 내 결과 / 설문 기록 / 내 정보(별명 등 수정)
@@ -118,7 +118,7 @@ export function MyPage() {
                 {verdicts.map((v) => (
                   <li key={v.id} className={v.status}>
                     <i aria-hidden="true">{ST[v.status].g}</i>
-                    <span><b>{POLICIES.find((p) => p.id === v.id)?.name ?? v.id}</b><small>{ST[v.status].t}</small></span>
+                    <span><b>{policyById(v.id)?.name ?? v.id}</b><small>{ST[v.status].t}</small></span>
                   </li>
                 ))}
               </ul>

@@ -5,6 +5,7 @@ import type { Benefit, BenefitsRes, Load, MyhomeRes, RoneRes, TradesRes } from '
 import { LiveCarousel } from './LiveCarousel'
 import type { Answers } from '../lib/eligibility'
 import { coveredByVerdicts, fitsNotice } from '../lib/live'
+import { evaluate } from '../lib/eligibility'
 import { matchBenefit } from '../lib/recommend'
 import { Btn, VBadge, reduced } from '../ui'
 
@@ -62,7 +63,7 @@ export function PublicRentals({ answers }: { answers: Answers }) {
 /** 결과 화면 하단: 추가로 확인해볼 혜택 (정부24·복지로·온통청년). 위 진단 카드에 있는 제도는 빼고, 나이·무주택으로 맞지 않는 것은 접는다 */
 export function ExtraBenefits({ load: r, answers }: { load: Load<BenefitsRes>; answers: Answers }) {
   const [all, setAll] = useState(false)
-  const matches = r.state === 'ok' ? r.data.items.filter((b) => !coveredByVerdicts(b)).map((b) => matchBenefit(b, answers)) : []
+  const matches = r.state === 'ok' ? r.data.items.filter((b) => !coveredByVerdicts(b, evaluate(answers).map((v) => v.id))).map((b) => matchBenefit(b, answers)) : []
   const fit = matches.filter((m) => m.status !== 'no')
   const items = all ? matches : fit
   const hidden = matches.length - fit.length

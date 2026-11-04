@@ -8,16 +8,25 @@ describe('청년 주거 경험 설문 → 판정 답변', () => {
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  it('폼 24문항 + 새로 구하는 집 4문항(총 28), 건너뛰는 문항은 없다', () => {
-    expect(QUESTIONS.length).toBe(28)
-    expect(visibleQuestions({}).length).toBe(QUESTIONS.length)
+  it('폼 24문항 + 새로 구하는 집 4문항 + 심화 전용 7문항(총 35). 회사 규모(D6)는 민간 재직일 때만 보인다', () => {
+    expect(QUESTIONS.length).toBe(35)
+    expect(visibleQuestions({}).length).toBe(QUESTIONS.length - 1)
+    expect(visibleQuestions({ Q3: '4' }).some((q) => q.id === 'D6')).toBe(true)
+    expect(visibleQuestions({ Q3: '1' }).some((q) => q.id === 'D6')).toBe(false)
+  })
+
+  it('심화 전용 문항(D1~D7)은 맛보기에 나오지 않고, 기존 문항 순서는 그대로다', () => {
+    const deepOnly = QUESTIONS.filter((q) => /^D\d/.test(q.id)).map((q) => q.id)
+    expect(deepOnly).toEqual(['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7'])
+    expect(visibleQuestions({ Q3: '4' }, 'simple').some((q) => deepOnly.includes(q.id))).toBe(false)
+    expect(QUESTIONS.slice(0, 28).map((q) => q.id).filter((id) => !id.startsWith('D'))).toHaveLength(28)
   })
 
   it('맛보기 설문은 12문항이고 모두 실제 문항이며, 심화 설문은 전체다', () => {
     expect(SIMPLE_IDS.length).toBe(12)
     expect(SIMPLE_IDS.every((id) => QUESTIONS.some((q) => q.id === id))).toBe(true)
     expect(visibleQuestions({}, 'simple').map((q) => q.id)).toEqual(SIMPLE_IDS)
-    expect(visibleQuestions({}, 'deep').length).toBe(QUESTIONS.length)
+    expect(visibleQuestions({}, 'deep').length).toBe(QUESTIONS.length - 1) // D6(회사 규모)는 민간 재직일 때만
     expect(deriveAnswers({}, 'simple').surveyType).toBe('simple')
   })
 
@@ -55,5 +64,31 @@ describe('청년 주거 경험 설문 → 판정 답변', () => {
     expect(s.ratio).toBe(14)
     expect(s.known).toBe(2)
     expect(s.used).toBe(1)
+  })
+
+  it('심화 문항 → 판정 답변: 소득 분위·자산·세대 분리·무주택 기간·부채·회사 규모·희망 금액', () => {
+    const a = deriveAnswers({ Q3: '4', Q4: '2', D1: '2', D2: '1', D3: '3', D4: '3', D5: 'small', D6: 'sme', D7: { maxDeposit: 8000, maxRent: 50 }, N1: 'wolse' }, 'deep')
+    expect(a.medianBand).toBe(2)
+    expect(a.assetBand).toBe(3)
+    expect(a.separateHousehold).toBe(true)
+    expect(a.livesApart).toBe(true) // 부모와 살지만 등본상 별도 세대
+    expect(a.homelessYears).toBe(3)
+    expect(a.debt).toBe('small')
+    expect(a.employer).toBe('sme')
+    expect(a.wishDeposit).toBe(8000)
+    expect(a.wishRent).toBe(50)
+  })
+
+  it('심화 문항에서 모르겠어요를 고르면 확인 항목에 남고 값은 비운다', () => {
+    const a = deriveAnswers({ D1: 'unk', D4: 'unk', D2: 'unk', D7: 'unk' }, 'deep')
+    expect(a.medianBand).toBeUndefined()
+    expect(a.assetBand).toBeUndefined()
+    expect(a.unknown).toEqual(expect.arrayContaining(['medianBand', 'assets', 'separateHousehold', 'wish']))
+  })
+
+  it('맛보기로는 심화 값을 채우지 않는다', () => {
+    const a = deriveAnswers({ D1: '1', D4: '1' }, 'simple')
+    expect(a.medianBand).toBeUndefined()
+    expect(a.assetBand).toBeUndefined()
   })
 })

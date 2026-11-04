@@ -1,6 +1,6 @@
 // 진단 카드(직접 정리한 5개 제도)와 공공 API 제도를 한 줄로 세워 "먼저 할 일"을 고른다.
 // 모두 브라우저에서만 계산하고 설문 답은 서버로 보내지 않는다. 설계: docs/recommendation-design.md
-import { POLICIES, RULES } from '../data/policies'
+import { policyById, RULES } from '../data/policies'
 import type { PolicyId } from '../data/policies'
 import type { Benefit } from './api'
 import { ymdLabel } from './api'
@@ -65,7 +65,13 @@ export interface Rec {
   from: 'verdict' | 'api'
 }
 
-const KIND: Record<PolicyId, Kind> = { sejongInterest: 'loan', youthButeemok: 'loan', newlywedButeemok: 'loan', sejongRent: 'rent', molitRent: 'rent' }
+const KIND: Record<PolicyId, Kind> = {
+  sejongInterest: 'loan', youthButeemok: 'loan', newlywedButeemok: 'loan', generalButeemok: 'loan', youthMonthlyLoan: 'loan', smeYouthLoan: 'loan', youthDreamLoan: 'loan',
+  sejongRent: 'rent', molitRent: 'rent', housingBenefit: 'rent', rentTaxCredit: 'rent',
+  youthDreamAccount: 'other', newlywedSpecial: 'other', lhYouthJeonse: 'other', lhNewlywedJeonse: 'other', happyYouth: 'other', happyNewlywed: 'other', youthMaeip: 'other', nationalRental: 'other', depositGuaranteeFee: 'other',
+}
+/** 은행 상품이라 접수 일정 없이 늘 신청할 수 있는 대출 */
+const BANK_LOANS: PolicyId[] = ['youthButeemok', 'newlywedButeemok', 'generalButeemok', 'youthMonthlyLoan']
 const kindOf = (name: string): Kind => (/보증료|보증금|이자|대출|전세/.test(name) ? 'loan' : /월세|임대료/.test(name) ? 'rent' : 'other')
 
 /** 비교 기간(basis.years) 동안 받거나 아끼는 돈. 대출은 은행 금리(bank)로 빌렸을 때보다 덜 내는 이자 */
@@ -73,6 +79,11 @@ export function amountOf(id: PolicyId, a: Answers, bank: number, basis: CostBasi
   const months = basis.years * 12
   if (id === 'sejongRent') return RULES.sejongRent.monthlySupport * Math.min(RULES.sejongRent.months, months)
   if (id === 'molitRent') return RULES.molitRent.monthlySupport * Math.min(RULES.molitRent.months, months)
+  if (id === 'rentTaxCredit') {
+    const rate = a.income <= RULES.rentTaxCredit.salaryHigh ? RULES.rentTaxCredit.rateHigh : RULES.rentTaxCredit.rateLow
+    return Math.round(Math.min(a.rent * 12, RULES.rentTaxCredit.rentCap) * rate / 100 * basis.years)
+  }
+  if (id !== 'sejongInterest' && id !== 'youthButeemok' && id !== 'newlywedButeemok') return undefined
   const c = compareCost(a, bank, basis)
   if (!c) return undefined
   if (id === 'sejongInterest') return Math.round(c.loanInterest * (Math.min(bank, RULES.sejongInterest.maxSupportRate) / 100) * basis.years)
@@ -124,24 +135,25 @@ export function rank({ verdicts, items, answers: a, today, bank, basis }: RankIn
   const phaseFor = (id: PolicyId): Phase => {
     const s = items ? scheduleFor(id, items) : null
     // 버팀목은 은행 상품이라 상시 신청
-    return s ? phaseOf(s, today) : KIND[id] === 'loan' && id !== 'sejongInterest' ? 'always' : 'unknown'
+    return s ? phaseOf(s, today) : BANK_LOANS.includes(id) ? 'always' : 'unknown'
   }
   const losers = pickOneLosers(verdicts, a, bank, basis, phaseFor)
   const recs: Rec[] = []
   for (const v of verdicts) {
     if (v.status === 'no' || losers.has(v.id)) continue
-    const p = POLICIES.find((x) => x.id === v.id)!
+    const p = policyById(v.id)!
     const phase = phaseFor(v.id)
     const amount = amountOf(v.id, a, bank, basis)
     recs.push({ key: v.id, name: p.name, status: v.status, phase, kind: KIND[v.id], amount, why: [], url: p.apply.url, from: 'verdict' })
   }
   for (const b of items ?? []) {
-    if (coveredByVerdicts(b) || matchBenefit(b, a).status === 'no') continue
+    if (coveredByVerdicts(b, verdicts.map((v) => v.id)) || matchBenefit(b, a).status === 'no') continue
     const phase = phaseOf({ begin: b.begin, end: b.end, deadline: b.deadline, source: b.source }, today)
     recs.push({ key: `${b.source}-${b.id}`, name: b.name, status: 'maybe', phase, kind: kindOf(b.name), why: [], url: b.url, from: 'api', ages: !!b.ages?.length })
   }
 
-  const k = (r: Rec) => [r.status === 'ok' ? 0 : 1, PHASE_ORDER[r.phase], stageFit(r.kind, a) ? 0 : 1, -(r.amount ?? -1), r.from === 'verdict' ? 0 : 1]
+  // 청약통장·공공임대처럼 지금 당장 계약에 쓰는 돈 지원이 아닌 제도는 대출·월세 지원 뒤에 둔다
+  const k = (r: Rec) => [r.from === 'verdict' && r.kind === 'other' ? 1 : 0, r.status === 'ok' ? 0 : 1, PHASE_ORDER[r.phase], stageFit(r.kind, a) ? 0 : 1, -(r.amount ?? -1), r.from === 'verdict' ? 0 : 1]
   recs.sort((x, y) => {
     const kx = k(x), ky = k(y)
     for (let i = 0; i < kx.length; i++) if (kx[i] !== ky[i]) return kx[i] - ky[i]

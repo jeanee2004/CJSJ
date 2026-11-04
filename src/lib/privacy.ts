@@ -20,6 +20,8 @@ export function sanitizeSurvey(sv: Survey): Survey {
     if (k === 'Q21' && typeof v === 'string') out[k] = maskText(v).slice(0, 500)
     else if (k === 'N2' && v && typeof v === 'object' && !Array.isArray(v)) {
       out[k] = { deposit: bucket(v.deposit, 1000), rent: bucket(v.rent, 5) }
+    } else if (k === 'D7' && v && typeof v === 'object' && !Array.isArray(v)) {
+      out[k] = { maxDeposit: bucket(v.maxDeposit, 1000), maxRent: bucket(v.maxRent, 5) }
     } else out[k] = v
   }
   return out

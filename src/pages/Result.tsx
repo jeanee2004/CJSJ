@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import { LayoutGroup, motion } from 'framer-motion'
-import { DEFAULT_BASIS, compareCost, evaluate, warnings } from '../lib/eligibility'
+import { DEFAULT_BASIS, compareCost, evaluate, lockedPolicies, warnings } from '../lib/eligibility'
 import { summarize } from '../lib/survey'
 import type { Survey } from '../data/survey'
 import type { CostBasis, Status } from '../lib/eligibility'
-import { POLICIES, RULES } from '../data/policies'
+import { ALL_POLICIES, CATEGORIES, RULES, policyById } from '../data/policies'
+import type { Category } from '../data/policies'
 import { Btn, CountUp, Lines, SourceBlock, Term, VBadge } from '../ui'
 import { useStore } from '../store'
 import { Footer } from './Home'
@@ -33,6 +34,10 @@ const UNKNOWN_TXT: Record<string, string> = {
   hasLoan: '기존 전세대출이 있는지',
   usedBefore: '세종시 지원을 받은 적이 있는지',
   houseType: '구하는 집이 다중주택(원룸·고시원)인지',
+  medianBand: '내 소득이 기준중위소득 몇 %인지 (건강보험 납부확인서·복지로 모의계산으로 확인)',
+  assets: '부채를 뺀 순자산이 얼마인지 (부동산·자동차·예금 − 빚)',
+  separateHousehold: '주민등록등본에서 부모님과 세대가 분리되어 있는지',
+  wish: '감당할 수 있는 최대 보증금·월세',
 }
 const BARRIER_TIP: Record<string, string> = {
   '2': '절차와 서류가 부담된다면 아래 카드의 "다음에 할 일"에 순서대로 적어 두었어요. 정부24·홈택스에서 온라인으로 뗄 수 있는 서류부터 챙겨 보세요.',
@@ -46,6 +51,7 @@ const FILTERS: { id: 'all' | Status; t: string }[] = [
 export default function Result() {
   const { answers: a, hasSaved, user, openModal, persisted, openLogin, openDeep, authReady } = useStore()
   const [f, setF] = useState<'all' | Status>('all')
+  const [cat, setCat] = useState<'all' | Category>('all')
   const [bank, setBank] = useState(4.5)
   // 자격 판정은 evaluate 그대로, 접수 일정만 공공 API(온통청년 우선)로 덧붙인다. 불러오지 못하면 기존 판정을 쓴다
   const benefits = useApi<BenefitsRes>('/api/benefits')
@@ -53,6 +59,8 @@ export default function Result() {
   // 나이 기준이 출처마다 다르면 우리 기준(RULES)으로 판정하고 "확인 필요"만 붙인다
   const verdicts = useMemo(() => (items ? flagAgeConflicts(applySchedules(evaluate(a), items, todayKst()), items, a) : evaluate(a)), [a, items])
   const warns = useMemo(() => warnings(a), [a])
+  // 맛보기에서 잠겨 있는 제도(심화 설문으로만 정밀 판정). 지금 답으로 분명히 안 되는 것은 뺀다
+  const locked = useMemo(() => lockedPolicies(a), [a])
   // 금액 비교 기준(기간·버팀목 금리)은 추천 순서와 아래 이자 비교가 함께 쓴다
   const [basis, setBasis] = useState<CostBasis>(DEFAULT_BASIS)
   const cost = useMemo(() => compareCost(a, bank, basis), [a, bank, basis])
@@ -60,12 +68,13 @@ export default function Result() {
   if (!hasSaved) return authReady ? <Navigate to="/" replace /> : null // 새로고침 직후엔 로그인 확인이 끝나야 저장된 결과를 불러온다
 
   const count = (s: Status) => verdicts.filter((v) => v.status === s).length
-  const shown = verdicts.filter((v) => f === 'all' || v.status === f)
+  const shown = verdicts.filter((v) => (f === 'all' || v.status === f) && (cat === 'all' || policyById(v.id)?.category === cat))
+  const deepMode = a.surveyType === 'deep'
   const pickOne = verdicts.some((v) => v.codes.includes('EXCL_PICK_ONE') && v.id === 'sejongInterest')
   const unknown = (a.unknown ?? []).filter((k) => UNKNOWN_TXT[k])
   const knownIds = (a.aware ?? []).flatMap((k) => (k === 'buteemok' ? ['youthButeemok', 'newlywedButeemok'] : [k]))
   const missed = a.aware?.length
-    ? verdicts.filter((v) => v.status !== 'no' && !knownIds.includes(v.id)).map((v) => POLICIES.find((p) => p.id === v.id)!.name)
+    ? verdicts.filter((v) => v.status !== 'no' && !knownIds.includes(v.id)).map((v) => policyById(v.id)!.name)
     : []
   const sum = a.survey ? summarize(a.survey as Survey) : null
   const best = count('ok') + count('maybe')
@@ -87,7 +96,7 @@ export default function Result() {
 
           <ResultViz
             verdicts={verdicts}
-            names={Object.fromEntries(POLICIES.map((p) => [p.id, p.name]))}
+            names={Object.fromEntries(ALL_POLICIES.map((p) => [p.id, p.name]))}
             phases={Object.fromEntries(verdicts.map((v) => { const sc = items ? scheduleFor(v.id, items) : null; return [v.id, sc ? phaseOf(sc, todayKst()) : undefined] }))}
             onJump={(id) => { setF('all'); setTimeout(() => document.getElementById(`vd-${id}`)?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' }), 60) }}
             cost={cost && pickOne ? cost : null}
@@ -103,14 +112,28 @@ export default function Result() {
           </div>
 
           {a.surveyType === 'simple' ? (
-            <div className="strip ask">
-              <span className="ico" aria-hidden="true">i</span>
-              <span>
-                <b>간편 설문 결과예요</b>
-                핵심 {Object.keys(a.survey ?? {}).length}문항만으로 계산해서 대략적인 결과예요. 로그인 후 심화 설문으로 더 자세히 답하면 내 상황에 더 가까운 결과를 볼 수 있어요.
-                <span className="strip-act"><Btn size="sm" variant="light" onClick={openDeep}>{user ? '심화 설문 하러 가기' : '로그인하고 심화 설문 하기'}</Btn></span>
-              </span>
-            </div>
+            <>
+              <div className="strip ask">
+                <span className="ico" aria-hidden="true">i</span>
+                <span>
+                  <b>맛보기 결과예요 · 대략 {verdicts.length}개 제도를 확인했어요</b>
+                  핵심 {Object.keys(a.survey ?? {}).length}문항만으로 나이·거주·소득 구간·가구 형태를 보고 대략 판정했어요. 자산이나 소득 분위가 필요한 제도는 "확인해 보면 좋아요"로 두었어요.
+                  <span className="strip-act"><Btn size="sm" variant="light" onClick={openDeep}>{user ? '심화 설문 하러 가기' : '로그인하고 심화 설문 하기'}</Btn></span>
+                </span>
+              </div>
+              {locked.length > 0 && (
+                <section className="rv-lock" aria-labelledby="rv-lock-t">
+                  <h2 id="rv-lock-t" className="rv-lock-h"><span aria-hidden="true">🔒</span> 심화로 {locked.length}개 제도를 더 정밀하게 확인할 수 있어요</h2>
+                  <p className="rv-lock-p">소득 분위·순자산·부모와 세대 분리 여부 같은 심화 문항이 있어야 맞는지 가릴 수 있는 제도예요. 지금 답으로는 분명히 안 되는 제도는 뺐어요.</p>
+                  <ul className="rv-lock-list">
+                    {locked.map((id) => { const p = policyById(id)!; return (
+                      <li key={id}><span className="rv-lock-cat">{p.category}</span><b>{p.name}</b><small>{p.easy}</small></li>
+                    ) })}
+                  </ul>
+                  <Btn size="sm" onClick={openDeep}>{user ? '심화 설문으로 정밀하게 확인하기' : '로그인하고 심화 설문 하기'}</Btn>
+                </section>
+              )}
+            </>
           ) : null}
 
           {!persisted && (
@@ -169,16 +192,22 @@ export default function Result() {
               ))}
             </div>
           </LayoutGroup>
+          <div className="filters rv-cats" role="group" aria-label="제도 분류" style={{ marginTop: 10, marginBottom: 0 }}>
+            {(['all', ...CATEGORIES] as const).map((c) => (
+              <button key={c} className="fchip" type="button" aria-pressed={cat === c} onClick={() => setCat(c)}><span>{c === 'all' ? '모든 분류' : c}</span></button>
+            ))}
+          </div>
 
           {benefits.state === 'error' && <p className="hint" style={{ marginTop: 14 }}>최신 데이터를 불러오지 못했습니다. 접수 일정은 각 제도 안내 페이지에서 한 번 더 확인해 주세요.</p>}
           <div className="verdicts">
             {shown.map((v) => {
-              const p = POLICIES.find((x) => x.id === v.id)!
+              const p = policyById(v.id)!
               const L = LABEL[v.status]
               return (
                 <article key={v.id} id={`vd-${v.id}`} className="vd" aria-label={`${p.name}: ${L.t}`}>
                   <div><span className={`status ${v.status}`}><i data-g={L.g} aria-hidden="true" />{L.t}</span></div>
                   <div>
+                    <span className="rv-lock-cat">{p.category}</span>
                     <h3>{p.name}</h3>
                     <p className="easy">{p.easy}</p>
                     {v.status !== 'no' && <div style={{ marginTop: 18 }}><Btn href={p.apply.url} external size="sm">{`${p.apply.name.split(' ')[0]}에서 신청하기`}</Btn></div>}
@@ -186,6 +215,8 @@ export default function Result() {
                   <div>
                     <ul>{v.reasons.map((r, i) => <li key={i}>{r}</li>)}</ul>
                     {v.todo.length > 0 && <div className="todo"><b>다음에 할 일</b>{v.todo.map((t, i) => <div key={i}>• {t}</div>)}</div>}
+                    {deepMode && v.status !== 'no' && v.need && v.need.length > 0 && <div className="todo rv-need"><b>준비할 서류·확인 항목</b>{v.need.map((t, i) => <div key={i}>• {t}</div>)}</div>}
+                    {deepMode && v.status === 'no' && v.fix && v.fix.length > 0 && <div className="todo rv-need"><b>이렇게 해 볼 수 있어요</b>{v.fix.map((t, i) => <div key={i}>• {t}</div>)}</div>}
                   </div>
                   <SourceBlock ids={p.sourceIds} />
                 </article>

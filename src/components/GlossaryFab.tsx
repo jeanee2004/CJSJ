@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { TERMS } from '../data/terms'
+import { GUIDE } from '../data/guidebook'
 import { rank } from '../lib/search'
 import { Guidebook } from './Guidebook'
 import './Guidebook.css'
@@ -34,7 +35,7 @@ export function GlossaryFab() {
           {mode === 'menu' ? (
             <div className="gmenu">
               <button type="button" data-track="glossary_terms" onClick={() => setMode('terms')}><b>용어 사전</b><small>보증금, 전세, 잔금… 낯선 말을 검색해요</small></button>
-              <button type="button" data-track="guidebook_open" className="lime" onClick={() => setMode('guide')}><b>왕초보 가이드북</b><small>집 구하기부터 입주까지 9단계로 쉽게</small></button>
+              <button type="button" data-track="guidebook_open" className="lime" onClick={() => setMode('guide')}><b>왕초보 가이드북</b><small>소득분위 확인부터 입주까지 {GUIDE.length}단계로 쉽게</small></button>
             </div>
           ) : (
             <>
