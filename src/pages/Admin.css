@@ -4,8 +4,8 @@
 .adm {
   --adm-font: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Segoe UI', system-ui, sans-serif;
   --f-kr: var(--adm-font); --f-num: var(--adm-font);
-  --bg: #f4f5f7; --card: #ffffff; --bd: #e5e7eb; --tx: #111827; --tx2: #374151; --tx3: #5b6472;
-  --head: #0b1b3a; --a1: #1e3a8a; --a1-soft: #eef2fb; --a2: #94a3b8; --a3: #6f8fd8; --track: #eceff3; --subtle: #f9fafb;
+  --bg: #f6f6f6; --card: #ffffff; --bd: #e4e4e7; --tx: #18181b; --tx2: #3f3f46; --tx3: #62626b;
+  --head: #18181b; --a1: #52525b; --a1-soft: #f4f4f5; --a2: #a1a1aa; --a3: #8b8b94; --track: #ececee; --subtle: #fafafa; --hl: #1e3a8a;
   --up: #15803d; --dn: #b91c1c; --rd: 10px;
   font-family: var(--adm-font); color: var(--tx); background: var(--bg); min-height: 100vh;
   padding-top: calc(var(--header-h, 72px)); padding-bottom: 72px; font-variant-numeric: tabular-nums;
@@ -16,9 +16,9 @@
 /* 상단 보고서 띠 */
 .adm-head { background: var(--head); color: #fff; position: sticky; top: calc(var(--header-h, 72px) - 1px); z-index: 20; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
 .adm-head-in { display: flex; flex-wrap: wrap; gap: 14px 24px; justify-content: space-between; align-items: center; padding-top: 14px; padding-bottom: 14px; }
-.adm-kicker { margin: 0 0 2px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #aebbd6; }
+.adm-kicker { margin: 0 0 2px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #a1a1aa; }
 .adm h1 { font-weight: 600; font-size: clamp(20px, 2.6vw, 26px); letter-spacing: -0.01em; margin: 0; line-height: 1.25; color: #fff; }
-.adm-sub { margin: 4px 0 0; font-size: 13px; color: #c7d2e6; }
+.adm-sub { margin: 4px 0 0; font-size: 13px; color: #b4b4bb; }
 .adm-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .adm-filters > div { display: inline-flex; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 8px; padding: 2px; }
 .adm-filters button, .adm-btn { font: inherit; font-size: 14px; font-weight: 600; border: 0; border-radius: 6px; padding: 0 14px; min-height: 44px; cursor: pointer; background: transparent; color: #fff; display: inline-flex; align-items: center; text-decoration: none; }
@@ -192,3 +192,14 @@
   .adm-kind, .adm-pri { background: #fff; color: #000; border-color: #000; }
   .adm-ai { background: #fff; border-left-color: #000; } .adm-ai b, .adm-rh, .adm-act b { color: #000; }
 }
+
+/* 모노톤 + 하이라이트: 기본은 회색 계열, 눈에 띄어야 할 곳(막대 1위·선 그래프 첫 계열·1순위 뱃지·활성 필터)만 강조색 */
+.adm-bars li:first-child .adm-bt i:not(.ab) { background: var(--hl); }
+.adm-line .l1 { stroke: var(--hl); } .adm-line .d1 { fill: var(--hl); }
+.adm-line .l2 { stroke: #a1a1aa; } .adm-line .d2 { fill: #a1a1aa; }
+.adm-legend i.s1 { background: var(--hl); } .adm-legend i.s2 { background: #a1a1aa; }
+.adm-pri.p1 { background: #fff; color: var(--hl); border-color: var(--hl); }
+.adm-h2 { border-left-color: var(--tx); }
+.adm-filters button[aria-pressed='true'] { background: #fff; color: var(--head); }
+.adm-kpi:first-child .adm-kbar u { background: var(--hl); }
+@media print { .adm-bars li:first-child .adm-bt i:not(.ab), .adm-kpi:first-child .adm-kbar u { background: #333; } .adm-line .l1, .adm-line .l2 { stroke: #333; } }
