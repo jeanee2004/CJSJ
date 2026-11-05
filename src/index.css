@@ -200,13 +200,6 @@ a:hover .roll > span, button:hover .roll > span, .roll:hover > span, .idx-head:h
 .hero-facts { position: absolute; z-index: 4; left: var(--gutter); right: var(--gutter); bottom: 22px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 
 /* ───── 마퀴 ───── */
-.marquee { background: var(--ink); color: var(--paper); overflow: hidden; padding: 20px 0; border-block: 1px solid var(--ink); }
-.marquee .track { display: flex; width: max-content; animation: slide 38s linear infinite; }
-.marquee:hover .track { animation-play-state: paused; }
-.marquee span { display: inline-flex; align-items: center; gap: 36px; padding-right: 36px; font-family: var(--f-kr); font-weight: 800; font-size: clamp(28px, 4.6vw, 60px); letter-spacing: -0.02em; white-space: nowrap; }
-.marquee span i { font-family: var(--f-it); color: var(--accent); font-size: 1.1em; }
-.marquee span b { color: var(--accent); font-size: 0.5em; }
-@keyframes slide { to { transform: translateX(-50%); } }
 
 /* ───── 섹션 ───── */
 .sec { padding: clamp(80px, 12vw, 160px) 0; position: relative; }
@@ -448,7 +441,6 @@ input[type='range'] { width: 100%; accent-color: var(--accent); height: 28px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
-  .marquee .track { animation: none !important; }
 }
 
 /* ───── 모바일 보정 ───── */
@@ -534,8 +526,6 @@ input[type='range'] { width: 100%; accent-color: var(--accent); height: 28px; }
 .display .l { font-weight: 300; letter-spacing: -0.05em; }
 .em { font-weight: 800; }
 .idx-name, .facts dd.amount, .gl-row h3, .chart-card h3, .vd h3, .about-points b, .step h3, .choice b { font-weight: 700; letter-spacing: -0.035em; }
-.marquee span { font-weight: 800; letter-spacing: -0.03em; }
-.marquee span i { font-size: 0.9em; }
 .diag-side h1 { font-weight: 800; letter-spacing: -0.04em; }
 .step .big { font-weight: 800; }
 
@@ -622,7 +612,6 @@ input[type='range'] { width: 100%; accent-color: var(--accent); height: 28px; }
 .step h3 { font-size: 21px; }
 .diag-side h1 { font-size: clamp(24px, 3.2vw, 40px); }
 .cmp-wrap h2 { font-size: clamp(22px, 3vw, 36px); }
-.marquee span { font-size: clamp(22px, 3vw, 38px); }
 .mega { font-size: clamp(48px, 11vw, 160px); }
 .choice b { font-size: clamp(16px, 1.7vw, 20px); }
 .modal h2 { font-size: 26px; }
@@ -638,7 +627,6 @@ input[type='range'] { width: 100%; accent-color: var(--accent); height: 28px; }
 .hero2 { padding-top: clamp(170px, 24vh, 230px); padding-bottom: 150px; }
 .hero2::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 220px; z-index: 1; pointer-events: none; background: linear-gradient(180deg, var(--ink), rgba(29, 39, 69, 0)); }
 .hero2::after { content: ''; position: absolute; inset: auto 0 0 0; height: 240px; z-index: 1; pointer-events: none; background: linear-gradient(180deg, rgba(251, 245, 244, 0), var(--paper)); }
-.marquee { border-block: 0; }
 
 #how { background: linear-gradient(180deg, var(--paper) 0%, var(--tint-sky) 100%); }
 #policies { background: linear-gradient(180deg, var(--tint-sky) 0%, var(--tint-rose) 55%, var(--tint-rose) 100%); }

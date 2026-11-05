@@ -3,7 +3,7 @@
 // 서버 전용 비밀 키는 이 파일 밖으로 나가지 않는다 (응답·로그에 넣지 않음).
 import { createClient } from '@supabase/supabase-js'
 import { badRequest, json, serverConfigError } from './_lib/http.js'
-import { buildCodebookCsv, buildResponsesCsv } from './_lib/export.js'
+import { buildCodebookCsv, buildResponsesCsv, parseBound } from './_lib/export.js'
 import type { ResponseRow } from './_lib/export.js'
 
 const PAGE = 1000
@@ -23,18 +23,12 @@ const csvResponse = (csv: string, filename: string) =>
 
 const denied = (status: 401 | 403) => json({ error: status === 401 ? 'UNAUTHORIZED' : 'FORBIDDEN', message: status === 401 ? '로그인이 필요해요' : '관리자만 받을 수 있어요' }, status)
 
-const parseDate = (v: string | null): string | null | 'bad' => {
-  if (!v) return null
-  const t = Date.parse(v)
-  return Number.isNaN(t) ? 'bad' : new Date(t).toISOString()
-}
-
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url)
   const type = (url.searchParams.get('type') ?? 'all') as ExportType
   if (!TYPES.includes(type)) return badRequest('type 은 simple, deep, all, codebook 중 하나예요')
-  const from = parseDate(url.searchParams.get('from'))
-  const to = parseDate(url.searchParams.get('to'))
+  const from = parseBound(url.searchParams.get('from'), false)
+  const to = parseBound(url.searchParams.get('to'), true)
   if (from === 'bad' || to === 'bad') return badRequest('from, to 는 ISO 날짜여야 해요')
 
   const token = /^Bearer\s+(.+)$/i.exec(request.headers.get('authorization') ?? '')?.[1]?.trim()
@@ -68,9 +62,10 @@ export async function GET(request: Request): Promise<Response> {
     if (data.length < PAGE) break
   }
 
-  const csv = buildResponsesCsv(rows, type)
+  // 내보내기 기록을 먼저 남긴다. 기록이 안 되면 내려받기도 막는다(fail-closed)
   const { error: le } = await db.from('export_logs').insert({ admin_id: adminId, survey_type: type === 'all' ? null : type, range_from: from, range_to: to, row_count: rows.length })
-  if (le) console.error('admin-export: 내보내기 기록 실패', le.code) // 기록 실패가 내려받기를 막지는 않는다
+  if (le) { console.error('admin-export: 내보내기 기록 실패', le.code); return json({ error: 'SERVER_ERROR', message: '내보내기 기록을 남기지 못해 내려받기를 막았어요' }, 500) }
+  const csv = buildResponsesCsv(rows, type)
 
   const stamp = new Date().toISOString().slice(0, 10)
   return csvResponse(csv, `survey_${type}_${stamp}.csv`)

@@ -5,9 +5,10 @@ import { supabase } from '../lib/supabase'
 import { QUESTIONS, SIMPLE_IDS } from '../data/survey'
 import { change, clickRank, daily, distribution, fmtDur, fmtPct, funnel, inRange, prevRange, sectionAvg, summarize } from '../lib/adminStats'
 import type { Bar, EventRow, ResponseRow, SurveyFilter } from '../lib/adminStats'
-import { analyze, collectionStatus, diagnoseFlow, buildReport, periodLabel } from '../lib/insights'
+import { analyze, collectionStatus, diagnoseFlow, periodLabel } from '../lib/insights'
 import type { Insight, Suggestion } from '../lib/insights'
-import { FeedbackPanel } from './AdminFeedback'
+import { FeedbackPanel, useFeedback } from './AdminFeedback'
+import { ReportView } from './AdminReport'
 import './Admin.css'
 
 const PAGE = 1000
@@ -231,31 +232,6 @@ function FlowPanel({ error, events, responses }: { error: string | null; events:
   )
 }
 
-function ReportCard({ days, text }: { days: number | null; text: string }) {
-  const [msg, setMsg] = useState<string | null>(null)
-  const copy = async () => {
-    try { await navigator.clipboard.writeText(text); setMsg('복사했어요. 메신저나 메일에 붙여 넣으세요.') }
-    catch {
-      const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select()
-      let ok = false
-      try { ok = document.execCommand('copy') } catch { /* noop */ }
-      ta.remove(); setMsg(ok ? '복사했어요.' : '복사하지 못했어요. 아래 글을 직접 선택해 복사해 주세요.')
-    }
-  }
-  return (
-    <section className="adm-card adm-report adm-print">
-      <h3>주간 리포트 · {periodLabel(days)}</h3>
-      <p className="adm-take adm-noprint">위쪽에서 고른 기간 기준 한 장 요약이에요. 복사하거나 인쇄(PDF 저장)할 수 있어요.</p>
-      <div className="adm-noprint adm-csv">
-        <button type="button" className="adm-btn" onClick={copy}>요약 복사</button>
-        <button type="button" className="adm-btn ghost" onClick={() => window.print()}>인쇄 / PDF</button>
-        {msg && <p role="status" className="adm-ok">{msg}</p>}
-      </div>
-      <pre className="adm-pre">{text}</pre>
-    </section>
-  )
-}
-
 /* ───────── CSV ───────── */
 function CsvBox() {
   const [type, setType] = useState<'simple' | 'deep' | 'all'>('all')
@@ -324,7 +300,7 @@ function Dashboard() {
   const order = useMemo(() => QUESTIONS.map((q) => q.id).filter((id) => (ftype === 'simple' ? SIMPLE_IDS.includes(id) : true)), [ftype])
   const fun = useMemo(() => funnel(ev, order, ftype), [ev, order, ftype])
   const an = useMemo(() => analyze({ ...INSIGHT_CTX, events, responses }, days), [events, responses, days])
-  const report = useMemo(() => buildReport({ days, events: an.events, responses: an.responses, insights: an.insights, suggestions: an.suggestions }), [an, days])
+  const fb = useFeedback()
   const prevEv = useMemo(() => prevRange(events, days), [events, days])
   const psum = useMemo(() => summarize(prevEv), [prevEv])
   const countApply = (rows: typeof ev) => new Set(rows.filter((e) => e.event_type === 'click' && e.name?.startsWith('apply:')).map((e) => e.session_id)).size
@@ -422,8 +398,8 @@ function Dashboard() {
       </p>
 
       <h2 className="adm-h2 adm-noprint">의견 · 리포트<small>이용자가 남긴 의견과 한 장 요약</small></h2>
-      <FeedbackPanel days={days} />
-      {!none && <ReportCard days={days} text={report} />}
+      <FeedbackPanel days={days} rows={fb.rows} err={fb.err} />
+      {!none && <ReportView events={events} feedback={fb.rows} clickLabel={INSIGHT_CTX.clickLabel} />}
 
       <section className="adm-card adm-noprint" id="adm-csv">
         <h3>설문 원자료 CSV</h3>

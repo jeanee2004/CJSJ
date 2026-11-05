@@ -10,12 +10,10 @@ const AI_NOTE: Record<string, string> = {
   EMPTY: '아직 의견이 없어요.',
 }
 
-/** 관리자 대시보드: 의견 남기기 모음 — 기본 집계 요약은 항상, AI 요약은 버튼으로 */
-export function FeedbackPanel({ days }: { days: number | null }) {
+/** 의견 목록을 한 번 읽는다(대시보드 의견 패널과 리포트가 함께 쓴다) */
+export function useFeedback(): { rows: FeedbackRow[] | null; err: string | null } {
   const [rows, setRows] = useState<FeedbackRow[] | null>(null)
   const [err, setErr] = useState<string | null>(null)
-  const [ai, setAi] = useState<Ai>({ state: 'idle' })
-
   useEffect(() => {
     let off = false
     void (async () => {
@@ -27,6 +25,12 @@ export function FeedbackPanel({ days }: { days: number | null }) {
     })()
     return () => { off = true }
   }, [])
+  return { rows, err }
+}
+
+/** 관리자 대시보드: 의견 남기기 모음 — 기본 집계 요약은 항상, AI 요약은 버튼으로 */
+export function FeedbackPanel({ days, rows, err }: { days: number | null; rows: FeedbackRow[] | null; err: string | null }) {
+  const [ai, setAi] = useState<Ai>({ state: 'idle' })
 
   const shown = useMemo(() => {
     if (!rows) return []

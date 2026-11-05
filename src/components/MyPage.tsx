@@ -59,6 +59,7 @@ export function MyPage() {
   const [form, setForm] = useState<Profile>(user?.profile ?? EMPTY_PROFILE)
   const [saved, setSaved] = useState<'' | 'ok' | 'fail'>('')
   const [ask, setAsk] = useState<Kind | null>(null)
+  const [del, setDel] = useState<{ open: boolean; text: string; busy: boolean; err: string }>({ open: false, text: '', busy: false, err: '' })
 
   const load = async () => {
     if (!supabase) return setRows([])
@@ -83,6 +84,17 @@ export function MyPage() {
     setAsk(null)
     if (k === 'simple') openModal('diagnose')
     else if (k === 'deep') { closeModal(); openDeep() }
+  }
+  const deleteAccount = async () => {
+    if (!supabase || del.text.trim() !== '삭제' || del.busy) return
+    setDel((d) => ({ ...d, busy: true, err: '' }))
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token
+      const res = await fetch('/api/delete-account', { method: 'POST', headers: { Authorization: `Bearer ${token ?? ''}` } })
+      const body = (await res.json().catch(() => ({}))) as { message?: string }
+      if (!res.ok) return setDel((d) => ({ ...d, busy: false, err: body.message ?? '삭제하지 못했어요. 잠시 후 다시 시도해 주세요.' }))
+      logout(); closeModal(); nav('/')
+    } catch { setDel((d) => ({ ...d, busy: false, err: '연결에 실패했어요. 잠시 후 다시 시도해 주세요.' })) }
   }
   const remove = async (id: string) => {
     if (!supabase || !window.confirm('이 설문 기록을 지울까요? 되돌릴 수 없어요.')) return
@@ -241,6 +253,26 @@ export function MyPage() {
           <hr className="mp-hr" />
           <div className="mp-row">
             <Btn variant="line" onClick={() => { if (window.confirm('이 기기에 저장된 내 결과를 지울까요? (서버의 통계 응답은 그대로예요)')) clearSaved() }}>이 기기의 내 결과 지우기</Btn>
+          </div>
+          <hr className="mp-hr" />
+          <div className="mp-danger">
+            <h3 className="mp-h">계정 삭제</h3>
+            {user.isAdmin ? <p className="mp-sub">관리자 계정은 실수를 막으려고 여기서 삭제할 수 없어요.</p> : !del.open ? (
+              <>
+                <p className="mp-sub">계정과 별명·관심 지원이 지워지고 로그인할 수 없게 돼요. 지금까지 한 설문 응답은 이름·계정과의 연결이 끊긴 채 통계로만 남아요. 되돌릴 수 없어요.</p>
+                <div className="mp-row"><Btn variant="line" onClick={() => setDel({ open: true, text: '', busy: false, err: '' })}>계정 삭제하기</Btn></div>
+              </>
+            ) : (
+              <div className="field">
+                <label htmlFor="mp-del">정말 삭제하려면 아래에 <b>삭제</b> 라고 입력하세요</label>
+                <input id="mp-del" value={del.text} autoComplete="off" onChange={(e) => setDel({ ...del, text: e.target.value })} />
+                {del.err && <p className="login-msg" role="status">{del.err}</p>}
+                <div className="mp-row">
+                  <Btn variant="line" onClick={() => setDel({ open: false, text: '', busy: false, err: '' })}>취소</Btn>
+                  <button type="button" className="mp-delete" disabled={del.text.trim() !== '삭제' || del.busy} onClick={() => void deleteAccount()}>{del.busy ? '삭제 중…' : '계정 영구 삭제'}</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

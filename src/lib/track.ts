@@ -7,7 +7,7 @@ import { supabase } from './supabase'
 export type EventType = 'page_view' | 'section_view' | 'click' | 'survey_start' | 'survey_answer' | 'survey_complete' | 'survey_abandon'
 interface Row {
   session_id: string; event_type: EventType; name?: string; path?: string
-  survey_type?: SurveyType; duration_ms?: number; device: 'mobile' | 'desktop'
+  survey_type?: SurveyType; duration_ms?: number; device: 'mobile' | 'desktop'; props?: { ref?: string; utm?: string }
 }
 interface Extra { name?: string; survey_type?: SurveyType; duration_ms?: number }
 
@@ -40,12 +40,29 @@ export function track(event_type: EventType, extra: Extra = {}): void {
     if (extra.survey_type) row.survey_type = extra.survey_type
     if (typeof extra.duration_ms === 'number' && Number.isFinite(extra.duration_ms))
       row.duration_ms = Math.min(86_400_000, Math.max(0, Math.round(extra.duration_ms)))
+    if (event_type === 'page_view' && !landed) { // 세션 첫 방문 한 번만 유입 경로를 붙인다
+      landed = true
+      const p = landingProps(document.referrer, location.search, location.hostname)
+      if (p) row.props = p
+    }
     if (queue.length >= MAX_QUEUE) queue.shift()
     queue.push(row)
     if (queue.length >= BATCH) void flush()
     else if (!timer) timer = window.setTimeout(() => { void flush() }, 5000)
   } catch { /* 추적 실패는 무시 */ }
 }
+
+/** 유입 경로: 외부 사이트 도메인(referrer)과 utm_source 만, 길이를 줄여서. 같은 사이트 이동·주소 전체·검색어는 보내지 않는다 */
+export function landingProps(referrer: string, search: string, host: string): { ref?: string; utm?: string } | undefined {
+  const out: { ref?: string; utm?: string } = {}
+  try {
+    if (referrer) { const h = new URL(referrer).hostname.replace(/^www\./, ''); if (h && h !== host.replace(/^www\./, '')) out.ref = h.slice(0, 60) }
+  } catch { /* 잘못된 referrer 는 무시 */ }
+  const u = new URLSearchParams(search).get('utm_source')?.trim().toLowerCase().replace(/[^a-z0-9가-힣_.-]/g, '').slice(0, 40)
+  if (u) out.utm = u
+  return out.ref || out.utm ? out : undefined
+}
+let landed = false
 
 /** 큐를 서버로 보낸다. 페이지가 닫히는 중(unload)에는 keepalive 요청으로 보낸다 */
 export async function flush(unloading = false): Promise<void> {

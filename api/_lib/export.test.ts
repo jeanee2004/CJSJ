@@ -1,7 +1,7 @@
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { describe, expect, it } from 'vitest'
-import { applyKAnonymity, buildCodebookCsv, buildResponsesCsv, csvCell, kstDate, maskText, toCsv } from './export.js'
+import { applyKAnonymity, buildCodebookCsv, buildResponsesCsv, csvCell, kstDate, maskText, parseBound, toCsv } from './export.js'
 import type { Flat, ResponseRow } from './export.js'
 import { GET } from '../admin-export.js'
 
@@ -97,5 +97,17 @@ describe('admin-export 인증', () => {
         expect(await res.text()).not.toContain('test-secret')
       })
     } finally { srv.close() }
+  })
+})
+
+describe('parseBound', () => {
+  it('to 가 날짜만이면 그날 끝까지 포함한다', () => {
+    expect(parseBound('2026-11-04', true)).toBe('2026-11-04T23:59:59.999Z')
+    expect(parseBound('2026-11-04', false)).toBe('2026-11-04T00:00:00.000Z')
+  })
+  it('시각이 있으면 그대로, 비면 null, 잘못되면 bad', () => {
+    expect(parseBound('2026-11-04T05:00:00Z', true)).toBe('2026-11-04T05:00:00.000Z')
+    expect(parseBound(null, true)).toBeNull()
+    expect(parseBound('내일', true)).toBe('bad')
   })
 })

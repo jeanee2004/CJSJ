@@ -98,3 +98,11 @@ export function buildCodebookCsv(): string {
   }
   return toCsv(rows)
 }
+
+/** 기간 값 해석: ISO 날짜·시각을 받는다. `to` 가 날짜만(YYYY-MM-DD)이면 그날 끝(23:59:59.999Z)까지 포함한다. 잘못되면 'bad' */
+export function parseBound(v: string | null, isEnd: boolean): string | null | 'bad' {
+  if (!v) return null
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(v)
+  const t = Date.parse(dateOnly && isEnd ? `${v}T23:59:59.999Z` : v)
+  return Number.isNaN(t) ? 'bad' : new Date(t).toISOString()
+}
