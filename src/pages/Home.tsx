@@ -160,6 +160,7 @@ function HeroVideo() {
         <p className="lead">받을 수 있는 지원금, 신청하는 순서, 놓치기 쉬운 함정까지 — 로그인 없이 약 2분 걸리는 맛보기 설문({SIMPLE_IDS.length}문항)으로 먼저 확인하고, 로그인하면 약 6분 걸리는 심화 설문({QUESTIONS.length}문항)으로 더 정확하게 알려드릴게요.</p>
         <div className="hero-cta">
           <Btn onClick={openDiagnose} variant="light" track="hero_start_survey">내 상황 확인해 보기</Btn>
+          <Btn to="/#ask" variant="glass" track="hero_search">궁금한 걸 검색하기</Btn>
           <Btn to="/#intro" variant="glass">청정 세종 소개</Btn>
         </div>
       </div>
@@ -507,9 +508,9 @@ export default function Home() {
   return (
     <>
       <HeroVideo />
+      <AiSearch />
       <TrustStrip />
       <Intro />
-      <AiSearch />
       <How />
       <Live />
       <Policies />

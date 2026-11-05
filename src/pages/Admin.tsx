@@ -15,7 +15,7 @@ const MAX_ROWS = 50_000
 
 const SECTION_LABEL: Record<string, string> = { hero: '히어로(첫 화면)', intro: '인트로', ask: 'AI 검색', how: '이용 방법', live: '실시간 정보', policies: '지원 제도', data: '숫자로 보기' }
 const CLICK_LABEL: Record<string, string> = {
-  hero_start_survey: '첫 화면 · 내 상황 확인', intro_policies: '인트로 · 지원 제도 둘러보기', intro_past_result: '인트로 · 지난 결과 보기',
+  hero_start_survey: '첫 화면 · 내 상황 확인', hero_search: '첫 화면 · 검색하기', intro_policies: '인트로 · 지원 제도 둘러보기', intro_past_result: '인트로 · 지난 결과 보기',
   policy_card_open: '지원 제도 카드 열기', policy_filter: '지원 제도 필터', glossary_fab: '돋보기(용어 사전)', glossary_terms: '돋보기 · 용어 사전',
   guidebook_open: '돋보기 · 가이드북', login_open: '로그인 열기', nav_diagnose: '메뉴 · 내 상황 확인', nav_survey: '메뉴 · 내 상황 확인', nav_feedback: '메뉴 · 의견 남기기', ask_submit: 'AI 검색 · 질문하기',
 }
