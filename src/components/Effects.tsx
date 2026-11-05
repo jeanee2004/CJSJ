@@ -14,7 +14,6 @@ export function Effects() {
   return (
     <>
       <Progress />
-      <Grain />
       <SmoothScroll />
       <HeroParallax active={pathname === '/' || !['/result', '/privacy'].includes(pathname)} />
     </>
@@ -41,10 +40,6 @@ function Progress() {
 }
 
 /** 아주 옅은 필름 그레인(고정 이미지 한 장, 애니메이션 없음) */
-function Grain() {
-  return <div className="fx-grain" aria-hidden="true" />
-}
-
 /** 부드러운 스크롤(lenis): 데스크톱에서만, 모달·메뉴로 body 가 잠기면 멈춘다. 라이브러리는 첫 화면이 그려진 뒤에 불러온다 */
 function SmoothScroll() {
   useEffect(() => {
