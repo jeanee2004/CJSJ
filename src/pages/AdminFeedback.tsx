@@ -5,7 +5,7 @@ import type { FeedbackRow } from '../lib/feedbackSummary'
 
 type Ai = { state: 'idle' | 'loading' | 'ok' | 'none' | 'error'; text?: string; reason?: string }
 const AI_NOTE: Record<string, string> = {
-  NO_AI_KEY: 'AI 요약을 쓰려면 Vercel 환경변수에 ANTHROPIC_API_KEY 를 넣어 주세요. 그 전에는 아래 기본 요약이 보여요.',
+  NO_AI_KEY: 'AI 요약을 쓰려면 Vercel 환경변수에 GEMINI_API_KEY 를 넣어 주세요. 그 전에는 아래 기본 요약이 보여요.',
   AI_ERROR: 'AI 요약을 불러오지 못했어요. 기본 요약을 보여 드려요.',
   EMPTY: '아직 의견이 없어요.',
 }
