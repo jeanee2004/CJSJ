@@ -4,7 +4,7 @@ import { reduced } from '../ui'
 import { scrollToTarget, setLenis } from '../lib/smooth'
 import '../effects.css'
 
-// 홈페이지의 고급스러운 인터랙션 모음: 커서, 부드러운 스크롤, 스크롤 진행 선, 히어로 패럴랙스, 필름 그레인.
+// 홈페이지의 고급스러운 인터랙션 모음: 부드러운 스크롤, 스크롤 진행 선, 히어로 패럴랙스, 필름 그레인.
 // 관리자(/admin)·터치 기기·'동작 줄이기' 설정에서는 해당 효과를 켜지 않는다.
 const fine = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches
 
@@ -15,7 +15,6 @@ export function Effects() {
     <>
       <Progress />
       <Grain />
-      <Cursor />
       <SmoothScroll />
       <HeroParallax active={pathname === '/' || !['/result', '/privacy'].includes(pathname)} />
     </>
@@ -44,78 +43,6 @@ function Progress() {
 /** 아주 옅은 필름 그레인(고정 이미지 한 장, 애니메이션 없음) */
 function Grain() {
   return <div className="fx-grain" aria-hidden="true" />
-}
-
-/** 데스크톱 전용 커서: 작은 점 + 따라오는 링. 링크·카드 위에서 커지고 라벨이 붙고, 글자 입력 위에서는 사라진다 */
-const LINK = 'a[href], button, [role="button"], summary, label[for], .idx-head, .choice, .fchip, select, input[type="range"], input[type="checkbox"]'
-const TEXT = 'input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), textarea, [contenteditable="true"]'
-const LABELS: [string, string][] = [['.idx-head', 'VIEW'], ['.live-card a, .lc-slot a', 'VIEW'], ['a[target="_blank"]', '↗']]
-
-function Cursor() {
-  const dot = useRef<HTMLDivElement>(null)
-  const ring = useRef<HTMLDivElement>(null)
-  const label = useRef<HTMLSpanElement>(null)
-  useEffect(() => {
-    if (reduced() || !fine()) return
-    const root = document.documentElement
-    const d = dot.current, r = ring.current, l = label.current
-    if (!d || !r || !l) return
-    root.classList.add('has-cursor')
-    let tx = -100, ty = -100, rx = -100, ry = -100, raf = 0, seen = false
-    const loop = () => {
-      rx += (tx - rx) * 0.2; ry += (ty - ry) * 0.2
-      r.style.transform = `translate3d(${rx}px, ${ry}px, 0)`
-      raf = Math.abs(tx - rx) + Math.abs(ty - ry) > 0.3 ? requestAnimationFrame(loop) : 0
-    }
-    const move = (e: PointerEvent) => {
-      if (e.pointerType !== 'mouse') return
-      tx = e.clientX; ty = e.clientY
-      d.style.transform = `translate3d(${tx}px, ${ty}px, 0)`
-      if (!seen) { seen = true; rx = tx; ry = ty; root.classList.add('cursor-on') }
-      if (!raf) raf = requestAnimationFrame(loop)
-    }
-    const over = (e: PointerEvent) => {
-      const t = e.target as Element | null
-      if (!t || !t.closest) return
-      const text = !!t.closest(TEXT)
-      const link = !text && !!t.closest(LINK)
-      r.classList.toggle('is-text', text)
-      r.classList.toggle('is-link', link)
-      d.classList.toggle('is-text', text)
-      r.classList.toggle('is-media', !!t.closest('video, .vhero-media, .vhero-scrim'))
-      const custom = (t.closest('[data-cursor]') as HTMLElement | null)?.dataset.cursor
-      const mapped = link ? LABELS.find(([s]) => t.closest(s))?.[1] : undefined
-      const txt = custom ?? mapped ?? ''
-      l.textContent = txt
-      r.classList.toggle('has-label', !!txt)
-    }
-    const down = () => r.classList.add('is-down')
-    const up = () => r.classList.remove('is-down')
-    const leave = () => root.classList.remove('cursor-on')
-    const enter = () => { if (seen) root.classList.add('cursor-on') }
-    document.addEventListener('pointermove', move, { passive: true })
-    document.addEventListener('pointerover', over, { passive: true })
-    document.addEventListener('pointerdown', down, { passive: true })
-    document.addEventListener('pointerup', up, { passive: true })
-    document.documentElement.addEventListener('mouseleave', leave)
-    document.documentElement.addEventListener('mouseenter', enter)
-    return () => {
-      cancelAnimationFrame(raf)
-      root.classList.remove('has-cursor', 'cursor-on')
-      document.removeEventListener('pointermove', move)
-      document.removeEventListener('pointerover', over)
-      document.removeEventListener('pointerdown', down)
-      document.removeEventListener('pointerup', up)
-      document.documentElement.removeEventListener('mouseleave', leave)
-      document.documentElement.removeEventListener('mouseenter', enter)
-    }
-  }, [])
-  return (
-    <>
-      <div ref={ring} className="fx-ring" aria-hidden="true"><span ref={label} /></div>
-      <div ref={dot} className="fx-dot" aria-hidden="true" />
-    </>
-  )
 }
 
 /** 부드러운 스크롤(lenis): 데스크톱에서만, 모달·메뉴로 body 가 잠기면 멈춘다. 라이브러리는 첫 화면이 그려진 뒤에 불러온다 */

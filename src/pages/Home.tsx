@@ -9,6 +9,8 @@ import { QUESTIONS, SIMPLE_IDS } from '../data/survey'
 import type { PolicyInfo } from '../data/policies'
 import { LiveBoard } from '../components/LiveCards'
 import { AiSearch } from '../components/AiSearch'
+import { LOADER_MS } from '../components/Loader'
+import '../luxe.css'
 import { AddressCheck } from '../components/AddressCheck'
 import { TrustStrip } from '../components/TrustStrip'
 import { useStore } from '../store'
@@ -86,7 +88,7 @@ function HeroVideo() {
         onReady = go
         a.addEventListener('canplay', go, { once: true })
         timers.push(setTimeout(go, 3000))
-      }, loaderUp ? 2100 : 0))
+      }, loaderUp ? LOADER_MS + 150 : 0))
     }
     return () => {
       clearInterval(id)
@@ -153,7 +155,7 @@ function HeroVideo() {
         <span className="vh-pill">세종에서 처음 집을 구하는 청년 · 신혼부부를 위해</span>
         <Lines
           as="h1" id="vh-title" className="display"
-          delay={loaderUp ? 1.9 : 0.1}
+          delay={loaderUp ? LOADER_MS / 1000 + 0.05 : 0.1}
           lines={[<span className="l" key="a">청년이 머무는 곳,</span>, <span key="b">세종이 <span className="em">시작</span>되는 곳</span>]}
         />
         <p className="vh-sub">세종에서 첫 집, <b>어디서부터 시작하죠?</b></p>
@@ -166,6 +168,11 @@ function HeroVideo() {
       </div>
       <div className="vh-right">
         {showBtn && <button type="button" className="vh-replay" onClick={() => seq.current?.restart()}>{started ? '↺ 처음부터 보기' : '▶ 영상 재생'}</button>}
+      </div>
+      <div className="vh-meta" aria-hidden="true">
+        <span>SEJONG, KOREA</span>
+        <span className="vh-cue"><i />SCROLL</span>
+        <span>SINCE 2026 <em>//</em> 청정 세종</span>
       </div>
     </section>
   )
@@ -282,7 +289,8 @@ function IdxItem({ p, i, open, onToggle, live, rows, off }: { p: PolicyInfo; i: 
         <span className="idx-no">{String(i + 1).padStart(2, '0')}</span>
         <span className="idx-name">{p.name}</span>
         <span className="idx-sum">{p.easy}</span>
-        <span className="idx-arrow" aria-hidden="true">→</span>
+        <span className="idx-cat">{p.category}</span>
+        <span className="idx-arrow" aria-hidden="true" />
       </button>
       <div className="idx-panel" id={pid} role="region" aria-label={`${p.name} 자세히`}>
         <div inert={!open}>
@@ -352,7 +360,8 @@ function ApiIdxItem({ b, i, open, onToggle, today }: { b: Benefit; i: number; op
         <span className="idx-no">{String(i + 1).padStart(2, '0')}</span>
         <span className="idx-name">{b.name}</span>
         <span className="idx-sum">{b.summary || off?.support?.split('\n')[0]}</span>
-        <span className="idx-arrow" aria-hidden="true">→</span>
+        <span className="idx-cat">{typesOf(b.name)[0] ?? '공공 API'}</span>
+        <span className="idx-arrow" aria-hidden="true" />
       </button>
       <div className="idx-panel" id={pid} role="region" aria-label={`${b.name} 자세히`}>
         <div inert={!open}>
@@ -462,6 +471,21 @@ export function Footer({ tone = 'home' }: { tone?: 'home' | 'paper' }) {
   return (
     <footer className={`footer ${tone === 'paper' ? 'from-paper' : ''}`}>
       <div className="wrap">
+        <div className="ft-top">
+          <nav className="ft-nav" aria-label="사이트 이동">
+            <Link to="/">HOME</Link>
+            <Link to="/#live">실시간 정보</Link>
+            <Link to="/#policies">지원 제도</Link>
+            <Link to="/#survey">내 상황 확인</Link>
+            <Link to="/#feedback">의견 남기기</Link>
+          </nav>
+          <div className="ft-small" aria-label="공식 사이트">
+            <a href="https://www.sejong.go.kr" target="_blank" rel="noreferrer noopener">Sejong.go.kr ↗</a>
+            <a href="https://www.bokjiro.go.kr" target="_blank" rel="noreferrer noopener">Bokjiro ↗</a>
+            <a href="https://nhuf.molit.go.kr" target="_blank" rel="noreferrer noopener">NHUF ↗</a>
+            <a href="https://www.myhome.go.kr" target="_blank" rel="noreferrer noopener">MyHome ↗</a>
+          </div>
+        </div>
         <div className="brandblock">
           <img className="bb-logo" src="/logo-lg.png" alt="" />
           <div>
@@ -499,8 +523,24 @@ export function Footer({ tone = 'home' }: { tone?: 'home' | 'paper' }) {
           <br /><br />
           이 서비스는 참고용이에요. 대출·지원금의 최종 판정은 각 기관(세종시, 주택도시기금, 복지로 등)에서 해요. 제도 수치는 2026년 11월에 확인한 공고·보도 기준이며 자주 바뀔 수 있어요. 신청을 대신해 드리지는 않아요. 설문 응답은 이름·이메일 없이 구간 값으로만 통계에 쓰여요.
         </p>
+        <p className="ft-credit"><span>© 2026 청정 세종 · CHEONGJEONG SEJONG</span><span>SEJONG CAMPUS CHANGEMAKERS</span></p>
       </div>
     </footer>
+  )
+}
+
+/** 섹션 사이를 천천히 흐르는 큰 글씨 띠. 장식이라 스크린리더에서는 숨기고, 마우스를 올리면 멈추며, '동작 줄이기'에서는 멈춰 있다 */
+function Marquee({ text }: { text: string }) {
+  return (
+    <div className="marq" aria-hidden="true">
+      <div className="marq-track">
+        {[0, 1].map((k) => (
+          <span className="marq-row" key={k}>
+            {Array.from({ length: 3 }, (_, i) => <span key={i}>{text}<em>—</em></span>)}
+          </span>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -512,8 +552,10 @@ export default function Home() {
       <TrustStrip />
       <Intro />
       <How />
+      <Marquee text="청년이 머무는 곳 · 세종이 시작되는 곳" />
       <Live />
       <Policies />
+      <Marquee text="쉬운 말로 · 공식 자료로 · 내 상황에 맞게" />
       <section className="sec dark" id="data" aria-labelledby="data-t">
         <div className="wrap">
           <div className="sec-head">

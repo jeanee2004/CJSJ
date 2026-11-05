@@ -3,22 +3,17 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { reduced } from '../ui'
 
 const KEY = 'cjsj.seen'
+export const LOADER_MS = 1250
 
-// 집 모양 도형: LOADING... 의 점 자리를 대신한다 (문 부분은 구멍)
-const House = ({ i }: { i: number }) => (
-  <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" style={{ ['--i' as string]: i }}>
-    <path fillRule="evenodd" d="M8 1.2 15 7.4h-2v7.4H3V7.4H1L8 1.2Zm-1.5 13.6v-4.3h3v4.3h-3Z" />
-  </svg>
-)
-
-// 첫 방문에만, 2초 안팎. 건너뛰기 가능. 막이 위로 걷히며 사라진다.
+// 첫 방문에만, 1.2초 남짓: 로고와 '청정 세종'이 서서히 나타나고, 가는 선이 차오른 뒤 막이 위로 걷힌다. 건너뛰기 가능.
+// 재방문(sessionStorage)과 '동작 줄이기' 설정에서는 보이지 않는다. 본문은 막 뒤에서 이미 그려져 있어 접근을 막지 않는다.
 export function Loader() {
   const [show, setShow] = useState(() => {
     try { return !sessionStorage.getItem(KEY) && !reduced() } catch { return false }
   })
   useEffect(() => {
     if (!show) return
-    const t = setTimeout(close, 2100)
+    const t = setTimeout(close, LOADER_MS)
     return () => clearTimeout(t)
   }, [show])
   function close() {
@@ -28,13 +23,12 @@ export function Loader() {
   return (
     <AnimatePresence>
       {show && (
-        <motion.div className="loader" role="status" aria-label="불러오는 중" exit={{ y: '-100%' }} transition={{ duration: 0.9, ease: [0.76, 0, 0.24, 1] }}>
-          <div className="ld-center">
-            <img className="ld-logo" src="/logo-sm.png" alt="CJSJ" />
-            <p className="ld-text" aria-hidden="true">
-              LOADING
-              <span className="ld-houses"><House i={0} /><House i={1} /><House i={2} /></span>
-            </p>
+        <motion.div className="loader lx" role="status" aria-label="불러오는 중" exit={{ y: '-100%' }} transition={{ duration: 0.85, ease: [0.76, 0, 0.24, 1] }}>
+          <div className="lx-center">
+            <img className="lx-logo" src="/logo-sm.png" alt="" />
+            <p className="lx-word" aria-hidden="true">청정 세종</p>
+            <p className="lx-sub" aria-hidden="true">SEJONG // HOUSING GUIDE</p>
+            <span className="lx-line" aria-hidden="true"><i /></span>
           </div>
           <button className="ld-skip" type="button" onClick={close}>건너뛰기</button>
         </motion.div>
