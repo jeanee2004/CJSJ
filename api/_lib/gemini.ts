@@ -17,7 +17,8 @@ export async function generate(prompt: string, opts: GenOpts = {}): Promise<stri
         headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: opts.maxTokens ?? 2000, temperature: 0.3, ...(opts.json ? { responseMimeType: 'application/json' } : {}) },
+          // thinkingBudget 0: 짧은 안내에는 '생각' 단계가 필요 없고, 끄면 응답이 3배쯤 빠르고 토큰도 적게 든다
+          generationConfig: { maxOutputTokens: opts.maxTokens ?? 2000, temperature: 0.3, thinkingConfig: { thinkingBudget: 0 }, ...(opts.json ? { responseMimeType: 'application/json' } : {}) },
         }),
         signal: AbortSignal.timeout(opts.perModelMs ?? 9000),
       })
