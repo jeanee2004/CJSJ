@@ -153,7 +153,8 @@ export function rank({ verdicts, items, answers: a, today, bank, basis }: RankIn
   }
 
   // 청약통장·공공임대처럼 지금 당장 계약에 쓰는 돈 지원이 아닌 제도는 대출·월세 지원 뒤에 둔다
-  const k = (r: Rec) => [r.from === 'verdict' && r.kind === 'other' ? 1 : 0, r.status === 'ok' ? 0 : 1, PHASE_ORDER[r.phase], stageFit(r.kind, a) ? 0 : 1, -(r.amount ?? -1), r.from === 'verdict' ? 0 : 1]
+  // 공공 API 의 '확인해 보면 좋아요' 항목은 진단 카드의 '신청할 수 있어요'(청약통장 등 포함)보다 뒤에 둔다
+  const k = (r: Rec) => [r.from === 'api' || r.kind === 'other' ? 1 : 0, r.status === 'ok' ? 0 : 1, PHASE_ORDER[r.phase], stageFit(r.kind, a) ? 0 : 1, -(r.amount ?? -1), r.from === 'verdict' ? 0 : 1]
   recs.sort((x, y) => {
     const kx = k(x), ky = k(y)
     for (let i = 0; i < kx.length; i++) if (kx[i] !== ky[i]) return kx[i] - ky[i]

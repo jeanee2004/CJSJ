@@ -127,3 +127,6 @@
   #live .l3d { transition: none; }
   #live .lc-view { padding: 16px var(--gutter, 16px) 24px; }
 }
+
+/* 일부 카드를 못 불러왔을 때 하단 안내 */
+#live .lc-miss { text-align: center; margin: 8px 0 24px; font-size: 14px; color: var(--ink-2); }

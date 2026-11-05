@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { MouseEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Btn, Roll, useMagnetic } from '../ui'
 import { useStore } from '../store'
+import './Menu.css'
 
-// action 이 있는 항목은 페이지 이동 없이 팝업으로 열린다
+// action 이 있는 항목은 눌러도 페이지 이동 없이 팝업이 열리고, 주소(/#survey, /#feedback)로 들어와도 같은 팝업이 열린다
 export const NAV: { n: string; label: string; to?: string; action?: 'survey' | 'feedback' }[] = [
   { n: '01', label: '실시간 정보', to: '/#live' },
   { n: '02', label: '지원 제도', to: '/#policies' },
@@ -12,6 +14,7 @@ export const NAV: { n: string; label: string; to?: string; action?: 'survey' | '
   { n: '04', label: '내 상황 확인', action: 'survey' },
   { n: '05', label: '의견 남기기', action: 'feedback' },
 ]
+const hrefOf = (m: (typeof NAV)[number]) => m.to ?? `/#${m.action}`
 
 export function Header() {
   const { user, setLoginOpen, openModal } = useStore()
@@ -19,6 +22,17 @@ export function Header() {
   const [stuck, setStuck] = useState(false)
   const loc = useLocation()
   const menuRef = useMagnetic<HTMLButtonElement>(8)
+  const panel = useRef<HTMLDivElement>(null)
+  const closeBtn = useRef<HTMLButtonElement>(null)
+  const here = loc.pathname + loc.hash
+  const isHere = (m: (typeof NAV)[number]) => (m.to ? m.to === here : false)
+  // 새 탭·복사 등 보통의 링크 동작은 살리고, 그냥 클릭일 때만 팝업으로 연다
+  const onAction = (m: (typeof NAV)[number], after?: () => void) => (e: MouseEvent) => {
+    if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+    e.preventDefault()
+    after?.()
+    openModal(m.action!)
+  }
 
   useEffect(() => setMenu(false), [loc.pathname, loc.hash])
   useEffect(() => {
@@ -28,10 +42,26 @@ export function Header() {
     return () => window.removeEventListener('scroll', on)
   }, [])
   useEffect(() => {
-    document.body.style.overflow = menu ? 'hidden' : ''
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setMenu(false)
-    window.addEventListener('keydown', esc)
-    return () => window.removeEventListener('keydown', esc)
+    if (!menu) return
+    document.body.style.overflow = 'hidden'
+    const opener = document.activeElement as HTMLElement | null
+    closeBtn.current?.focus()
+    // ESC 로 닫기 + Tab 이 패널 밖으로 나가지 않게 가둔다
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') return setMenu(false)
+      if (e.key !== 'Tab' || !panel.current) return
+      const f = [...panel.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled])')]
+      if (f.length === 0) return
+      const first = f[0], last = f[f.length - 1]
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+    }
+    window.addEventListener('keydown', key)
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('keydown', key)
+      opener?.focus?.()
+    }
   }, [menu])
 
   return (
@@ -45,7 +75,7 @@ export function Header() {
           <nav className="nav" aria-label="주요 메뉴">
             {NAV.map((m) =>
               m.action ? (
-                <button key={m.n} type="button" data-track={`nav_${m.action}`} onClick={() => openModal(m.action!)}><i>{m.n}</i><Roll>{m.label}</Roll></button>
+                <Link key={m.n} to={hrefOf(m)} data-track={`nav_${m.action}`} onClick={onAction(m)}><i>{m.n}</i><Roll>{m.label}</Roll></Link>
               ) : (
                 <Link key={m.n} to={m.to!}><i>{m.n}</i><Roll>{m.label}</Roll></Link>
               ),
@@ -68,22 +98,39 @@ export function Header() {
       </header>
       <AnimatePresence>
         {menu && (
-          <motion.div className="fullmenu" role="dialog" aria-label="전체 메뉴" initial={{ clipPath: 'circle(0% at calc(100% - 40px) 40px)' }} animate={{ clipPath: 'circle(150% at calc(100% - 40px) 40px)' }} exit={{ clipPath: 'circle(0% at calc(100% - 40px) 40px)' }} transition={{ duration: 0.8, ease: [0.76, 0, 0.24, 1] }}>
-            <button className="circle close" type="button" aria-label="메뉴 닫기" onClick={() => setMenu(false)}>✕</button>
-            {NAV.map((m) =>
-              m.action ? (
-                <button key={m.n} type="button" onClick={() => { setMenu(false); openModal(m.action!) }}><i>{m.n}</i>{m.label}</button>
-              ) : (
-                <Link key={m.n} to={m.to!}><i>{m.n}</i>{m.label}</Link>
-              ),
-            )}
-            {user?.isAdmin && <Link to="/admin"><i>A</i>대시보드</Link>}
-            {user && <button type="button" onClick={() => { setMenu(false); openModal('mypage') }}><i>●</i>마이페이지</button>}
-            {!user && (
-              <div style={{ marginTop: 28 }}>
-                <Btn variant="light" track="login_open" onClick={() => { setMenu(false); setLoginOpen(true) }}>로그인</Btn>
+          <motion.div className="fm-wrap" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
+            <div className="fm-dim" aria-hidden="true" onClick={() => setMenu(false)} />
+            <motion.div ref={panel} className="fullmenu" role="dialog" aria-modal="true" aria-label="전체 메뉴" initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}>
+              <div className="fm-head">
+                <span className="fm-title">메뉴</span>
+                <button ref={closeBtn} className="circle close" type="button" aria-label="메뉴 닫기" onClick={() => setMenu(false)}>✕</button>
               </div>
-            )}
+              <ul className="fm-list">
+                {NAV.map((m) => (
+                  <li key={m.n}>
+                    {m.action ? (
+                      <Link className="fm-item" to={hrefOf(m)} onClick={onAction(m, () => setMenu(false))}><i>{m.n}</i>{m.label}<span className="fm-arrow" aria-hidden="true">→</span></Link>
+                    ) : (
+                      <Link className="fm-item" to={m.to!} aria-current={isHere(m) ? 'page' : undefined}><i>{m.n}</i>{m.label}<span className="fm-arrow" aria-hidden="true">→</span></Link>
+                    )}
+                  </li>
+                ))}
+                {user?.isAdmin && <li><Link className="fm-item" to="/admin" aria-current={loc.pathname === '/admin' ? 'page' : undefined}><i>A</i>대시보드<span className="fm-arrow" aria-hidden="true">→</span></Link></li>}
+              </ul>
+              <div className="fm-foot">
+                {user ? (
+                  <button type="button" className="fm-me" onClick={() => { setMenu(false); openModal('mypage') }}>
+                    <span className="fm-av" aria-hidden="true">{user.name.slice(0, 1)}</span>
+                    <span><b>{user.profile.nickname || user.name}님</b><span>마이페이지 열기</span></span>
+                  </button>
+                ) : (
+                  <>
+                    <Btn variant="light" track="login_open" onClick={() => { setMenu(false); setLoginOpen(true) }}>로그인</Btn>
+                    <small>로그인하면 결과와 서류를 계정에 모아 둘 수 있어요.</small>
+                  </>
+                )}
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

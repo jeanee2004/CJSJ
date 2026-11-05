@@ -191,7 +191,8 @@ export function Flutter() {
       burst(e.clientX, e.clientY, 2, 1)
       wake()
     }
-    const onDown = (e: PointerEvent) => { burst(e.clientX, e.clientY, 3, 1.2); wake() }
+    // 버튼·링크를 누를 때는 나비를 띄우지 않는다(모바일에서 '영상 재생' 같은 버튼을 가리지 않게)
+    const onDown = (e: PointerEvent) => { if ((e.target as Element | null)?.closest?.('button, a, [role="button"]')) return; burst(e.clientX, e.clientY, 3, 1.2); wake() }
     window.addEventListener('mousemove', onMove, { passive: true })
     document.addEventListener('mouseover', onOver, { passive: true })
     window.addEventListener('pointerdown', onDown)

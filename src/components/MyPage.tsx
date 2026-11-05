@@ -9,14 +9,46 @@ import type { Status } from '../lib/eligibility'
 import { POLICIES, policyById } from '../data/policies'
 import { QUESTIONS } from '../data/survey'
 import { DocBox } from './DocBox'
+import { PrepBoard } from './PrepBoard'
+import './MyPage.css'
 
-// 로그인 후 마이페이지. 탭: 요약 / 내 결과 / 서류함 / 설문 기록 / 내 정보(별명 등 수정)
-type Tab = 'sum' | 'result' | 'docs' | 'history' | 'info'
+// 로그인 후 마이페이지. 탭: 요약 / 내 결과 / 신청 준비 / 서류함 / 설문 기록 / 내 정보(별명 등 수정)
+type Tab = 'sum' | 'result' | 'prep' | 'docs' | 'history' | 'info'
+type Kind = 'simple' | 'deep'
 interface Row { id: string; survey_type: 'simple' | 'deep'; created_at: string }
 
 const ST: Record<Status, { t: string; g: string }> = { ok: { t: '신청할 수 있어요', g: '✓' }, maybe: { t: '확인해 보면 좋아요', g: '△' }, no: { t: '지금은 어려워요', g: '✕' } }
 const opts = (id: string) => QUESTIONS.find((q) => q.id === id)?.opts ?? []
 const short = (t: string) => t.replace(/ \(.*\)$/, '')
+
+const SURVEY_INFO: Record<Kind, { name: string; min: string; n: number; line: string }> = {
+  simple: { name: '맛보기 설문', min: '약 2분', n: 12, line: '핵심만 물어봐서 어떤 지원을 받을 수 있는지 빠르게 알려 드려요.' },
+  deep: { name: '심화 설문', min: '약 5분', n: 24, line: '소득·자산 등을 더 자세히 물어 결과가 정확해지고, 제도별 준비 서류도 알려 드려요.' },
+}
+
+/** 설문 시작 전 확인 창 (마이페이지의 모든 설문 버튼이 이 창을 거친다) */
+function StartConfirm({ kind, hasResult, onYes, onNo }: { kind: Kind; hasResult: boolean; onYes: () => void; onNo: () => void }) {
+  const i = SURVEY_INFO[kind]
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && onNo()
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [onNo])
+  return (
+    <div className="mp-confirm" role="presentation" onClick={onNo}>
+      <div role="alertdialog" aria-modal="true" aria-labelledby="mp-cf-t" aria-describedby="mp-cf-d" onClick={(e) => e.stopPropagation()}>
+        <h3 id="mp-cf-t">{i.name}를 시작하시겠습니까?</h3>
+        <p id="mp-cf-d">{i.line}</p>
+        <ul>
+          <li>문항 {i.n}개 안팎, {i.min} 걸려요.</li>
+          <li>이름·전화번호 없이 구간 값으로만 저장돼요.</li>
+          {hasResult && <li>이 기기에 저장된 지난 결과는 새 결과로 바뀔 수 있어요.</li>}
+        </ul>
+        <div className="mp-row"><Btn variant="line" onClick={onNo}>아니요</Btn><Btn onClick={onYes}>시작하기</Btn></div>
+      </div>
+    </div>
+  )
+}
 
 export function MyPage() {
   const { user, answers, hasSaved, logout, closeModal, openModal, openDeep, clearSaved, updateProfile } = useStore()
@@ -26,6 +58,7 @@ export function MyPage() {
   const [err, setErr] = useState('')
   const [form, setForm] = useState<Profile>(user?.profile ?? EMPTY_PROFILE)
   const [saved, setSaved] = useState<'' | 'ok' | 'fail'>('')
+  const [ask, setAsk] = useState<Kind | null>(null)
 
   const load = async () => {
     if (!supabase) return setRows([])
@@ -40,11 +73,17 @@ export function MyPage() {
   const deepDone = hasSaved && answers.surveyType === 'deep'
   const todo: { t: string; act: () => void }[] = []
   if (!user?.profile.nickname) todo.push({ t: '별명을 정해 보세요', act: () => setTab('info') })
-  if (!hasSaved) todo.push({ t: '맛보기 설문으로 받을 수 있는 지원 확인하기', act: () => openModal('diagnose') })
-  else if (!deepDone) todo.push({ t: '심화 설문으로 결과를 더 정확하게 만들기', act: () => { closeModal(); openDeep() } })
-  todo.push({ t: '신청에 필요한 서류를 서류함에 모아 두기', act: () => setTab('docs') })
+  if (!hasSaved) todo.push({ t: '맛보기 설문으로 받을 수 있는 지원 확인하기', act: () => setAsk('simple') })
+  else if (!deepDone) todo.push({ t: '심화 설문으로 결과를 더 정확하게 만들기', act: () => setAsk('deep') })
+  todo.push({ t: '신청 준비 확인하고 서류 챙기기', act: () => setTab('prep') })
   if (hasSaved) todo.push({ t: '결과 자세히 보고 신청 순서 확인하기', act: () => { closeModal(); nav('/result') } })
 
+  const begin = () => {
+    const k = ask
+    setAsk(null)
+    if (k === 'simple') openModal('diagnose')
+    else if (k === 'deep') { closeModal(); openDeep() }
+  }
   const remove = async (id: string) => {
     if (!supabase || !window.confirm('이 설문 기록을 지울까요? 되돌릴 수 없어요.')) return
     const { error } = await supabase.from('survey_responses').delete().eq('id', id)
@@ -57,6 +96,9 @@ export function MyPage() {
   if (!user) return null
   const simpleN = rows?.filter((r) => r.survey_type === 'simple').length ?? 0
   const deepN = rows?.filter((r) => r.survey_type === 'deep').length ?? 0
+  const filled = [user.profile.nickname, user.profile.ageBand, user.profile.residence, user.profile.interests.length ? 'y' : ''].filter(Boolean).length
+  const profilePct = Math.round((filled / 4) * 100)
+  const lastAt = rows?.[0]?.created_at ? new Date(rows[0].created_at).toLocaleDateString('ko-KR') : null
   const ageText = short(opts('Q1').find((o) => o.v === user.profile.ageBand)?.t ?? '')
   const resText = short(opts('Q2').find((o) => o.v === user.profile.residence)?.t ?? '')
 
@@ -72,18 +114,20 @@ export function MyPage() {
             {ageText && <span className="mp-chip">{ageText}</span>}
             {resText && <span className="mp-chip">{resText}</span>}
           </p>
+          {profilePct < 100 && <div className="mp-meter" role="img" aria-label={`프로필 ${profilePct}% 완성`}><i style={{ width: `${profilePct}%` }} /></div>}
+          <p className="mp-meta">{profilePct < 100 ? `프로필 ${profilePct}% 완성 · ` : ''}{lastAt ? `마지막 설문 ${lastAt}` : '아직 설문 기록이 없어요'}</p>
         </div>
         {user.isAdmin && <Link className="mp-admin" to="/admin" onClick={closeModal}>대시보드 →</Link>}
       </div>
 
-      <ol className="mp-steps" aria-label="설문 진행 단계">
-        <li className={hasSaved ? 'done' : 'now'}><button type="button" onClick={() => (hasSaved ? setTab('result') : openModal('diagnose'))}><i>{hasSaved ? '✓' : '1'}</i>맛보기 설문</button></li>
-        <li className={deepDone ? 'done' : hasSaved ? 'now' : ''}><button type="button" onClick={() => { closeModal(); openDeep() }}><i>{deepDone ? '✓' : '2'}</i>심화 설문</button></li>
-        <li className={deepDone ? 'now' : ''}><button type="button" onClick={() => setTab('docs')}><i>3</i>신청 준비</button></li>
+      <ol className="mp-steps" aria-label="진행 단계">
+        <li className={hasSaved ? 'done' : 'now'}><button type="button" onClick={() => (hasSaved ? setTab('result') : setAsk('simple'))}><i>{hasSaved ? '✓' : '1'}</i><span>맛보기 설문<small>{hasSaved ? '완료 · 결과 보기' : '약 2분'}</small></span></button></li>
+        <li className={deepDone ? 'done' : hasSaved ? 'now' : ''}><button type="button" onClick={() => setAsk('deep')}><i>{deepDone ? '✓' : '2'}</i><span>심화 설문<small>{deepDone ? '완료 · 다시 하기' : '약 5분 · 더 정확'}</small></span></button></li>
+        <li className={deepDone ? 'now' : ''}><button type="button" onClick={() => setTab('prep')}><i>3</i><span>신청 준비<small>서류 · 신청 링크</small></span></button></li>
       </ol>
 
       <div className="mp-tabs" role="tablist">
-        {([['sum', '요약'], ['result', '내 결과'], ['docs', '서류함'], ['history', '설문 기록'], ['info', '내 정보']] as [Tab, string][]).map(([k, t]) => (
+        {([['sum', '요약'], ['result', '내 결과'], ['prep', '신청 준비'], ['docs', '서류함'], ['history', '설문 기록'], ['info', '내 정보']] as [Tab, string][]).map(([k, t]) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{t}</button>
         ))}
       </div>
@@ -126,18 +170,20 @@ export function MyPage() {
               </ul>
               <div className="mp-row">
                 <Btn onClick={() => { closeModal(); nav('/result') }}>결과 자세히 보기</Btn>
-                {!deepDone && <Btn variant="line" onClick={() => { closeModal(); openDeep() }}>심화 설문 하기</Btn>}
+                {!deepDone && <Btn variant="line" onClick={() => setAsk('deep')}>심화 설문 하기</Btn>}
               </div>
             </>
           ) : (
             <>
               <p className="mp-big">아직 저장된 결과가 없어요</p>
               <p className="mp-sub">설문을 하면 이곳에서 다시 볼 수 있어요.</p>
-              <div className="mp-row"><Btn onClick={() => openModal('diagnose')}>맛보기 설문 시작</Btn><Btn variant="line" onClick={() => { closeModal(); openDeep() }}>심화 설문 시작</Btn></div>
+              <div className="mp-row"><Btn onClick={() => setAsk('simple')}>맛보기 설문 시작</Btn><Btn variant="line" onClick={() => setAsk('deep')}>심화 설문 시작</Btn></div>
             </>
           )}
         </div>
       )}
+
+      {tab === 'prep' && <PrepBoard uid={user.id} verdict={verdicts.map((v) => ({ id: v.id, status: v.status }))} interests={user.profile.interests} hasSaved={hasSaved} onDocs={() => setTab('docs')} onSurvey={() => setAsk('simple')} />}
 
       {tab === 'docs' && <DocBox uid={user.id} verdict={Object.fromEntries(verdicts.map((v) => [v.id, v.status]))} interests={user.profile.interests} />}
 
@@ -203,6 +249,7 @@ export function MyPage() {
         <Btn variant="line" onClick={() => { logout(); closeModal(); nav('/') }}>로그아웃</Btn>
         <Btn onClick={closeModal}>닫기</Btn>
       </div>
+      {ask && <StartConfirm kind={ask} hasResult={hasSaved} onYes={begin} onNo={() => setAsk(null)} />}
     </div>
   )
 }

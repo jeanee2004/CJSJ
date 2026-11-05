@@ -78,6 +78,9 @@ export default function Result() {
     : []
   const sum = a.survey ? summarize(a.survey as Survey) : null
   const ok = count('ok'), maybe = count('maybe'), best = ok + maybe
+  // 이번 접수가 끝난 제도: '확인해 볼 지원'에서 따로 세어 "다음 공고 대기"로 안내한다
+  const waiting = items ? verdicts.filter((v) => { if (v.status === 'no') return false; const sc = scheduleFor(v.id, items); return !!sc && phaseOf(sc, todayKst()) === 'closed' }).length : 0
+  const maybeOpen = Math.max(0, maybe - waiting)
 
   return (
     <>
@@ -87,11 +90,11 @@ export default function Result() {
           <Lines
             as="h1" className="display"
             lines={best > 0
-              ? [<span className="l" key="1">{ok > 0 ? '지금 신청할 수 있는 지원이' : '확인해 볼 만한 지원이'}</span>, <span key="2"><span className="em">{ok || maybe}개</span> 있어요</span>]
+              ? [<span className="l" key="1">{ok > 0 ? '지금 신청할 수 있는 지원이' : '확인해 볼 만한 지원이'}</span>, <span key="2"><span className="em">{ok || maybeOpen || maybe}개</span> 있어요</span>]
               : [<span className="l" key="1">아직은 맞는 지원이</span>, <span key="2"><span className="em">없지만</span> 괜찮아요</span>]}
           />
           <p style={{ color: 'var(--ink-2)', maxWidth: 560 }}>
-            {ok > 0 && maybe > 0 ? `확인해 볼 지원 ${maybe}개도 함께 정리했어요. ` : ''}{best > 0 ? '아래에서 이유와 다음에 할 일을 천천히 살펴보세요. 순서를 지키는 게 가장 중요해요.' : '너무 속상해하지 않으셔도 돼요. 어려운 이유를 쉬운 말로 풀어 두었고, 조건이 바뀌면 결과도 달라질 수 있어요.'}
+            {ok > 0 && maybeOpen > 0 ? `확인해 볼 지원 ${maybeOpen}개도 함께 정리했어요. ` : ''}{waiting > 0 ? `${waiting}개는 이번 접수가 끝나 다음 공고를 기다려야 해요. ` : ''}{best > 0 ? '아래에서 이유와 다음에 할 일을 천천히 살펴보세요. 순서를 지키는 게 가장 중요해요.' : '너무 속상해하지 않으셔도 돼요. 어려운 이유를 쉬운 말로 풀어 두었고, 조건이 바뀌면 결과도 달라질 수 있어요.'}
           </p>
 
           <ResultViz
@@ -208,7 +211,7 @@ export default function Result() {
                     <span className="rv-lock-cat">{p.category}</span>
                     <h3>{p.name}</h3>
                     <p className="easy">{p.easy}</p>
-                    {v.status !== 'no' && <div style={{ marginTop: 18 }}><Btn href={p.apply.url} external size="sm" track={`apply:${p.id}`}>{`${p.apply.name.split(' ')[0]}에서 ${p.apply.general ? '안내 보기' : '신청하기'}`}</Btn></div>}
+                    {v.status !== 'no' && <div style={{ marginTop: 18 }}><Btn href={p.apply.url} external size="sm" variant={p.apply.general ? 'line' : 'ink'} track={`apply:${p.id}`}>{`${p.apply.name.split(' ')[0]}에서 ${p.apply.general ? '안내 보기' : '신청하기'}`}</Btn></div>}
                   </div>
                   <div>
                     <ul>{v.reasons.map((r, i) => <li key={i}>{r}</li>)}</ul>

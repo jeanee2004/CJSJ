@@ -7,6 +7,7 @@ import { clickRank, daily, distribution, fmtDur, fmtPct, funnel, inRange, sectio
 import type { Bar, EventRow, ResponseRow, SurveyFilter } from '../lib/adminStats'
 import { analyze, collectionStatus, diagnoseFlow, buildReport, periodLabel } from '../lib/insights'
 import type { Insight, Suggestion } from '../lib/insights'
+import { FeedbackPanel } from './AdminFeedback'
 import './Admin.css'
 
 const PAGE = 1000
@@ -16,7 +17,7 @@ const SECTION_LABEL: Record<string, string> = { hero: '히어로(첫 화면)', i
 const CLICK_LABEL: Record<string, string> = {
   hero_start_survey: '첫 화면 · 내 상황 확인', intro_policies: '인트로 · 지원 제도 둘러보기', intro_past_result: '인트로 · 지난 결과 보기',
   policy_card_open: '지원 제도 카드 열기', policy_filter: '지원 제도 필터', glossary_fab: '돋보기(용어 사전)', glossary_terms: '돋보기 · 용어 사전',
-  guidebook_open: '돋보기 · 가이드북', login_open: '로그인 열기', nav_diagnose: '메뉴 · 내 상황 확인', nav_feedback: '메뉴 · 의견 남기기',
+  guidebook_open: '돋보기 · 가이드북', login_open: '로그인 열기', nav_diagnose: '메뉴 · 내 상황 확인', nav_survey: '메뉴 · 내 상황 확인', nav_feedback: '메뉴 · 의견 남기기',
 }
 const nameOf = (m: Record<string, string>) => (k: string) => m[k] ?? (k.startsWith('apply:') ? `신청 링크 · ${k.slice(6)}` : k.startsWith('feedback:') ? `의견 · ${k.slice(9)}` : k)
 
@@ -383,6 +384,7 @@ function Dashboard() {
         평균 체류는 세션의 첫 기록~마지막 기록 간격이에요(기록이 2개 이상인 세션만). 많아지면 SQL 집계로 옮겨야 해요.
       </p>
 
+      <FeedbackPanel days={days} />
       {!none && <ReportCard days={days} text={report} />}
 
       <section className="adm-card adm-noprint">

@@ -303,7 +303,7 @@ function IdxItem({ p, i, open, onToggle, live, rows, off }: { p: PolicyInfo; i: 
             <div>
               <div className="tags" style={{ marginBottom: 14 }}>{p.type.map((t) => <span className="tag" key={t}>{t}</span>)}</div>
               {p.caution && !(live && isStaleCaution(p.id, p.caution)) && <div className="note">⚠ {p.caution}</div>}
-              <div className="apply"><Btn href={p.apply.url} external variant="light" size="sm" track={`apply:${p.id}`}>{`${p.apply.name.split(' ')[0]}에서 ${p.apply.general ? '안내 보기' : '신청하기'}`}</Btn></div>
+              <div className="apply"><Btn href={p.apply.url} external variant={p.apply.general ? 'glass' : 'light'} size="sm" track={`apply:${p.id}`}>{`${p.apply.name.split(' ')[0]}에서 ${p.apply.general ? '안내 보기' : '신청하기'}`}</Btn></div>
               {rows && <LiveBox rows={rows} fallback={p.apply} />}
               {off ? (
                 <>

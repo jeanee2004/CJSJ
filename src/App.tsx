@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect } from 'react'
 import { Route, Routes, useLocation } from 'react-router-dom'
-import { StoreProvider } from './store'
+import { StoreProvider, useStore } from './store'
 import { Header } from './components/Header'
 import { LoginModal } from './components/LoginModal'
 import { Loader } from './components/Loader'
@@ -26,6 +26,17 @@ function ScrollManager() {
   return null
 }
 
+/** 주소 해시(#survey, #feedback)로 들어오면 해당 팝업을 연다 (메뉴 항목의 공유·새 탭 열기용) */
+function HashModal() {
+  const { hash } = useLocation()
+  const { openModal } = useStore()
+  useEffect(() => {
+    if (hash === '#survey') openModal('survey')
+    else if (hash === '#feedback') openModal('feedback')
+  }, [hash, openModal])
+  return null
+}
+
 /** 페이지 조회·홈 섹션 체류·클릭 추적 (Supabase 가 없으면 아무 일도 하지 않는다) */
 function Tracker() {
   const { pathname } = useLocation()
@@ -46,6 +57,7 @@ export default function App() {
     <StoreProvider>
       <ScrollManager />
       <Tracker />
+      <HashModal />
       <Loader />
       <div className="aurora" aria-hidden="true" />
       <Flutter />

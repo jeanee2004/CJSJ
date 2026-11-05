@@ -150,11 +150,6 @@ a:hover .roll > span, button:hover .roll > span, .roll:hover > span, .idx-head:h
 .avatar { background: linear-gradient(135deg, var(--mint), var(--aqua) 55%, var(--peri)); font-family: var(--f-kr); font-weight: 800; }
 @media (min-width: 960px) { .nav { display: flex; } .nav + .header-actions { margin-left: 18px; } .menu-btn { display: none; } }
 
-.fullmenu { position: fixed; inset: 0; z-index: 60; background: var(--ink); color: var(--paper); display: flex; flex-direction: column; justify-content: center; padding: 96px var(--gutter) 48px; }
-.fullmenu a { display: flex; align-items: baseline; gap: 16px; padding: 6px 0; border-top: 1px solid var(--line-light); font-family: var(--f-body); font-weight: 300; font-size: clamp(36px, 10vw, 64px); letter-spacing: -0.02em; transition: padding-left 0.5s var(--ease), color 0.3s; }
-.fullmenu a:hover { padding-left: 18px; color: var(--accent); }
-.fullmenu a i { font-family: var(--f-mono); font-style: normal; font-size: 12px; color: var(--accent); }
-.fullmenu .close { position: absolute; top: 14px; right: var(--gutter); color: var(--ink); }
 
 /* ───── 로그인 모달 ───── */
 .overlay { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 16px; background: rgba(23, 35, 77, 0.55); backdrop-filter: blur(6px); }
@@ -630,7 +625,6 @@ input[type='range'] { width: 100%; accent-color: var(--accent); height: 28px; }
 .marquee span { font-size: clamp(22px, 3vw, 38px); }
 .mega { font-size: clamp(48px, 11vw, 160px); }
 .choice b { font-size: clamp(16px, 1.7vw, 20px); }
-.fullmenu a { font-size: clamp(28px, 7vw, 44px); }
 .modal h2 { font-size: 26px; }
 .sec-head p { font-size: 16.5px; }
 @media (max-aspect-ratio: 7/5), (max-width: 760px) {
@@ -776,9 +770,6 @@ body { background: var(--paper); }
 .header.on-dark .nav button { color: #fff; }
 .header.on-dark .nav button:hover { background: rgba(255, 255, 255, 0.16); }
 .header.on-dark .nav button i { color: var(--accent); }
-.fullmenu > button:not(.circle) { display: flex; align-items: baseline; gap: 16px; padding: 6px 0; width: 100%; text-align: left; border-top: 1px solid var(--line-light); font-family: var(--f-body); font-weight: 300; font-size: clamp(28px, 7vw, 44px); letter-spacing: -0.04em; color: var(--paper); transition: padding-left 0.25s var(--ease), color 0.2s; }
-.fullmenu > button:not(.circle):hover { padding-left: 14px; color: var(--accent); }
-.fullmenu > button:not(.circle) i { font-family: var(--f-mono); font-style: normal; font-size: 12px; color: var(--accent); }
 
 /* 진단 흐름: 팝업 안에서는 페이지용 큰 레이아웃을 줄인다 */
 .diag-flow { position: relative; }
@@ -1277,7 +1268,6 @@ input[type='text'], input[type='number'], input:not([type]), textarea { cursor: 
   .btn.light:hover .dot { color: var(--paper); }
   .btn.line:hover .dot { color: var(--paper); }
   .circle:hover { animation: none; }
-  .fullmenu a:hover, .fullmenu > button:not(.circle):hover { padding-left: 0; color: var(--paper); }
 }
 /* 도넛 차트 범례 (좁은 화면에서 라벨이 잘리지 않게 차트 밖으로) */
 .pie-legend { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 14px; }
@@ -1366,7 +1356,6 @@ body { background: var(--paper); }
 .circle { background: #fff; box-shadow: inset 0 0 0 1px var(--line); }
 .circle:hover { background: var(--paper-2); }
 .avatar { background: var(--tint); }
-.fullmenu { background: var(--ink-deep); }
 
 /* ── 첫 화면(영상): 차분한 네이비 오버레이, 강조는 연한 세이지 ── */
 .vhero { background: var(--ink-deep); }
@@ -1540,13 +1529,12 @@ body { background: var(--paper); }
 }
 
 /* ── 성능 권고: hover 때 레이아웃(padding)을 바꾸지 않고, 형제 흐림은 쓰지 않는다 ── */
-.choice:hover, .fullmenu a:hover, .fullmenu > button:not(.circle):hover, .gl-row:hover { padding-left: 0; padding-right: 0; }
+.choice:hover, .gl-row:hover { padding-left: 0; padding-right: 0; }
 .gl-row:hover, .gl-row { padding-left: 22px; padding-right: 22px; }
 .choice[aria-pressed='true'], .choice[aria-pressed='true']:hover { padding-left: 16px; padding-right: 16px; }
 .idx:hover .idx-item:not(:hover):not(.open), .gloss:hover .gl-row:not(:hover), .choices:hover .choice:not(:hover):not([aria-pressed='true']),
 .kpis:hover .kpi:not(:hover), .steps:hover .step:not(:hover), .verdicts:hover .vd:not(:hover), .about-points:hover li:not(:hover) { opacity: 1; }
 .steps, .idx, .choices, .kpis, .gloss, .verdicts { contain: layout style; }
-@media (hover: hover) { .fullmenu a:hover, .fullmenu > button:not(.circle):hover { color: var(--accent); } }
 @media (max-width: 700px) { .trust-list li + li::before { display: none; } }
 
 /* 이용 방법: 정비 전의 은은한 분홍·하늘·민트 빛 번짐(정적 그라데이션, 흐림 필터 없음) */
@@ -1571,3 +1559,9 @@ body { background: var(--paper); }
 .mp-files small { color: var(--ink-2); font-size: 12px; white-space: nowrap; }
 .mp-errs { list-style: none; margin: 0 0 10px; padding: 0; font-size: 13px; color: #b3402a; }
 @media (max-width: 520px) { .mp-steps li button { padding: 8px; gap: 6px; } .mp-tabs button { font-size: 13px; } }
+
+/* ── 접근성: 터치 영역 44px 이상 (작은 버튼·칩) ── */
+.btn.sm { min-height: 44px; }
+.vh-replay { min-height: 44px; }
+.fchip { min-height: 44px; }
+.btn.line:focus-visible, .btn.glass:focus-visible { outline-offset: 4px; }

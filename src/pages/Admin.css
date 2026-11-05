@@ -85,3 +85,4 @@
   .adm-noprint { display: none !important; }
   .adm-pre { background: none; padding: 0; font-size: 12pt; }
 }
+.adm-comments{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}.adm-comments li{padding:10px 12px;border-radius:12px;background:var(--paper);font-size:14px;line-height:1.5}

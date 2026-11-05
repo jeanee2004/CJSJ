@@ -134,7 +134,7 @@ function TradeCard({ r, name, portal, ym }: { r: Load<TradesRes>; name: string; 
 }
 
 /** 11개 영역을 한 번에 불러와 카드로 만든다. 카드는 복제되어 두 번 그려지므로 호출은 여기서 한 번만 한다 */
-export function LiveBoard() {
+function Board({ onRetry }: { onRetry: () => void }) {
   const ym = monthsAgo(2)
   const sale = useApi<TradesRes>(`/api/trades?type=apt-trade&dealYmd=${ym}&summary=1`)
   // 훅은 개수가 고정이어야 하므로 전월세 4종을 하나씩 호출한다
@@ -210,5 +210,16 @@ export function LiveBoard() {
       )}
     </Card>,
   ]).filter(Boolean)
-  return <LiveCarousel items={cards} label="실시간 공공 정보 카드" />
+  const failed = [sale, ...rents, myhome, benefits, rone].some((r) => r.state === 'error')
+  return (
+    <>
+      <LiveCarousel items={cards} label="실시간 공공 정보 카드" />
+      {failed && <p className="lc-miss" role="status">일부 제도는 표시되지 않았어요 · <button type="button" className="term" onClick={onRetry}>다시 시도</button></p>}
+    </>
+  )
+}
+
+export function LiveBoard() {
+  const [n, setN] = useState(0)
+  return <Board key={n} onRetry={() => setN((x) => x + 1)} />
 }
