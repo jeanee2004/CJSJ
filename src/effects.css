@@ -1,0 +1,78 @@
+/* 고급스러운 인터랙션 (KORDA 레퍼런스 감각). 켜는 조건은 components/Effects.tsx 참고 */
+
+/* ① 커서: 데스크톱 + 마우스일 때만 (html.has-cursor). 글자 입력 칸에서는 기본 커서를 되돌린다 */
+.fx-ring, .fx-dot { position: fixed; left: 0; top: 0; z-index: 9999; pointer-events: none; opacity: 0; transition: opacity 0.25s; }
+html.cursor-on .fx-ring, html.cursor-on .fx-dot { opacity: 1; }
+.fx-dot { width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: var(--pink-deep); }
+.fx-ring { width: 38px; height: 38px; margin: -19px 0 0 -19px; border-radius: 50%; border: 1px solid rgba(185, 90, 124, 0.7); display: grid; place-items: center;
+  transition: opacity 0.25s, width 0.3s var(--ease), height 0.3s var(--ease), margin 0.3s var(--ease), background 0.3s, border-color 0.3s; }
+.fx-ring span { font: 800 10.5px/1 var(--f-body, inherit); letter-spacing: 0.08em; color: var(--ink); opacity: 0; transition: opacity 0.2s; }
+.fx-ring.is-link { width: 56px; height: 56px; margin: -28px 0 0 -28px; background: rgba(232, 163, 187, 0.22); border-color: var(--pink-deep); }
+.fx-ring.has-label { width: 72px; height: 72px; margin: -36px 0 0 -36px; background: var(--accent); border-color: transparent; }
+.fx-ring.has-label span { opacity: 1; }
+.fx-ring.is-down { width: 28px; height: 28px; margin: -14px 0 0 -14px; }
+.fx-ring.is-media { border-color: rgba(255, 255, 255, 0.85); }
+.fx-ring.is-media:not(.has-label) { mix-blend-mode: difference; }
+.fx-ring.is-text, .fx-dot.is-text { opacity: 0 !important; }
+html.has-cursor, html.has-cursor *, html.has-cursor a, html.has-cursor button { cursor: none !important; }
+html.has-cursor input:not([type='range']):not([type='checkbox']):not([type='radio']), html.has-cursor textarea { cursor: text !important; }
+@media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) { .fx-ring, .fx-dot { display: none; } }
+
+/* ② 부드러운 스크롤 (lenis 권장 CSS). 모달이 body 를 잠그면 lenis 가 멈춘다 */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: clip; }
+.lenis.lenis-scrolling iframe { pointer-events: none; }
+
+/* ③ 스크롤 진행 선 */
+.fx-progress { position: fixed; inset: 0 0 auto 0; height: 1px; z-index: 60; pointer-events: none; }
+.fx-progress div { height: 100%; background: var(--pink-deep); transform: scaleX(0); transform-origin: left; will-change: transform; }
+
+/* ⑥ 필름 그레인: 작은 SVG 노이즈를 타일로 깐 고정 막. 투명도가 낮고 움직이지 않아 비용이 거의 없다 */
+.fx-grain { position: fixed; inset: 0; z-index: 40; pointer-events: none; opacity: 0.045; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+
+/* ④ 가는 선이 그려지며 나타나는 구분선 (스크롤 연동을 지원하는 브라우저에서만, 아니면 처음부터 보임) */
+@keyframes fx-draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.trust-list li, .steps .step, .chart-card, .live-card { --fx-line: var(--line); }
+@supports (animation-timeline: view()) {
+  .trust { position: relative; }
+  .trust::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: var(--ink); opacity: 0.5; transform-origin: left; animation: fx-draw linear both; animation-timeline: view(); animation-range: entry 10% entry 90%; }
+  .chart-card { border-bottom-color: transparent; }
+  .chart-card::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--line-light); transform-origin: left; animation: fx-draw linear both; animation-timeline: view(); animation-range: entry 0% entry 80%; }
+}
+
+/* ④ 카드 모서리 'ㄱ'자 표시 + 호버 시 살짝 떠오름 */
+.live-card, .chart-card { position: relative; transition: transform 0.45s var(--ease), box-shadow 0.45s var(--ease); }
+.live-card::after, .chart-card::after { content: ''; position: absolute; inset: 9px; pointer-events: none; opacity: 0; transition: opacity 0.3s, inset 0.3s var(--ease);
+  --c: var(--ink);
+  background:
+    linear-gradient(var(--c), var(--c)) top left / 10px 1px no-repeat, linear-gradient(var(--c), var(--c)) top left / 1px 10px no-repeat,
+    linear-gradient(var(--c), var(--c)) top right / 10px 1px no-repeat, linear-gradient(var(--c), var(--c)) top right / 1px 10px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom left / 10px 1px no-repeat, linear-gradient(var(--c), var(--c)) bottom left / 1px 10px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom right / 10px 1px no-repeat, linear-gradient(var(--c), var(--c)) bottom right / 1px 10px no-repeat; }
+.chart-card::after { --c: var(--accent); }
+.live-card:hover, .chart-card:hover { transform: translateY(-4px); }
+.live-card:hover { box-shadow: 0 18px 36px rgba(27, 42, 65, 0.1); }
+.live-card:hover::after, .chart-card:hover::after { opacity: 0.8; inset: 6px; }
+
+/* ⑦ 신뢰 띠: 큰 글씨 한 줄 + 가는 구분선 느낌. 위쪽에 작은 대문자 라벨 */
+.trust-lead::before { content: 'DATA SOURCES'; font: 700 11px/1 var(--f-body, inherit); letter-spacing: 0.16em; color: var(--mute); margin-right: 6px; }
+.trust-list { font-size: clamp(15px, 1.5vw, 18px); font-weight: 600; letter-spacing: -0.01em; }
+.trust-list li { padding-block: 2px; }
+
+/* ⑧ 본문 링크 호버: 밑줄이 왼쪽에서 오른쪽으로 그려진다 (이미 밑줄이 있는 링크는 그 밑줄을 쓴다) */
+.mp-sub a, .ask-note a, .footer a, .src a, .thanks a { text-decoration: none; background: linear-gradient(currentColor, currentColor) left bottom / 0 1px no-repeat; transition: background-size 0.4s var(--ease); }
+.mp-sub a:hover, .ask-note a:hover, .footer a:hover, .src a:hover, .thanks a:hover { background-size: 100% 1px; }
+.mp-sub a:focus-visible, .footer a:focus-visible { background-size: 100% 1px; }
+
+/* 히어로 패럴랙스에 쓰는 요소는 변형을 미리 알린다 */
+.vhero-media, .vhero-inner { will-change: transform; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-progress, .fx-grain { display: none; }
+  .live-card:hover, .chart-card:hover { transform: none; }
+  .trust::after, .chart-card::before { animation: none; }
+  .mp-sub a, .ask-note a, .footer a, .src a, .thanks a { transition: none; }
+}

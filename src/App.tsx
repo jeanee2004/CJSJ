@@ -6,6 +6,8 @@ import { LoginModal } from './components/LoginModal'
 import { Loader } from './components/Loader'
 import { ScrollTop } from './components/ScrollTop'
 import { GlossaryFab } from './components/GlossaryFab'
+import { Effects } from './components/Effects'
+import { scrollToTarget } from './lib/smooth'
 import { Flutter } from './components/Flutter'
 import Home from './pages/Home'
 import { Modals, OpenModalRedirect } from './components/Modals'
@@ -18,7 +20,7 @@ function ScrollManager() {
   const { pathname, hash } = useLocation()
   useEffect(() => {
     if (hash) {
-      const t = setTimeout(() => document.querySelector(hash)?.scrollIntoView(), 60)
+      const t = setTimeout(() => { const el = document.querySelector(hash); if (el) scrollToTarget(el) }, 60)
       return () => clearTimeout(t)
     }
     window.scrollTo(0, 0)
@@ -59,6 +61,7 @@ export default function App() {
       <Tracker />
       <HashModal />
       <Loader />
+      <Effects />
       <div className="aurora" aria-hidden="true" />
       <Flutter />
       <Header />

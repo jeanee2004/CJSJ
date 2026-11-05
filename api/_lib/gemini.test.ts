@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { generate, resetModelSkips } from '../../api/_lib/gemini'
+import { generate, resetModelSkips } from './gemini.js'
 
 const ok = (text: string) => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] }), { status: 200 })
 const used: string[] = []
