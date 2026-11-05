@@ -62,3 +62,19 @@ describe('adminStats', () => {
     expect(distribution(rows, 'Q11', {}).length).toBe(2)
   })
 })
+
+import { change as chg, prevRange as prev } from './adminStats'
+describe('전 기간 대비', () => {
+  const now = Date.parse('2026-11-15T00:00:00Z')
+  const at = (d: number) => ({ created_at: new Date(now - d * 86_400_000).toISOString() })
+  it('직전 같은 길이의 기간만 고른다', () => {
+    expect(prev([at(1), at(8), at(13), at(20)], 7, now)).toHaveLength(2)
+    expect(prev([at(1)], null, now)).toEqual([])
+  })
+  it('증감률: 이전이 0이거나 값이 없으면 null', () => {
+    expect(chg(150, 100)).toBeCloseTo(0.5)
+    expect(chg(50, 100)).toBeCloseTo(-0.5)
+    expect(chg(5, 0)).toBeNull()
+    expect(chg(null, 3)).toBeNull()
+  })
+})

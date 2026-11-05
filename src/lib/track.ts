@@ -69,7 +69,7 @@ export async function flush(unloading = false): Promise<void> {
 
 // 홈 섹션: [이름, CSS 선택자]
 const SECTIONS: [string, string][] = [
-  ['hero', '.vhero'], ['intro', '#intro'], ['how', '#how'], ['live', '#live'], ['policies', '#policies'], ['data', '#data'],
+  ['hero', '.vhero'], ['intro', '#intro'], ['ask', '#ask'], ['how', '#how'], ['live', '#live'], ['policies', '#policies'], ['data', '#data'],
 ]
 
 /** 홈 섹션이 화면에 보인 시간을 잰다. 반환값은 정리 함수 */

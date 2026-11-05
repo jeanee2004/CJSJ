@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { useStore } from '../store'
 import { supabase } from '../lib/supabase'
 import { QUESTIONS, SIMPLE_IDS } from '../data/survey'
-import { clickRank, daily, distribution, fmtDur, fmtPct, funnel, inRange, sectionAvg, summarize } from '../lib/adminStats'
+import { change, clickRank, daily, distribution, fmtDur, fmtPct, funnel, inRange, prevRange, sectionAvg, summarize } from '../lib/adminStats'
 import type { Bar, EventRow, ResponseRow, SurveyFilter } from '../lib/adminStats'
 import { analyze, collectionStatus, diagnoseFlow, buildReport, periodLabel } from '../lib/insights'
 import type { Insight, Suggestion } from '../lib/insights'
@@ -13,13 +13,13 @@ import './Admin.css'
 const PAGE = 1000
 const MAX_ROWS = 50_000
 
-const SECTION_LABEL: Record<string, string> = { hero: '히어로(첫 화면)', intro: '인트로', how: '이용 방법', live: '실시간 정보', policies: '지원 제도', data: '숫자로 보기' }
+const SECTION_LABEL: Record<string, string> = { hero: '히어로(첫 화면)', intro: '인트로', ask: 'AI 검색', how: '이용 방법', live: '실시간 정보', policies: '지원 제도', data: '숫자로 보기' }
 const CLICK_LABEL: Record<string, string> = {
   hero_start_survey: '첫 화면 · 내 상황 확인', intro_policies: '인트로 · 지원 제도 둘러보기', intro_past_result: '인트로 · 지난 결과 보기',
   policy_card_open: '지원 제도 카드 열기', policy_filter: '지원 제도 필터', glossary_fab: '돋보기(용어 사전)', glossary_terms: '돋보기 · 용어 사전',
-  guidebook_open: '돋보기 · 가이드북', login_open: '로그인 열기', nav_diagnose: '메뉴 · 내 상황 확인', nav_survey: '메뉴 · 내 상황 확인', nav_feedback: '메뉴 · 의견 남기기',
+  guidebook_open: '돋보기 · 가이드북', login_open: '로그인 열기', nav_diagnose: '메뉴 · 내 상황 확인', nav_survey: '메뉴 · 내 상황 확인', nav_feedback: '메뉴 · 의견 남기기', ask_submit: 'AI 검색 · 질문하기',
 }
-const nameOf = (m: Record<string, string>) => (k: string) => m[k] ?? (k.startsWith('apply:') ? `신청 링크 · ${k.slice(6)}` : k.startsWith('feedback:') ? `의견 · ${k.slice(9)}` : k)
+const nameOf = (m: Record<string, string>) => (k: string) => m[k] ?? (k.startsWith('apply:') ? `신청 링크 · ${k.slice(6)}` : k.startsWith('feedback:') ? `의견 · ${k.slice(9)}` : k.startsWith('ask_policy:') ? `AI 검색 · 제도 ${k.slice(11)}` : k.startsWith('ask_link:') ? `AI 검색 · 공식 링크 ${k.slice(9)}` : k.startsWith('ask_section:') ? `AI 검색 · 화면 ${k.slice(12)}` : k)
 
 /** 한 테이블을 1000행씩 최대 MAX_ROWS 까지 읽는다(최신순). 막히면 지금까지 읽은 행과 오류를 돌려준다 */
 async function fetchAll<T>(table: 'events' | 'survey_responses', cols: string, signal: { stop: boolean }): Promise<{ rows: T[]; truncated: boolean; error: string | null }> {
@@ -55,9 +55,9 @@ function useData() {
 }
 
 /* ───────── 작은 차트들 (가벼운 HTML/SVG) ───────── */
-function Card({ title, take, children, table }: { title: string; take?: string; children: React.ReactNode; table?: [string, string][] }) {
+function Card({ title, take, children, table, w = 6 }: { title: string; take?: string; children: React.ReactNode; table?: [string, string][]; w?: 4 | 6 | 8 | 12 }) {
   return (
-    <section className="adm-card">
+    <section className={`adm-card w${w}`}>
       <h3>{title}</h3>
       {take && <p className="adm-take">{take}</p>}
       {children}
@@ -157,6 +157,27 @@ const INSIGHT_CTX = {
   rowLabel: (qid: string, row: string) => QUESTIONS.find((q) => q.id === qid)?.rows?.find((r) => r.k === row)?.t ?? row,
   sectionLabel: nameOf(SECTION_LABEL),
   clickLabel: nameOf(CLICK_LABEL),
+}
+
+/** 요약 타일: 큰 숫자 + 전 기간 대비 증감(▲▼). 증감은 '이전 기간이 있을 때'만 보인다 */
+function Kpi({ label, value, delta, unit = '%', bar, hint }: { label: string; value: string; delta?: number | null; unit?: '%' | '%p'; bar?: number | null; hint?: string }) {
+  const d = delta === undefined ? undefined : delta
+  const up = d !== null && d !== undefined && d > 0.0049
+  const down = d !== null && d !== undefined && d < -0.0049
+  const num = d === null || d === undefined ? '' : `${Math.abs(unit === '%p' ? d * 100 : d * 100).toFixed(unit === '%p' ? 1 : 0)}${unit}`
+  return (
+    <div className="adm-kpi">
+      <span className="adm-kl">{label}</span>
+      <b>{value}</b>
+      {bar !== undefined && bar !== null && <i className="adm-kbar" aria-hidden="true"><u style={{ width: `${Math.round(bar * 100)}%` }} /></i>}
+      {d !== undefined && (
+        <span className={`adm-kd ${up ? 'up' : down ? 'down' : ''}`}>
+          {d === null ? '비교할 이전 기간 없음' : <><span aria-hidden="true">{up ? '▲' : down ? '▼' : '–'}</span><span className="sr-only">{up ? '증가' : down ? '감소' : '변화 없음'}</span> {num} <small>전 기간 대비</small></>}
+        </span>
+      )}
+      {hint && <span className="adm-kd">{hint}</span>}
+    </div>
+  )
 }
 
 function InsightList({ items }: { items: Insight[] }) {
@@ -304,16 +325,24 @@ function Dashboard() {
   const fun = useMemo(() => funnel(ev, order, ftype), [ev, order, ftype])
   const an = useMemo(() => analyze({ ...INSIGHT_CTX, events, responses }, days), [events, responses, days])
   const report = useMemo(() => buildReport({ days, events: an.events, responses: an.responses, insights: an.insights, suggestions: an.suggestions }), [an, days])
+  const prevEv = useMemo(() => prevRange(events, days), [events, days])
+  const psum = useMemo(() => summarize(prevEv), [prevEv])
+  const countApply = (rows: typeof ev) => new Set(rows.filter((e) => e.event_type === 'click' && e.name?.startsWith('apply:')).map((e) => e.session_id)).size
+  const pApplyN = countApply(prevEv)
+  const hasPrev = days !== null
+  const rateDelta = (a: number | null, b: number | null) => (hasPrev ? (a === null || b === null ? null : a - b) : undefined)
   const applyN = new Set(ev.filter((e) => e.event_type === 'click' && e.name?.startsWith('apply:')).map((e) => e.session_id)).size
   const respN = rs.filter((r) => sf === 'all' || r.survey_type === sf).length
   const none = !loading && events.length === 0 && responses.length === 0
 
   return (
-    <main className="adm wrap">
+    <main className="adm">
       <header className="adm-head adm-noprint">
+       <div className="adm-in adm-head-in">
         <div>
+          <p className="adm-kicker">청정 세종 · 운영 성과 보고</p>
           <h1>사용 현황 대시보드</h1>
-          <p className="adm-take">이름·이메일 없이 가명 세션으로만 모은 숫자예요. 관리자만 볼 수 있어요.</p>
+          <p className="adm-sub">{periodLabel(days)} 기준 · 이름·이메일 없이 가명 세션으로만 집계 · 관리자 전용</p>
         </div>
         <div className="adm-filters">
           <div role="group" aria-label="기간">
@@ -323,30 +352,37 @@ function Dashboard() {
             {([['all', '전체'], ['simple', '맛보기'], ['deep', '심화']] as [SurveyFilter, string][]).map(([k, t]) => <button key={k} type="button" aria-pressed={sf === k} onClick={() => setSf(k)}>{t}</button>)}
           </div>
           <button type="button" className="adm-btn ghost" onClick={reload} disabled={loading}>새로고침</button>
+          <a className="adm-btn ghost" href="#adm-csv">CSV 내보내기</a>
         </div>
+       </div>
       </header>
+      <div className="adm-in">
 
       {loading && <p className="adm-empty" role="status">불러오는 중이에요…</p>}
       {error && <p className="adm-err" role="alert">데이터를 모두 읽지 못했어요: {error}</p>}
       {(none || error) && !loading && <FlowPanel error={error} events={events} responses={responses} />}
 
-      <div className="adm-cards adm-noprint">
-        <div><small>방문 세션</small><b>{sum.visitors.toLocaleString()}</b></div>
-        <div><small>설문 시작</small><b>{sum.surveyStarts.toLocaleString()}</b></div>
-        <div><small>맛보기 완료율</small><b>{fmtPct(sum.completeRate.simple)}</b></div>
-        <div><small>심화 완료율</small><b>{fmtPct(sum.completeRate.deep)}</b></div>
-        <div><small>신청 링크 클릭</small><b>{applyN.toLocaleString()}</b></div>
-        <div><small>평균 체류</small><b>{fmtDur(sum.avgStayMs)}</b></div>
-      </div>
+      <section className="adm-sec adm-noprint" aria-label="핵심 지표">
+        <h2 className="adm-h2">핵심 지표<small>{hasPrev ? `직전 ${days}일과 비교` : '전체 기간 합계'}</small></h2>
+        <div className="adm-cards">
+          <Kpi label="방문 세션" value={sum.visitors.toLocaleString()} delta={hasPrev ? change(sum.visitors, psum.visitors) : undefined} />
+          <Kpi label="설문 시작" value={sum.surveyStarts.toLocaleString()} delta={hasPrev ? change(sum.surveyStarts, psum.surveyStarts) : undefined} />
+          <Kpi label="맛보기 완료율" value={fmtPct(sum.completeRate.simple)} bar={sum.completeRate.simple} delta={rateDelta(sum.completeRate.simple, psum.completeRate.simple)} unit="%p" />
+          <Kpi label="심화 완료율" value={fmtPct(sum.completeRate.deep)} bar={sum.completeRate.deep} delta={rateDelta(sum.completeRate.deep, psum.completeRate.deep)} unit="%p" />
+          <Kpi label="신청 링크 클릭" value={applyN.toLocaleString()} delta={hasPrev ? change(applyN, pApplyN) : undefined} />
+          <Kpi label="평균 체류" value={fmtDur(sum.avgStayMs)} delta={hasPrev ? change(sum.avgStayMs, psum.avgStayMs) : undefined} />
+        </div>
+      </section>
 
+      {!none && <h2 className="adm-h2 adm-noprint">핵심 인사이트 · 개선 제안<small>규칙으로 뽑은 요약과 우선순위</small></h2>}
       {!none && (
         <div className="adm-grid adm-noprint">
-          <section className="adm-card">
+          <section className="adm-card w6">
             <h3>자동 인사이트</h3>
             <p className="adm-take">{periodLabel(days)} 데이터에서 규칙으로 뽑은 문장이에요. 5명 미만 집단은 숨기고, 표본이 30 미만이면 표시해요.</p>
             {an.insights.length ? <InsightList items={an.insights} /> : <Empty>아직 보여 줄 만큼 모이지 않았어요. 기간을 늘려 보세요.</Empty>}
           </section>
-          <section className="adm-card">
+          <section className="adm-card w6">
             <h3>개선 제안</h3>
             <p className="adm-take">인사이트에서 나온 할 일이에요. 위에서부터 먼저 하면 좋아요.</p>
             {an.suggestions.length ? <SuggestionList items={an.suggestions} /> : <Empty>아직 제안할 만한 신호가 없어요.</Empty>}
@@ -354,11 +390,12 @@ function Dashboard() {
         </div>
       )}
 
+      <h2 className="adm-h2 adm-noprint">행동 · 설문 분석<small>어디서 머물고, 무엇을 누르고, 어디서 그만두는지</small></h2>
       <div className="adm-grid adm-noprint">
-        <Card title="일별 추이" take="하루에 몇 세션이 방문하고 설문을 시작했는지예요." table={dl.map((d) => [d.day, `방문 ${d.visitors} · 시작 ${d.starts}`])}>
+        <Card w={8} title="일별 추이" take="하루에 몇 세션이 방문하고 설문을 시작했는지예요." table={dl.map((d) => [d.day, `방문 ${d.visitors} · 시작 ${d.starts}`])}>
           {dl.length ? <Line data={dl} /> : <Empty />}
         </Card>
-        <Card title="섹션별 평균 체류" take="홈에서 각 부분이 화면에 보인 평균 시간이에요." table={secs.map((s) => [SECTION_LABEL[s.name] ?? s.name, `${fmtDur(s.value)} (${s.n}회)`])}>
+        <Card w={4} title="섹션별 평균 체류" take="홈에서 각 부분이 화면에 보인 평균 시간이에요." table={secs.map((s) => [SECTION_LABEL[s.name] ?? s.name, `${fmtDur(s.value)} (${s.n}회)`])}>
           {secs.length ? <HBars rows={secs} fmt={fmtDur} label={nameOf(SECTION_LABEL)} /> : <Empty />}
         </Card>
         <Card title="버튼 클릭 순위" take="많이 눌린 버튼 상위 10개예요." table={clicks.map((c) => [CLICK_LABEL[c.name] ?? c.name, `${c.value}회`])}>
@@ -372,7 +409,7 @@ function Dashboard() {
           const ordered = Object.keys(labelsOf(qid)).map((k) => labelsOf(qid)[k]).filter((l) => d.some((x) => x.name === l)).map((l) => d.find((x) => x.name === l)!)
           const rows = [...ordered, ...d.filter((x) => !ordered.includes(x))]
           return (
-            <Card key={qid} title={`응답 분포 · ${name}`} take={`${qid} · 응답 ${respN.toLocaleString()}건 기준이에요.`} table={rows.map((r) => [r.name, `${r.n}명`])}>
+            <Card w={4} key={qid} title={`응답 분포 · ${name}`} take={`${qid} · 응답 ${respN.toLocaleString()}건 기준이에요.`} table={rows.map((r) => [r.name, `${r.n}명`])}>
               {rows.length ? <HBars rows={rows} fmt={(n) => `${n}명`} /> : <Empty />}
             </Card>
           )
@@ -384,14 +421,16 @@ function Dashboard() {
         평균 체류는 세션의 첫 기록~마지막 기록 간격이에요(기록이 2개 이상인 세션만). 많아지면 SQL 집계로 옮겨야 해요.
       </p>
 
+      <h2 className="adm-h2 adm-noprint">의견 · 리포트<small>이용자가 남긴 의견과 한 장 요약</small></h2>
       <FeedbackPanel days={days} />
       {!none && <ReportCard days={days} text={report} />}
 
-      <section className="adm-card adm-noprint">
+      <section className="adm-card adm-noprint" id="adm-csv">
         <h3>설문 원자료 CSV</h3>
         <p className="adm-take">이름·이메일 없이 가명 ID와 구간 값만 들어 있어요. 내려받은 기록은 로그로 남아요.</p>
         <CsvBox />
       </section>
+      </div>
     </main>
   )
 }

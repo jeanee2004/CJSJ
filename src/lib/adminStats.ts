@@ -16,6 +16,20 @@ export function inRange<T extends { created_at: string }>(rows: T[], days: numbe
   return rows.filter((r) => ms(r) >= from)
 }
 
+/** 직전 같은 길이의 기간(예: 7일이면 14~7일 전). 전체 기간(null)은 비교 대상이 없어 빈 배열 */
+export function prevRange<T extends { created_at: string }>(rows: T[], days: number | null, now = Date.now()): T[] {
+  if (days === null) return []
+  const to = now - days * 86_400_000
+  const from = to - days * 86_400_000
+  return rows.filter((r) => ms(r) >= from && ms(r) < to)
+}
+
+/** 전 기간 대비 증감: 값이 없거나 이전이 0이면 null */
+export function change(cur: number | null, prev: number | null): number | null {
+  if (cur === null || prev === null || prev === 0) return null
+  return (cur - prev) / prev
+}
+
 const sessionsOf = (rows: EventRow[], type: string, st?: SType) =>
   new Set(rows.filter((r) => r.event_type === type && (!st || r.survey_type === st)).map((r) => r.session_id))
 

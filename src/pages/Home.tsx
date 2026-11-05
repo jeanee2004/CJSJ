@@ -8,6 +8,7 @@ import { POLICIES } from '../data/policies'
 import { QUESTIONS, SIMPLE_IDS } from '../data/survey'
 import type { PolicyInfo } from '../data/policies'
 import { LiveBoard } from '../components/LiveCards'
+import { AiSearch } from '../components/AiSearch'
 import { AddressCheck } from '../components/AddressCheck'
 import { TrustStrip } from '../components/TrustStrip'
 import { useStore } from '../store'
@@ -508,6 +509,7 @@ export default function Home() {
       <HeroVideo />
       <TrustStrip />
       <Intro />
+      <AiSearch />
       <How />
       <Live />
       <Policies />
