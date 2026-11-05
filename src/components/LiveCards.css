@@ -88,6 +88,9 @@
 
 /* 슬라이더 영역: 그림자가 잘리지 않을 여백 */
 #live .lc-view { padding: 36px 0 70px; }
+/* 클릭 막힘 방지: 띠(.lc-track)가 preserve-3d 이면 기울어진 카드 일부가 띠 평면 뒤로 넘어가 클릭을 띠가 가져간다.
+   원근은 카드마다 perspective() 로 주므로 띠·칸은 평면(flat)으로 둬도 모양이 같다. */
+#live .lc-track, #live .lc-slot { transform-style: flat; }
 
 /* 원근: 가운데 카드는 크고 또렷하게, 양옆은 작고 안쪽으로 기울어지게 (스크롤 위치에 맞춰 transform/opacity 만 바뀜) */
 @supports (animation-timeline: view()) {

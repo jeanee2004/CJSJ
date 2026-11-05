@@ -39,6 +39,13 @@ export function LiveCarousel({ items, label }: { items: ReactNode[]; label: stri
     return () => cancelAnimationFrame(raf)
   }, [])
 
+  // 복제본은 이음매용이라 화면 낭독기·탭 이동에서는 빼되, 마우스·터치로는 누를 수 있어야 한다.
+  // (예전에는 inert 로 막아서, 자동 회전 중 복제본이 보일 때 링크가 눌리지 않았다)
+  // 카드 내용은 데이터가 오면서 바뀌므로 렌더할 때마다 다시 맞춘다.
+  useEffect(() => {
+    view.current?.querySelectorAll<HTMLElement>('.lc-dup a, .lc-dup button, .lc-dup [tabindex]').forEach((el) => el.setAttribute('tabindex', '-1'))
+  })
+
   const go = (dir: -1 | 1) => {
     const el = view.current
     const slot = el?.querySelector('.lc-slot') as HTMLElement | null
@@ -56,7 +63,7 @@ export function LiveCarousel({ items, label }: { items: ReactNode[]; label: stri
       <div className="lc-view" ref={view}>
         <ul className="lc-track">
           {items.map((c, i) => <li className="lc-slot" key={i}>{c}</li>)}
-          {items.map((c, i) => <li className="lc-slot lc-dup" key={`d${i}`} aria-hidden="true" inert>{c}</li>)}
+          {items.map((c, i) => <li className="lc-slot lc-dup" key={`d${i}`} aria-hidden="true">{c}</li>)}
         </ul>
       </div>
       <button type="button" className="lc-pause" aria-pressed={paused} onClick={() => setPaused((p) => !p)}>
