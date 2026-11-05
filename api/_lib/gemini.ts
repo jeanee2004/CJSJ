@@ -1,6 +1,8 @@
 // Gemini 호출 공통: 한 모델이 과부하(503)·종료(404)·느림이어도 다음 모델로 넘어가서 답을 받는다.
 // 키는 process.env 에서만 읽고 응답·로그에 넣지 않는다.
-const MODELS = ['gemini-3.5-flash', 'gemini-3.1-flash-lite', 'gemini-3-flash-preview', 'gemini-3.8-flash']
+// 한도가 넉넉하고 빠른 가벼운 모델부터. 모델마다 한도가 따로라서, 429(한도 초과)가 난 모델은 10분, 404(종료)는 1시간 건너뛴다
+const MODELS = ['gemini-3.1-flash-lite', 'gemini-3-flash-preview', 'gemini-3.5-flash', 'gemini-3.8-flash']
+const skipUntil = new Map<string, number>()
 
 export interface GenOpts { json?: boolean; maxTokens?: number; perModelMs?: number }
 
@@ -10,7 +12,9 @@ export async function generate(prompt: string, opts: GenOpts = {}): Promise<stri
   if (!key) return null
   const first = process.env.GEMINI_MODEL?.trim()
   const order = first ? [first, ...MODELS.filter((m) => m !== first)] : MODELS
-  for (const model of order) {
+  const now = Date.now()
+  const live = order.filter((m) => (skipUntil.get(m) ?? 0) <= now)
+  for (const model of live.length ? live : order) {
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
         method: 'POST',
@@ -22,7 +26,11 @@ export async function generate(prompt: string, opts: GenOpts = {}): Promise<stri
         }),
         signal: AbortSignal.timeout(opts.perModelMs ?? 9000),
       })
-      if (!res.ok) continue
+      if (!res.ok) {
+        if (res.status === 429) skipUntil.set(model, Date.now() + 10 * 60_000)
+        else if (res.status === 404) skipUntil.set(model, Date.now() + 60 * 60_000)
+        continue
+      }
       const body = (await res.json()) as { candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[] }
       const text = body.candidates?.[0]?.content?.parts?.filter((p) => !p.thought).map((p) => p.text ?? '').join('').trim()
       if (text) return text
@@ -30,3 +38,6 @@ export async function generate(prompt: string, opts: GenOpts = {}): Promise<stri
   }
   return null
 }
+
+/** 테스트용: 건너뛰기 기록을 비운다 */
+export const resetModelSkips = () => skipUntil.clear()
