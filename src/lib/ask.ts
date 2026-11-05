@@ -1,12 +1,13 @@
 import { ALL_POLICIES } from '../data/policies'
 import { TERMS } from '../data/terms'
 import { rank } from './search'
+import { loadFaq, matchFaq } from './askFaq'
 
 // AI 검색 결과(서버 /api/ask) 와, AI 가 안 될 때 쓰는 사이트 안 검색(초성·오타 보정) 결과를 같은 모양으로 다룬다.
 export interface AskLink { key: string; name: string; url: string; about: string }
 export interface AskSection { key: string; label: string; to: string }
 export interface AskAnswer {
-  source: 'ai' | 'local'
+  source: 'ai' | 'faq' | 'local'
   answer: string
   followups: string[]
   policies: string[]
@@ -47,12 +48,35 @@ export function localAnswer(q: string): AskAnswer {
   }
 }
 
-/** AI 검색 호출. 실패·키 없음·느림이면 기본 검색 결과로 대신한다 */
-export async function ask(q: string, signal?: AbortSignal): Promise<AskAnswer & { note?: string }> {
+const norm = (q: string) => q.replace(/\s+/g, ' ').trim().toLowerCase().replace(/[?!.~。…]+$/u, '').trim()
+const personal = (q: string) => /\d[\d\s-]{7,}\d|@/.test(q)
+
+// 이 브라우저에 최근 AI 답을 저장해 같은 질문은 바로 보여 준다(최대 30개, 7일). 서버 호출·사용량을 아낀다.
+const KEY = 'cjsj.ask.v1'
+const TTL = 7 * 86_400_000
+type Saved = Record<string, { at: number; a: Omit<AskAnswer, 'source'> }>
+const readSaved = (): Saved => { try { return JSON.parse(localStorage.getItem(KEY) ?? '{}') } catch { return {} } }
+const save = (q: string, a: Omit<AskAnswer, 'source'>) => {
   try {
-    const res = await fetch(`/api/ask?q=${encodeURIComponent(q)}`, { signal })
+    const all = readSaved()
+    all[q] = { at: Date.now(), a }
+    const keep = Object.entries(all).filter(([, v]) => Date.now() - v.at < TTL).sort((x, y) => y[1].at - x[1].at).slice(0, 30)
+    localStorage.setItem(KEY, JSON.stringify(Object.fromEntries(keep)))
+  } catch { /* 저장 공간이 없으면 건너뜀 */ }
+}
+
+/** 검색: ① 미리 정리한 답 → ② 이 기기에 저장된 답 → ③ AI(서버도 같은 질문은 저장해 둠). 실패하면 사이트 안 검색 */
+export async function ask(q: string, signal?: AbortSignal): Promise<AskAnswer & { note?: string }> {
+  const nq = norm(q)
+  if (personal(nq)) return { ...localAnswer(q), note: '개인정보가 들어 있는 것 같아 AI에는 보내지 않았어요.' }
+  const faq = matchFaq(nq, await loadFaq())
+  if (faq) return { source: 'faq', answer: faq.answer, followups: faq.followups, policies: faq.policies, terms: faq.terms, links: faq.links, sections: faq.sections }
+  const hit = readSaved()[nq]
+  if (hit && Date.now() - hit.at < TTL) return { ...hit.a, source: 'ai' }
+  try {
+    const res = await fetch(`/api/ask?q=${encodeURIComponent(nq)}`, { signal })
     const body = (await res.json()) as { ai: (Omit<AskAnswer, 'source'>) | null; reason?: string }
-    if (body.ai?.answer) return { ...body.ai, source: 'ai' }
+    if (body.ai?.answer) { save(nq, body.ai); return { ...body.ai, source: 'ai' } }
     return { ...localAnswer(q), note: body.reason === 'RATE_LIMIT' ? '잠시 질문이 몰려 기본 검색으로 보여 드려요.' : undefined }
   } catch (e) {
     if ((e as Error).name === 'AbortError') throw e

@@ -54,7 +54,7 @@ export function AiSearch() {
           {busy && <p className="ask-wait">“{asked}” 에 대해 찾아보고 있어요…</p>}
           {!busy && res && <Result r={res} onAsk={(x) => void run(x)} />}
         </div>
-        <p className="ask-note">AI 설명은 참고용이에요. 금액·자격·마감일은 꼭 공식 사이트에서 다시 확인하세요. 질문 내용은 저장하지 않아요.</p>
+        <p className="ask-note">AI 설명은 참고용이에요. 금액·자격·마감일은 꼭 공식 사이트에서 다시 확인하세요. 이름·연락처는 입력하지 마세요. 자주 묻는 질문의 답은 저장해 두고 다시 보여 드려요.</p>
       </div>
     </section>
   )
@@ -67,7 +67,7 @@ function Result({ r, onAsk }: { r: Res; onAsk: (q: string) => void }) {
   return (
     <div className="ask-res">
       <div className="ask-ans">
-        <span className="ask-tag">{r.source === 'ai' ? 'AI가 정리했어요' : '사이트 안 검색 결과예요'}</span>
+        <span className="ask-tag">{r.source === 'ai' ? 'AI가 정리했어요' : r.source === 'faq' ? '미리 정리해 둔 답이에요' : '사이트 안 검색 결과예요'}</span>
         <p>{r.answer}</p>
         {r.note && <small>{r.note}</small>}
       </div>

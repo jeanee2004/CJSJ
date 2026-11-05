@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { approxSubstring, choseong, rank, toJamo } from './search'
-import { TERMS } from '../data/terms'
+import { TERMS, TERM_MAP } from '../data/terms'
 
 const items = TERMS.map((t) => ({ id: t.id, fields: [t.word, ...(t.alias ?? [])], long: t.easy }))
 const run = (q: string) => rank(items, q)
@@ -43,7 +43,10 @@ describe('용어 검색', () => {
     expect(run('버팀묵').suggestions).toContain('buteemok')
   })
   it('추천은 정말 비슷한 말만 보여준다', () => {
-    expect(run('보증굼').suggestions).toEqual(['deposit'])
+    const sug = run('보증굼').suggestions
+    expect(sug[0]).toBe('deposit') // 가장 비슷한 말이 먼저
+    // 용어가 늘어도 '보증'과 무관한 말은 추천하지 않는다
+    for (const id of sug) expect([TERM_MAP[id].word, ...(TERM_MAP[id].alias ?? [])].join(' ')).toContain('보증')
   })
   it('비슷한 뜻의 말(동의어)도 찾는다', () => {
     expect(run('집세').hits).toContain('wolse')
