@@ -1,0 +1,13 @@
+{
+  "비고": "반응형 점검 기준 화면 목록. 새 기기를 점검하려면 여기에만 추가하면 된다.",
+  "viewports": [
+    { "name": "소형 폰 320", "width": 320, "height": 640 },
+    { "name": "갤럭시 360", "width": 360, "height": 800 },
+    { "name": "아이폰 17 (402)", "width": 402, "height": 874 },
+    { "name": "대형 폰 430", "width": 430, "height": 932 },
+    { "name": "태블릿 세로 768", "width": 768, "height": 1024 },
+    { "name": "태블릿 가로 1024", "width": 1024, "height": 768 },
+    { "name": "노트북 1440", "width": 1440, "height": 900 }
+  ],
+  "routes": ["/", "/result", "/privacy", "/admin", "/diagnose"]
+}
