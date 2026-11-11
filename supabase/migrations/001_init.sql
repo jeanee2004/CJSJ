@@ -3,7 +3,7 @@
 --       계정(auth.users.id) ↔ 응답을 잇는 가명 ID(respondent_id)는 profiles 에만 있고,
 --       profiles 는 본인 행만 읽을 수 있다(관리자도 전체 조회 불가).
 -- 여러 번 실행해도 안전하도록 작성했다.
-
+feec
 -- 1) profiles: 계정별 권한과 가명 ID ------------------------------------------
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
