@@ -81,7 +81,10 @@ export async function flush(unloading = false): Promise<void> {
       const { error } = await supabase.from('events').insert(rows)
       if (error) throw error
     }
-  } catch { /* 실패한 묶음은 버린다(재시도로 사이트가 느려지지 않게) */ }
+  } catch {
+    // 실패한 묶음은 큐 한도 안에서 되돌려 넣고 15초 뒤 다시 시도한다(오래 쌓이면 오래된 것부터 버려 사이트가 느려지지 않게)
+    if (!unloading) { queue = [...rows, ...queue].slice(-MAX_QUEUE); if (!timer) timer = window.setTimeout(() => { void flush() }, 15_000) }
+  }
 }
 
 // 홈 섹션: [이름, CSS 선택자]

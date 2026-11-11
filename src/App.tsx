@@ -14,6 +14,7 @@ import { Modals, OpenModalRedirect } from './components/Modals'
 const Result = lazy(() => import('./pages/Result'))
 const Admin = lazy(() => import('./pages/Admin'))
 const Privacy = lazy(() => import('./pages/Privacy'))
+import { initOutbox } from './lib/responses'
 import { initTracking, observeSections, track } from './lib/track'
 
 function ScrollManager() {
@@ -43,6 +44,7 @@ function HashModal() {
 function Tracker() {
   const { pathname } = useLocation()
   useEffect(() => initTracking(), [])
+  useEffect(() => initOutbox(), [])
   useEffect(() => {
     if (pathname === '/admin') return // 관리자 화면은 집계에서 제외
     track('page_view')
