@@ -7,7 +7,7 @@
   --bg: #f6f6f6; --card: #ffffff; --bd: #e4e4e7; --tx: #18181b; --tx2: #3f3f46; --tx3: #62626b;
   --head: #18181b; --a1: #52525b; --a1-soft: #f4f4f5; --a2: #a1a1aa; --a3: #8b8b94; --track: #ececee; --subtle: #fafafa; --hl: #1e3a8a;
   --up: #15803d; --dn: #b91c1c; --rd: 10px;
-  font-family: var(--adm-font); color: var(--tx); background: var(--bg); min-height: 100vh;
+  font-family: var(--adm-font); color: var(--tx); background: var(--bg); min-height: 100vh; min-height: 100dvh;
   padding-top: calc(var(--header-h, 72px)); padding-bottom: 72px; font-variant-numeric: tabular-nums;
 }
 .adm * { font-family: inherit; }
