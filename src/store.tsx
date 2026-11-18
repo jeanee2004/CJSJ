@@ -6,8 +6,9 @@ import { cleanupLegacy, initialAnswers, onLogin, onLogout, saveIfMember, savedKe
 import { supabase } from './lib/supabase'
 import type { Session } from '@supabase/supabase-js'
 import type { KV } from './lib/history'
+import { accountLabel } from './lib/account'
 
-// 로그인은 Supabase Auth(이메일+비밀번호). 진단 결과 원본은 브라우저 localStorage 에 두고,
+// 로그인은 Supabase Auth(아이디+비밀번호, 아이디는 내부용 주소로 바꿔 쓴다 · lib/account.ts). 예전 이메일 가입 회원도 그대로 로그인된다. 진단 결과 원본은 브라우저 localStorage 에 두고,
 // 통계용 설문 응답만 비식별화(가명 ID·구간 값)해서 Supabase 에 저장한다. (lib/responses.ts)
 // · 진단 결과는 "로그인한 회원"에게만 저장한다. 비회원의 결과는 이 화면(메모리)에만 있고
 //   새로고침·로그아웃하면 사라진다.
@@ -16,7 +17,13 @@ export type LoginReason = 'history' | 'deep' | null
 /** 내 정보(선택 입력). Supabase Auth 의 user_metadata 에 저장하는 본인 전용 값이고, 설문 응답과는 연결하지 않는다 */
 export interface Profile { nickname: string; ageBand: string; residence: string; interests: string[] }
 export const EMPTY_PROFILE: Profile = { nickname: '', ageBand: '', residence: '', interests: [] }
-export interface User { id: string; email: string; name: string; profile: Profile; via: string; isAdmin: boolean; respondentId: string | null }
+export interface User {
+  id: string; email: string; name: string; profile: Profile; via: string; isAdmin: boolean; respondentId: string | null
+  /** 화면에 보여 줄 계정 이름 (아이디, 예전 가입자는 이메일) */
+  account: string
+  /** 결과 리포트를 받을 이메일 (선택 입력, 없으면 '') */
+  reportEmail: string
+}
 interface Store {
   user: User | null
   logout: () => void
@@ -26,6 +33,8 @@ interface Store {
   clearSaved: () => void
   /** 별명 등 내 정보 저장. 실패하면 false */
   updateProfile: (p: Profile) => Promise<boolean>
+  /** 리포트 받을 이메일 저장('' 이면 지움). 실패하면 false */
+  updateReportEmail: (email: string) => Promise<boolean>
   answers: Answers
   setAnswers: (a: Answers) => void
   hasSaved: boolean
@@ -92,9 +101,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const { data, error } = await sb.from('profiles').select('role, respondent_id').eq('id', session.user.id).maybeSingle()
       if (mine !== seq) return
       const email = session.user.email ?? ''
+      const account = accountLabel(email)
       const profile = readProfile(session.user.user_metadata)
+      const re = session.user.user_metadata?.report_email
       setUser((prev) => ({
-        id: session.user.id, email, profile, name: profile.nickname || email.split('@')[0] || '청년', via: 'email',
+        id: session.user.id, email, account, profile, name: profile.nickname || account.split('@')[0] || '청년', via: 'email',
+        reportEmail: typeof re === 'string' && session.user.user_metadata?.report_consent_at ? re : '',
         // 프로필을 못 읽었으면(일시 오류) 이전에 알던 값을 유지한다
         isAdmin: session.user.app_metadata?.role === 'admin' || (error ? (prev?.id === session.user.id ? prev.isAdmin : false) : data?.role === 'admin'),
         respondentId: error ? (prev?.id === session.user.id ? prev.respondentId : null) : data?.respondent_id ?? null,
@@ -137,7 +149,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const clean: Profile = { ...p, nickname: p.nickname.trim().slice(0, 12) }
     const { error } = await supabase.auth.updateUser({ data: { profile: clean } })
     if (error) return false
-    setUser((u) => (u ? { ...u, profile: clean, name: clean.nickname || u.email.split('@')[0] || '청년' } : u))
+    setUser((u) => (u ? { ...u, profile: clean, name: clean.nickname || u.account.split('@')[0] || '청년' } : u))
+    return true
+  }, [])
+
+  const updateReportEmail = useCallback(async (email: string) => {
+    if (!supabase) return false
+    const v = email.trim()
+    // null 을 넣으면 user_metadata 에서 그 키가 지워진다
+    const { error } = await supabase.auth.updateUser({ data: { report_email: v || null, report_consent_at: v ? new Date().toISOString() : null } })
+    if (error) return false
+    setUser((u) => (u ? { ...u, reportEmail: v } : u))
     return true
   }, [])
 
@@ -161,6 +183,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     authReady,
     clearSaved,
     updateProfile,
+    updateReportEmail,
     answers: answers ?? DEFAULT_ANSWERS,
     setAnswers,
     hasSaved: answers !== null,
@@ -174,7 +197,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     openModal,
     openDeep,
     closeModal,
-  }), [user, logout, authReady, clearSaved, updateProfile, answers, setAnswers, loginOpen, loginReason, modal, openLogin, setLoginOpenFn, openModal, openDeep, closeModal])
+  }), [user, logout, authReady, clearSaved, updateProfile, updateReportEmail, answers, setAnswers, loginOpen, loginReason, modal, openLogin, setLoginOpenFn, openModal, openDeep, closeModal])
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 

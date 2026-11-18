@@ -4,6 +4,7 @@ import { Btn } from '../ui'
 import { EMPTY_PROFILE, useStore } from '../store'
 import type { Profile } from '../store'
 import { supabase } from '../lib/supabase'
+import { isValidEmail } from '../lib/account'
 import { evaluate } from '../lib/eligibility'
 import type { Status } from '../lib/eligibility'
 import { POLICIES, policyById } from '../data/policies'
@@ -51,7 +52,7 @@ function StartConfirm({ kind, hasResult, onYes, onNo }: { kind: Kind; hasResult:
 }
 
 export function MyPage() {
-  const { user, answers, hasSaved, logout, closeModal, openModal, openDeep, clearSaved, updateProfile } = useStore()
+  const { user, answers, hasSaved, logout, closeModal, openModal, openDeep, clearSaved, updateProfile, updateReportEmail } = useStore()
   const nav = useNavigate()
   const [tab, setTab] = useState<Tab>('sum')
   const [rows, setRows] = useState<Row[] | null>(null)
@@ -59,6 +60,7 @@ export function MyPage() {
   const [form, setForm] = useState<Profile>(user?.profile ?? EMPTY_PROFILE)
   const [saved, setSaved] = useState<'' | 'ok' | 'fail'>('')
   const [ask, setAsk] = useState<Kind | null>(null)
+  const [mail, setMail] = useState({ v: user?.reportEmail ?? '', agree: false, msg: '', ok: false, busy: false })
   const [del, setDel] = useState<{ open: boolean; text: string; busy: boolean; err: string }>({ open: false, text: '', busy: false, err: '' })
 
   const load = async () => {
@@ -103,6 +105,14 @@ export function MyPage() {
     else { setErr(''); setRows((r) => (r ?? []).filter((x) => x.id !== id)) }
   }
   const save = async () => { setSaved(''); setSaved((await updateProfile(form)) ? 'ok' : 'fail') }
+  const saveMail = async (remove = false) => {
+    const v = remove ? '' : mail.v.trim()
+    if (v && !isValidEmail(v)) return setMail((m) => ({ ...m, msg: '이메일 형식을 확인해 주세요.', ok: false }))
+    if (v && !mail.agree) return setMail((m) => ({ ...m, msg: '리포트 발송 목적의 이메일 수집·이용에 동의해 주세요.', ok: false }))
+    setMail((m) => ({ ...m, busy: true, msg: '' }))
+    const ok = await updateReportEmail(v)
+    setMail((m) => ({ ...m, v, agree: false, busy: false, ok, msg: ok ? (v ? '저장했어요. 결과 화면에서 리포트를 메일로 받을 수 있어요.' : '이메일을 지웠어요. 리포트 메일을 보내지 않아요.') : '저장하지 못했어요. 잠시 후 다시 시도해 주세요.' }))
+  }
   const toggleInterest = (id: string) => setForm((f) => ({ ...f, interests: f.interests.includes(id) ? f.interests.filter((x) => x !== id) : [...f.interests, id].slice(0, 8) }))
 
   if (!user) return null
@@ -120,7 +130,7 @@ export function MyPage() {
         <span className="mp-avatar" aria-hidden="true">{user.name.slice(0, 1)}</span>
         <div>
           <h2>{user.name}<small>님</small></h2>
-          <p className="mp-email">{user.email}</p>
+          <p className="mp-email">{user.account}{user.reportEmail ? ` · 리포트 메일 ${user.reportEmail}` : ''}</p>
           <p className="mp-chips">
             <span className="mp-chip">{user.isAdmin ? '관리자' : '일반 회원'}</span>
             {ageText && <span className="mp-chip">{ageText}</span>}
@@ -251,6 +261,24 @@ export function MyPage() {
           </div>
           <p className="mp-sub">별명 등은 내 계정에만 저장되고, 설문 응답과 연결해 보지 않아요. 비워도 괜찮아요. <Link to="/privacy" onClick={closeModal}>개인정보처리방침</Link></p>
           <hr className="mp-hr" />
+          <h3 className="mp-h">결과 리포트 이메일 (선택)</h3>
+          <p className="mp-sub">적어 두면 설문 결과 화면에서 리포트를 이 주소로 받을 수 있어요. 인증 메일은 보내지 않으니 정확히 적어 주세요. 비워 두면 아무 메일도 보내지 않아요.</p>
+          <div className="field">
+            <label htmlFor="mp-mail">이메일</label>
+            <input id="mp-mail" type="email" autoComplete="email" maxLength={254} value={mail.v} placeholder="example@email.com" onChange={(e) => setMail({ ...mail, v: e.target.value, msg: '' })} />
+          </div>
+          {mail.v.trim() !== '' && mail.v.trim() !== user.reportEmail && (
+            <label className="consent">
+              <input type="checkbox" checked={mail.agree} onChange={(e) => setMail({ ...mail, agree: e.target.checked })} />
+              <span>(선택) 이메일을 설문 결과 리포트 발송 목적으로 수집·이용하는 데 동의합니다.</span>
+            </label>
+          )}
+          <div className="mp-row">
+            <Btn onClick={() => void saveMail()} disabled={mail.busy || mail.v.trim() === user.reportEmail}>{mail.busy ? '저장 중…' : '이메일 저장'}</Btn>
+            {user.reportEmail && <Btn variant="line" onClick={() => void saveMail(true)} disabled={mail.busy}>이메일 지우기</Btn>}
+          </div>
+          {mail.msg && <p className={`login-msg ${mail.ok ? 'ok' : ''}`} role="status">{mail.msg}</p>}
+          <hr className="mp-hr" />
           <div className="mp-row">
             <Btn variant="line" onClick={() => { if (window.confirm('이 기기에 저장된 내 결과를 지울까요? (서버의 통계 응답은 그대로예요)')) clearSaved() }}>이 기기의 내 결과 지우기</Btn>
           </div>
@@ -259,7 +287,7 @@ export function MyPage() {
             <h3 className="mp-h">계정 삭제</h3>
             {user.isAdmin ? <p className="mp-sub">관리자 계정은 실수를 막으려고 여기서 삭제할 수 없어요.</p> : !del.open ? (
               <>
-                <p className="mp-sub">계정과 별명·관심 지원이 지워지고 로그인할 수 없게 돼요. 지금까지 한 설문 응답은 이름·계정과의 연결이 끊긴 채 통계로만 남아요. 되돌릴 수 없어요.</p>
+                <p className="mp-sub">계정과 별명·관심 지원·리포트 이메일이 지워지고 로그인할 수 없게 돼요. 지금까지 한 설문 응답은 이름·계정과의 연결이 끊긴 채 통계로만 남아요. 되돌릴 수 없어요.</p>
                 <div className="mp-row"><Btn variant="line" onClick={() => setDel({ open: true, text: '', busy: false, err: '' })}>계정 삭제하기</Btn></div>
               </>
             ) : (

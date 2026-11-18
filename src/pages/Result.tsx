@@ -18,6 +18,7 @@ import { Recommendations } from '../components/Recommend'
 import { Navigate } from 'react-router-dom'
 import { ResultViz } from '../components/ResultViz'
 import { visibleQuestions } from '../lib/survey'
+import { ReportMail } from '../components/ReportMail'
 
 const LABEL: Record<Status, { t: string; g: string }> = {
   ok: { t: '신청할 수 있어요', g: '✓' },
@@ -138,6 +139,8 @@ export default function Result() {
               )}
             </>
           ) : null}
+
+          <ReportMail verdicts={verdicts} warns={warns} surveyType={a.surveyType === 'deep' ? 'deep' : 'simple'} unknown={unknown.map((k) => UNKNOWN_TXT[k])} />
 
           {!persisted && (
             <div className="strip ask">
