@@ -36,6 +36,7 @@ describe('청년 주거 경험 설문 → 판정 답변', () => {
     expect(a.residence).toBe('liveOnly')
     expect(a.marital).toBe('newlywed')
     expect(deriveAnswers({ Q2: '3' }).residence).toBe('outside')
+    expect(deriveAnswers({ Q2: '4' }).residence).toBe('none')
   })
 
   it('만 34세 상한에 걸치는 30대 연령대는 나이를 확인 항목에 넣는다', () => {

@@ -43,6 +43,16 @@ describe('세종시 조사 반영', () => {
     expect(r.sejongRent.status).toBe('maybe')
     expect(r.sejongRent.todo.some((t) => t.includes('전입'))).toBe(true)
   })
+  it('세종과 관련 없으면(이사 계획 없음) 세종시 지원 3개는 어려움, 전국 제도는 그대로', () => {
+    const base = { age: 26, income: 3000, deal: 'wolse' as const, deposit: 500, rent: 40 }
+    const r = run({ ...base, residence: 'none' })
+    for (const id of ['sejongRent', 'sejongInterest', 'depositGuaranteeFee'] as const) {
+      expect(r[id].status).toBe('no')
+      expect(r[id].codes).toContain('EXCL_REGION')
+    }
+    expect(r.molitRent.status).toBe(run(base).molitRent.status)
+    expect(r.youthDreamAccount.status).toBe(run(base).youthDreamAccount.status)
+  })
 })
 
 describe('규칙', () => {

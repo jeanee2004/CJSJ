@@ -32,7 +32,7 @@ export function deriveAnswers(s: Survey, type: SurveyType = 'deep'): Answers {
   a.age = AGE_MID[band - 1] ?? DEFAULT_ANSWERS.age
   // 30~34, 35~39 는 만 34세 상한이 걸리는 구간이라 대표값으로는 가를 수 없다
   if (band === 3 || band === 4) unknown.add('age')
-  a.residence = ({ '1': 'both', '2': 'liveOnly', '3': 'outside', '4': 'outside' } as Record<string, Residence>)[str(s, 'Q2') ?? '1'] ?? 'both'
+  a.residence = ({ '1': 'both', '2': 'liveOnly', '3': 'outside', '4': 'none' } as Record<string, Residence>)[str(s, 'Q2') ?? '1'] ?? 'both'
 
   const hh = str(s, 'Q4')
   a.marital = ({ '4': 'planning', '5': 'newlywed' } as Record<string, Marital>)[hh ?? ''] ?? 'single'

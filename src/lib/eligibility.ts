@@ -6,7 +6,8 @@ export type Deal = 'jeonse' | 'banjeonse' | 'wolse'
 export type Stage = 'explore' | 'contract' | 'paid' | 'movedin'
 export type HouseType = 'normal' | 'multi'
 // 세종시 청년 주거실태조사(2026) S2 거주 형태와 같은 구분
-export type Residence = 'both' | 'regOnly' | 'liveOnly' | 'outside'
+// outside: 세종으로 이사(전입) 예정 · none: 세종과 관련 없음(이사 계획도 없음)
+export type Residence = 'both' | 'regOnly' | 'liveOnly' | 'outside' | 'none'
 
 export interface Answers {
   age: number
@@ -46,6 +47,7 @@ export type ReasonCode =
   | 'EXCL_INCOME_SINGLE'
   | 'EXCL_AGE'
   | 'EXCL_RESIDENCE'
+  | 'EXCL_REGION'
   | 'EXCL_HOUSE_TYPE'
   | 'EXCL_DEAL_TYPE'
   | 'EXCL_TIMING'
@@ -69,9 +71,14 @@ export interface Verdict {
 const isCouple = (a: Answers) => a.marital !== 'single'
 
 // 세종시 지원은 세종에 주민등록 + 실거주가 모두 있어야 해서, 아닌 경우 해야 할 일을 알려 준다
+// 세종과 관련 없는 청년(이사 계획도 없음)은 세종시 지원 대상이 아니다
 function residenceTodo(a: Answers, v: Verdict) {
+  if (a.residence === 'none') {
+    fail(v, 'EXCL_REGION', '세종에 살거나 세종으로 이사할 예정인 청년만 받을 수 있는 세종시 지원이에요.')
+    return
+  }
   if (v.status === 'no' || a.residence === 'both') return
-  const msg: Record<Exclude<Residence, 'both'>, string> = {
+  const msg: Record<Exclude<Residence, 'both' | 'none'>, string> = {
     regOnly: '주민등록은 세종인데 실제로는 다른 곳에 살고 있어요. 실제 거주지가 세종이어야 해서 이사 후 신청하세요.',
     liveOnly: '세종에 살지만 주민등록은 다른 곳이에요. 전입신고(주소 옮기기)를 먼저 해야 신청할 수 있어요.',
     outside: '아직 세종에 살지 않아요. 세종으로 이사하고 전입신고를 한 뒤에 신청할 수 있어요.',
@@ -551,6 +558,7 @@ const FIX: Partial<Record<ReasonCode, string>> = {
   EXCL_DEAL_TYPE: '계약 방식(전세/월세)이나 가구 형태가 맞지 않아요. 같은 목적의 다른 제도를 확인하세요.',
   EXCL_TIMING: '신청 순서가 중요한 제도예요. 다음 계약부터는 계약 전에 신청 가능 시점을 먼저 확인하세요.',
   EXCL_ASSET: '순자산은 부동산·자동차·예금에서 학자금·신용대출 같은 부채를 뺀 금액이에요. 부채 증빙을 정확히 반영하면 기준 안에 들 수도 있어요.',
+  EXCL_REGION: '세종시 지원은 세종 주민만 받을 수 있어요. 지금 사는 지역의 청년 주거 지원(시·도 누리집, 온통청년)과 전국 제도(국토부 청년월세·버팀목 등)를 확인하세요.',
   EXCL_RESIDENCE: '부모님과 세대를 분리(독립)하면 대상이 되는 제도가 많아요. 주민등록등본의 세대 구성을 확인하세요.',
   EXCL_HOUSE_TYPE: '건축물대장의 용도·면적을 확인해 다중주택이나 면적 기준에서 벗어나는 집을 피하세요.',
   EXCL_EMPLOYER: '재직 형태나 회사 규모 조건이에요. 재직증명서와 회사 규모를 확인하세요.',
