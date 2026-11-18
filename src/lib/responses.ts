@@ -18,6 +18,22 @@ const read = (): Item[] => {
 }
 const write = (items: Item[]) => { try { localStorage.setItem(KEY, JSON.stringify(items.slice(-MAX_ITEMS))) } catch { /* 저장 공간 부족 등 */ } }
 
+// 서버가 형식 오류로 거부한 응답은 바로 버리지 않고 '보류함'에 30일 동안 두었다가, 다음에 사이트를 열 때 한 번씩 다시 보낸다.
+// (서버 검증 규칙이 잘못돼 응답이 거부되는 경우, 규칙을 고치면 그동안의 응답도 저장되게 하려는 것)
+const HELD = 'cjsj.outbox.held'
+const HELD_DAYS = 30
+interface Held { item: Item; at: number }
+const readHeld = (): Held[] => {
+  try { const v = JSON.parse(localStorage.getItem(HELD) ?? '[]'); return Array.isArray(v) ? v.filter((h) => h && h.item && Date.now() - Number(h.at) < HELD_DAYS * 86_400_000) : [] } catch { return [] }
+}
+const writeHeld = (h: Held[]) => { try { localStorage.setItem(HELD, JSON.stringify(h.slice(-MAX_ITEMS))) } catch { /* noop */ } }
+// 처음 보류된 시각(다시 보내려고 꺼냈다가 또 거부돼도 30일은 처음 시각부터 센다)
+const heldAt = new Map<string, number>()
+const hold = (it: Item) => {
+  const prev = readHeld().find((h) => h.item.id === it.id)
+  writeHeld([...readHeld().filter((h) => h.item.id !== it.id), { item: it, at: heldAt.get(it.id) ?? prev?.at ?? Date.now() }])
+}
+
 let sending = false
 let attempt = 0
 let timer = 0
@@ -37,8 +53,8 @@ export async function flushOutbox(): Promise<void> {
           ;({ error } = await supabase.from('survey_responses').insert(it))
         }
         ok = !error || error.code === '23505' // 23505: 같은 id 가 이미 저장됨
-        // 서버가 형식 자체를 거부한 응답(검증 오류)은 영원히 재시도하지 않도록 버린다
-        if (!ok && /^(22|23|42)/.test(error?.code ?? '')) ok = true
+        // 서버가 형식 자체를 거부한 응답(검증 오류)은 계속 재시도하지 않도록 대기함에서 빼서 보류함으로 옮긴다
+        if (!ok && /^(22|23|42)/.test(error?.code ?? '')) { console.warn('설문 응답이 서버 검증에서 거부됐어요', error?.code); hold(it); ok = true }
       } catch { ok = false }
       if (ok) write(read().filter((x) => x.id !== it.id))
     }
@@ -59,6 +75,11 @@ export async function saveResponse(sv: Survey, type: SurveyType, respondentId: s
 /** 앱 시작 때 한 번: 남아 있던 응답 재전송 + 접속 복구·탭 복귀 때마다 재전송 */
 export function initOutbox(): () => void {
   if (!supabase) return () => {}
+  // 보류함의 응답을 대기함으로 되돌려 한 번 다시 보낸다(또 거부되면 다시 보류함으로 간다)
+  const held = readHeld()
+  writeHeld([])
+  if (held.length) write([...read().filter((x) => !held.some((h) => h.item.id === x.id)), ...held.map((h) => h.item)])
+  for (const h of held) heldAt.set(h.item.id, h.at)
   const retry = () => { if (read().length) void flushOutbox() }
   const onVis = () => { if (!document.hidden) retry() }
   window.addEventListener('online', retry)
