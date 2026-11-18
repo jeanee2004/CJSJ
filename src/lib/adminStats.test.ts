@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clickRank, daily, distribution, funnel, inRange, sectionAvg, summarize } from './adminStats'
+import { ALL_TIME, clickRank, daily, dailyInPeriod, distribution, funnel, inPeriod, inRange, parseDay, periodFromDates, periodFromDays, periodText, prevPeriod, sectionAvg, shiftYears, summarize } from './adminStats'
 import type { EventRow } from './adminStats'
 
 const ev = (session_id: string, event_type: string, t: string, o: Partial<EventRow> = {}): EventRow => ({
@@ -76,5 +76,54 @@ describe('전 기간 대비', () => {
     expect(chg(50, 100)).toBeCloseTo(-0.5)
     expect(chg(5, 0)).toBeNull()
     expect(chg(null, 3)).toBeNull()
+  })
+})
+
+describe('기간(Period) 도구', () => {
+  const d = (y: number, m: number, day: number, h = 0) => new Date(y, m - 1, day, h).getTime()
+  const row = (t: number) => ({ created_at: new Date(t).toISOString() })
+
+  it('parseDay: 올바른 날짜만 받는다', () => {
+    expect(parseDay('2026-03-05')).toBe(d(2026, 3, 5))
+    expect(parseDay('2026-02-30')).toBeNull()
+    expect(parseDay('2026-3-5')).toBeNull()
+    expect(parseDay('')).toBeNull()
+  })
+  it('periodFromDates: 종료일을 포함하고, 거꾸로면 null', () => {
+    const p = periodFromDates('2026-03-01', '2026-03-31')!
+    expect(p).toEqual({ from: d(2026, 3, 1), to: d(2026, 4, 1) })
+    expect(periodFromDates('2026-03-31', '2026-03-01')).toBeNull()
+    expect(periodFromDates('2026-03-01', '2026-03-01')).toEqual({ from: d(2026, 3, 1), to: d(2026, 3, 2) })
+  })
+  it('inPeriod: 시작 이상 끝 미만', () => {
+    const p = periodFromDates('2026-03-01', '2026-03-02')!
+    const rows = [row(d(2026, 2, 28, 23)), row(d(2026, 3, 1)), row(d(2026, 3, 2, 23)), row(d(2026, 3, 3))]
+    expect(inPeriod(rows, p)).toHaveLength(2)
+    expect(inPeriod(rows, ALL_TIME)).toHaveLength(4)
+  })
+  it('prevPeriod: 직전 같은 길이, 전체 기간은 null', () => {
+    const p = periodFromDates('2026-03-08', '2026-03-14')!
+    expect(prevPeriod(p)).toEqual({ from: d(2026, 3, 1), to: d(2026, 3, 8) })
+    expect(prevPeriod(ALL_TIME)).toBeNull()
+    const now = Date.now()
+    expect(prevPeriod(periodFromDays(7, now), now)).toEqual({ from: now - 14 * 86_400_000, to: now - 7 * 86_400_000 })
+  })
+  it('shiftYears: 같은 달·일로 n년 전, 전체 기간은 그대로', () => {
+    const p = periodFromDates('2026-03-01', '2026-03-31')!
+    expect(shiftYears(p, 1)).toEqual({ from: d(2025, 3, 1), to: d(2025, 4, 1) })
+    expect(shiftYears(p, 2)).toEqual({ from: d(2024, 3, 1), to: d(2024, 4, 1) })
+    expect(shiftYears(ALL_TIME, 1)).toEqual(ALL_TIME)
+  })
+  it('periodText: 끝은 포함하는 날로 보여 준다', () => {
+    expect(periodText(periodFromDates('2026-03-01', '2026-03-31')!)).toBe('2026-03-01 ~ 2026-03-31')
+    expect(periodText(ALL_TIME)).toBe('전체 기간')
+  })
+  it('dailyInPeriod: 빈 날도 0으로 채워 기간 길이만큼 돌려준다', () => {
+    const p = periodFromDates('2026-03-01', '2026-03-04')!
+    const e = (s: string, t: number, type = 'page_view'): EventRow => ({ session_id: s, event_type: type, name: null, survey_type: null, duration_ms: null, device: null, created_at: new Date(t).toISOString() })
+    const out = dailyInPeriod([e('a', d(2026, 3, 1, 9)), e('b', d(2026, 3, 1, 10)), e('a', d(2026, 3, 1, 11)), e('c', d(2026, 3, 3, 9)), e('z', d(2026, 3, 9))], p)
+    expect(out.map((x) => x.visitors)).toEqual([2, 0, 1, 0])
+    expect(out[0].day).toBe('2026-03-01')
+    expect(dailyInPeriod([], ALL_TIME)).toEqual([])
   })
 })

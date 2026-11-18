@@ -1,7 +1,7 @@
 // 주간·월간 리포트(report_ex.pdf 구조): 지표 정의 → 한 장 요약 → 섹션별 진단 → 종합 인사이트 → 의견·AI 검색.
 // 순수 함수만 둔다(화면은 pages/AdminReport.tsx). 순위는 방문 수가 아니라 행동률(클릭률)로 매긴다.
-import { change, fmtDur, inRange, prevRange, summarize } from './adminStats'
-import type { EventRow } from './adminStats'
+import { change, fmtDur, inPeriod, periodFromDays, periodText, prevPeriod, summarize } from './adminStats'
+import type { EventRow, Period } from './adminStats'
 import { LOW_N } from './insights'
 
 export const SEC_ORDER = ['hero', 'ask', 'intro', 'how', 'live', 'policies', 'data'] as const
@@ -127,12 +127,14 @@ function diagnose(s: Omit<SectionDx, 'summary' | 'why' | 'keep' | 'change'>, avg
 
 const NO_DATA = '아직 보여 줄 만큼 모인 데이터가 없어요.'
 
-/** 리포트 계산. all 은 기간 필터 전 전체 이벤트, days 는 7(주간)·30(월간). clickLabel 은 버튼 이름 → 화면 글자 */
-export function buildReportDx(p: { all: EventRow[]; days: 7 | 30; clickLabel?: (n: string) => string; now?: number }): ReportDx {
+/** 리포트 계산. all 은 기간 필터 전 전체 이벤트, period(또는 days)로 기간을 정한다. clickLabel 은 버튼 이름 → 화면 글자 */
+export function buildReportDx(p: { all: EventRow[]; days?: number; period?: Period; label?: string; clickLabel?: (n: string) => string; now?: number }): ReportDx {
   const now = p.now ?? Date.now()
   const clickLabel = p.clickLabel ?? ((n: string) => n)
-  const ev = inRange(p.all, p.days, now)
-  const pv = prevRange(p.all, p.days, now)
+  const period = p.period ?? periodFromDays(p.days ?? 7, now)
+  const ev = inPeriod(p.all, period)
+  const prevP = prevPeriod(period, now)
+  const pv = prevP ? inPeriod(p.all, prevP) : []
   const kpis = kpisOf(ev, pv, clickLabel)
   const visitors = kpis[0].value ?? 0
   const raw = rawSections(ev, visitors, clickLabel)
@@ -169,7 +171,7 @@ export function buildReportDx(p: { all: EventRow[]; days: 7 | 30; clickLabel?: (
     if (submits > 0) insights.push(`AI 검색 질문은 ${submits}회예요. 저장된 답과 AI 답의 구분은 아직 수집하지 않아요.`)
   }
   if (!insights.length) insights.push(NO_DATA)
-  return { periodLabel: p.days === 7 ? '주간(최근 7일)' : '월간(최근 30일)', hasData, kpis, sections, avgClickRate: avgRate, insights: insights.slice(0, 4), ask }
+  return { periodLabel: p.label ?? (p.period ? periodText(p.period, now) : p.days === 30 ? '월간(최근 30일)' : p.days === 7 || p.days === undefined ? '주간(최근 7일)' : `최근 ${p.days}일`), hasData, kpis, sections, avgClickRate: avgRate, insights: insights.slice(0, 4), ask }
 }
 
 /** 복사·AI 다듬기 입력용 텍스트(규칙 기반 문장 그대로) */

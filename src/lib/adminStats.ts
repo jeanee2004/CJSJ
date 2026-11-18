@@ -24,6 +24,61 @@ export function prevRange<T extends { created_at: string }>(rows: T[], days: num
   return rows.filter((r) => ms(r) >= from && ms(r) < to)
 }
 
+const DAY = 86_400_000
+
+/** 기간: from 이상 to 미만(밀리초). null 은 한쪽(또는 양쪽)이 열려 있다는 뜻 — 둘 다 null 이면 전체 기간 */
+export interface Period { from: number | null; to: number | null }
+export const ALL_TIME: Period = { from: null, to: null }
+
+export function inPeriod<T extends { created_at: string }>(rows: T[], p: Period): T[] {
+  if (p.from === null && p.to === null) return rows
+  return rows.filter((r) => { const t = ms(r); return (p.from === null || t >= p.from) && (p.to === null || t < p.to) })
+}
+
+/** 최근 N일 (끝은 열어 둔다). days 가 null 이면 전체 기간 */
+export function periodFromDays(days: number | null, now = Date.now()): Period {
+  return days === null ? ALL_TIME : { from: now - days * DAY, to: null }
+}
+
+/** 'YYYY-MM-DD' → 그날 0시(로컬) 밀리초. 형식이 틀리거나 없는 날짜(2월 30일 등)면 null */
+export function parseDay(s: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s)
+  if (!m) return null
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])]
+  const t = new Date(y, mo - 1, d)
+  return t.getFullYear() === y && t.getMonth() === mo - 1 && t.getDate() === d ? t.getTime() : null
+}
+
+/** 시작일·종료일(둘 다 그날 포함) → 기간. 형식 오류·시작이 종료보다 뒤면 null */
+export function periodFromDates(start: string, end: string): Period | null {
+  const a = parseDay(start), b = parseDay(end)
+  if (a === null || b === null || a > b) return null
+  const next = new Date(b); next.setDate(next.getDate() + 1)
+  return { from: a, to: next.getTime() }
+}
+
+/** 직전 같은 길이의 기간. 시작이 없는 기간(전체)은 비교 대상이 없어 null. 끝이 열린 기간은 now 까지로 본다 */
+export function prevPeriod(p: Period, now = Date.now()): Period | null {
+  if (p.from === null) return null
+  const end = p.to ?? now
+  return { from: p.from - (end - p.from), to: p.from }
+}
+
+/** n 년 전 같은 달·일의 기간(달력 기준). 끝이 열린 기간은 now 까지로 본다. 전체 기간은 그대로 */
+export function shiftYears(p: Period, n: number, now = Date.now()): Period {
+  if (p.from === null) return p
+  const back = (t: number) => { const d = new Date(t); d.setFullYear(d.getFullYear() - n); return d.getTime() }
+  return { from: back(p.from), to: back(p.to ?? now) }
+}
+
+export const fmtDay = (t: number): string => dayKey(t)
+
+/** 화면용 기간 글자: 2026-03-01 ~ 2026-03-31 (끝은 포함하는 날) */
+export function periodText(p: Period, now = Date.now()): string {
+  if (p.from === null) return '전체 기간'
+  return `${fmtDay(p.from)} ~ ${fmtDay((p.to ?? now) - 1)}`
+}
+
 /** 전 기간 대비 증감: 값이 없거나 이전이 0이면 null */
 export function change(cur: number | null, prev: number | null): number | null {
   if (cur === null || prev === null || prev === 0) return null
@@ -120,6 +175,29 @@ export function daily(events: EventRow[]): DayPoint[] {
     const k = dayKey(d.getTime())
     out.push({ day: k, visitors: v.get(k)?.size ?? 0, starts: s.get(k)?.size ?? 0 })
     if (out.length > 400) break
+  }
+  return out
+}
+
+/** 정해진 기간의 날짜를 하나도 빼지 않고 센다(비교 차트용: 연도별로 같은 위치끼리 겹쳐 그린다). 기간이 열려 있으면 빈 배열, 최대 800일 */
+export function dailyInPeriod(events: EventRow[], p: Period, now = Date.now()): DayPoint[] {
+  if (p.from === null) return []
+  const end = p.to ?? now
+  const v = new Map<string, Set<string>>(), s = new Map<string, Set<string>>()
+  for (const e of events) {
+    const t = ms(e)
+    if (Number.isNaN(t) || t < p.from || t >= end) continue
+    const target = e.event_type === 'page_view' ? v : e.event_type === 'survey_start' ? s : null
+    if (!target) continue
+    const k = dayKey(t)
+    const x = target.get(k) ?? new Set<string>(); x.add(e.session_id); target.set(k, x)
+  }
+  const out: DayPoint[] = []
+  const d = new Date(p.from); d.setHours(0, 0, 0, 0)
+  while (d.getTime() < end && out.length < 800) {
+    const k = dayKey(d.getTime())
+    out.push({ day: k, visitors: v.get(k)?.size ?? 0, starts: s.get(k)?.size ?? 0 })
+    d.setDate(d.getDate() + 1)
   }
   return out
 }

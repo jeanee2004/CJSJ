@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { inRange } from '../lib/adminStats'
-import type { EventRow } from '../lib/adminStats'
+import { inPeriod } from '../lib/adminStats'
+import type { EventRow, Period } from '../lib/adminStats'
 import { buildReportDx, fmtPctDx, fmtVal, reportText } from '../lib/reportDx'
 import { summarizeFeedback } from '../lib/feedbackSummary'
 import type { FeedbackRow } from '../lib/feedbackSummary'
@@ -13,15 +13,16 @@ const AI_MSG: Record<string, string> = {
   AI_ERROR: 'AI가 지금 답하지 못했어요(무료 사용량이 찼을 수 있어요). 규칙 기반 리포트를 쓰세요.',
 }
 
-/** 주간·월간 리포트: ①지표 정의 ②한 장 요약 ③섹션별 진단 ④종합 인사이트 ⑤의견·AI 검색 (report_ex.pdf 구조) */
-export function ReportView({ events, feedback, clickLabel }: { events: EventRow[]; feedback: FeedbackRow[] | null; clickLabel: (n: string) => string }) {
-  const [days, setDays] = useState<7 | 30>(7)
-  const dx = useMemo(() => buildReportDx({ all: events, days, clickLabel }), [events, days, clickLabel])
-  const fb = useMemo(() => summarizeFeedback(inRange(feedback ?? [], days)), [feedback, days])
+/** 기간 리포트(대시보드에서 고른 기간): ①지표 정의 ②한 장 요약 ③섹션별 진단 ④종합 인사이트 ⑤의견·AI 검색 (report_ex.pdf 구조) */
+export function ReportView({ events, feedback, clickLabel, period, label }: { events: EventRow[]; feedback: FeedbackRow[] | null; clickLabel: (n: string) => string; period: Period; label: string }) {
+  const dx = useMemo(() => buildReportDx({ all: events, period, label, clickLabel }), [events, period, label, clickLabel])
+  const fb = useMemo(() => summarizeFeedback(inPeriod(feedback ?? [], period)), [feedback, period])
   const text = useMemo(() => reportText(dx, fb.lines), [dx, fb])
   const [msg, setMsg] = useState<string | null>(null)
   const [ai, setAi] = useState<Ai>({ state: 'idle' })
   const today = new Date().toISOString().slice(0, 10)
+  // 기간이 바뀌면 이전 기간으로 만든 AI 서술은 지운다
+  useEffect(() => { setAi({ state: 'idle' }) }, [period.from, period.to])
 
   const copy = async () => {
     try { await navigator.clipboard.writeText(text); setMsg('복사했어요. 메신저나 메일에 붙여 넣으세요.') }
@@ -48,10 +49,7 @@ export function ReportView({ events, feedback, clickLabel }: { events: EventRow[
       <div className="adm-noprint adm-rhead">
         <div>
           <h3>{dx.periodLabel} 리포트</h3>
-          <p className="adm-take">지표 정의 → 한 장 요약 → 섹션별 진단 → 종합 인사이트 순서예요. 순위는 방문 수가 아니라 행동률(클릭률)로 매겨요.</p>
-        </div>
-        <div className="adm-seg" role="group" aria-label="리포트 기간">
-          {([[7, '주간'], [30, '월간']] as [7 | 30, string][]).map(([d, t]) => <button key={d} type="button" aria-pressed={days === d} onClick={() => { setDays(d); setAi({ state: 'idle' }) }}>{t}</button>)}
+          <p className="adm-take">지표 정의 → 한 장 요약 → 섹션별 진단 → 종합 인사이트 순서예요. 위에서 고른 기간을 그대로 따라가요. 순위는 방문 수가 아니라 행동률(클릭률)로 매겨요.</p>
         </div>
       </div>
       <div className="adm-noprint adm-csv">

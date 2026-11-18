@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { summarizeFeedback } from '../lib/feedbackSummary'
 import type { FeedbackRow } from '../lib/feedbackSummary'
+import { inPeriod } from '../lib/adminStats'
+import type { Period } from '../lib/adminStats'
 
 type Ai = { state: 'idle' | 'loading' | 'ok' | 'none' | 'error'; text?: string; reason?: string }
 const AI_NOTE: Record<string, string> = {
@@ -29,15 +31,13 @@ export function useFeedback(): { rows: FeedbackRow[] | null; err: string | null 
 }
 
 /** 관리자 대시보드: 의견 남기기 모음 — 기본 집계 요약은 항상, AI 요약은 버튼으로 */
-export function FeedbackPanel({ days, rows, err }: { days: number | null; rows: FeedbackRow[] | null; err: string | null }) {
+export function FeedbackPanel({ period, rows, err }: { period: Period; rows: FeedbackRow[] | null; err: string | null }) {
   const [ai, setAi] = useState<Ai>({ state: 'idle' })
 
   const shown = useMemo(() => {
     if (!rows) return []
-    if (days === null) return rows
-    const from = Date.now() - days * 86_400_000
-    return rows.filter((r) => Date.parse(r.created_at) >= from)
-  }, [rows, days])
+    return inPeriod(rows, period)
+  }, [rows, period])
   const sum = useMemo(() => summarizeFeedback(shown), [shown])
 
   const askAi = async () => {
