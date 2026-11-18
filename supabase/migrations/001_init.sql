@@ -29,7 +29,7 @@ create or replace function public.sync_profile() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare make_admin boolean;
 begin
-  make_admin := new.email_confirmed_at is not null and lower(new.email) = 'jeaneeyi2004@gmail.com';
+  make_admin := new.email_confirmed_at is not null and lower(new.email) = any (array['jeaneeyi2004@gmail.com', 'chrisdo7@naver.com']);
   insert into public.profiles (id, role, consent_at)
   values (new.id, case when make_admin then 'admin' else 'user' end,
           nullif(new.raw_user_meta_data ->> 'consent_at', '')::timestamptz)
@@ -43,7 +43,7 @@ create trigger on_auth_user_sync after insert or update of email_confirmed_at on
 
 -- 이미 가입한 계정이 있으면 profiles 를 채워 둔다
 insert into public.profiles (id, role)
-select u.id, case when u.email_confirmed_at is not null and lower(u.email) = 'jeaneeyi2004@gmail.com' then 'admin' else 'user' end
+select u.id, case when u.email_confirmed_at is not null and lower(u.email) = any (array['jeaneeyi2004@gmail.com', 'chrisdo7@naver.com']) then 'admin' else 'user' end
 from auth.users u on conflict (id) do nothing;
 
 -- 2) survey_responses: 설문 응답 (식별정보 없음) --------------------------------
